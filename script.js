@@ -20,7 +20,7 @@ import {
     "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "PASTE_YOUR_API_KEY_HERE",
+    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
