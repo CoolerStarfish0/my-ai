@@ -196,6 +196,35 @@ async function findRelevantMemories(userId, question) {
 }
 
 function createBasicResponse(question, memories) {
+    const q = question.toLowerCase().trim();
+
+    // Basic greetings
+    if (
+        q === "hello" ||
+        q === "hello!" ||
+        q === "hi" ||
+        q === "hi!" ||
+        q === "hey" ||
+        q === "hey!" ||
+        q.startsWith("hello ") ||
+        q.startsWith("hi ") ||
+        q.startsWith("hey ")
+    ) {
+        return "Hello! 👋 I'm your AI. What do you want to talk about?";
+    }
+
+    // If relevant memories were found
+    if (memories.length > 0) {
+        return `I found this in my notebook:
+
+${memories.map(x => "• " + x).join("\n")}`;
+    }
+
+    // Nothing relevant
+    return `I don't have anything in my notebook that seems relevant to that yet.
+
+You can teach me something by ending your message with 5158.`;
+}
     if (memories.length === 0) {
         return `I don't have anything in my notebook that seems relevant to that yet.
 
