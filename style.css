@@ -1,0 +1,135 @@
+```css
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #0d0d12;
+    color: white;
+}
+
+.app {
+    width: min(900px, 95%);
+    margin: auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid #292933;
+}
+
+h1 {
+    margin: 0;
+    font-size: 30px;
+}
+
+header p {
+    margin: 5px 0 0;
+    color: #999;
+}
+
+button {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#loginButton {
+    background: white;
+    color: black;
+}
+
+#logoutButton {
+    background: #292933;
+    color: white;
+}
+
+.user-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0;
+    padding: 10px 14px;
+    background: #17171f;
+    border-radius: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+.chat {
+    height: 60vh;
+    min-height: 400px;
+    overflow-y: auto;
+    padding: 20px 0;
+}
+
+.message {
+    display: flex;
+    margin: 12px 0;
+}
+
+.message.user {
+    justify-content: flex-end;
+}
+
+.bubble {
+    max-width: 75%;
+    padding: 13px 16px;
+    border-radius: 16px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.message.ai .bubble {
+    background: #1c1c26;
+}
+
+.message.user .bubble {
+    background: #3a3a4b;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+}
+
+textarea {
+    flex: 1;
+    resize: none;
+    border: 1px solid #30303b;
+    background: #17171f;
+    color: white;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 16px;
+    outline: none;
+}
+
+textarea:focus {
+    border-color: #666;
+}
+
+#sendButton {
+    background: white;
+    color: black;
+    min-width: 80px;
+}
+
+.hint {
+    text-align: center;
+    color: #777;
+    font-size: 13px;
+}
+```
