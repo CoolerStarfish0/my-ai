@@ -118,31 +118,36 @@ async function sendMessage() {
             "Got it. I've saved that to your personal notebook. 🧠📓"
         );
 
-        return;
-    }
+    
+right before the comment, which **also cannot be in `script.js`**.
 
-    // Find memories relevant to the user's message
-    const memories =
-        await findRelevantMemories(user.uid, originalMessage);
+### Replace lines 121–144 with this:
 
-    // Send the message + memories to the Vercel backend
-    try {
-        addMessage("AI", "Thinking... 🧠");
+```javascript
+return;
+}
 
-        const response = await fetch(
-            ""https://5158-ai-backendpriv-hfbkf8chb-cooler-starfish0.vercel.app/api/chat",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    message: originalMessage,
-                    memories: memories
-                })
-            }
-        );
+// Find memories relevant to the user's message
+const memories =
+    await findRelevantMemories(user.uid, originalMessage);
 
+// Send the message + memories to the Vercel backend
+try {
+    addMessage("AI", "Thinking... 🧠");
+
+    const response = await fetch(
+        "https://5158-ai-backendpriv.vercel.app/api/chat",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: originalMessage,
+                memories: memories
+            })
+        }
+    );
         const data = await response.json();
 
         if (!response.ok) {
