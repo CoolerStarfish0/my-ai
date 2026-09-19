@@ -1,5 +1,5 @@
 import { initializeApp } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+"https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 
 import {
     getAuth,
@@ -8,7 +8,7 @@ import {
     signOut,
     onAuthStateChanged
 } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+"https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 import {
     getFirestore,
@@ -17,82 +17,16 @@ import {
     getDocs,
     serverTimestamp
 } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+"https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "import { initializeApp } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-
-import {
-    getAuth,
-    GoogleAuthProvider,
-    signInWithPopup,
-    signOut,
-    onAuthStateChanged
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    serverTimestamp
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn\_U",
-    authDomainimport { initializeApp } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-
-import {
-    getAuth,
-    GoogleAuthProvider,
-    signInWithPopup,
-    signOut,
-    onAuthStateChanged
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    serverTimestamp
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "import { initializeApp } from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-
-import {
-    getAuth,
-    GoogleAuthProvider,
-    signInWithPopup,
-    signOut,
-    onAuthStateChanged
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    serverTimestamp
-} from
-    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn\_U",
+    apiKey: "YOUR_FIREBASE_API_KEY",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
     messagingSenderId: "573112672263",
     appId: "1:573112672263:web:df128e854e3fcca7950aa2"
+};
 };
 
 const app = initializeApp(firebaseConfig);
