@@ -19,6 +19,11 @@ import {
 } from
 "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
+
+// ==============================
+// FIREBASE CONFIG
+// ==============================
+
 const firebaseConfig = {
     apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
@@ -28,11 +33,21 @@ const firebaseConfig = {
     appId: "1:573112672263:web:df128e854e3fcca7950aa2"
 };
 
+
+// ==============================
+// FIREBASE INITIALIZATION
+// ==============================
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const provider = new GoogleAuthProvider();
+
+
+// ==============================
+// UI ELEMENTS
+// ==============================
 
 const loginButton = document.getElementById("loginButton");
 const logoutButton = document.getElementById("logoutButton");
@@ -42,18 +57,41 @@ const chat = document.getElementById("chat");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 
+
+// ==============================
+// LOGIN
+// ==============================
+
 loginButton.addEventListener("click", async () => {
     try {
         await signInWithPopup(auth, provider);
     } catch (error) {
-        console.error(error);
-        addMessage("AI", "I couldn't sign you in. Check your Firebase settings.");
+        console.error("Login error:", error);
+
+        addMessage(
+            "AI",
+            "I couldn't sign you in. Check your Firebase settings."
+        );
     }
 });
 
+
+// ==============================
+// LOGOUT
+// ==============================
+
 logoutButton.addEventListener("click", async () => {
-    await signOut(auth);
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
 });
+
+
+// ==============================
+// AUTH STATE
+// ==============================
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -65,18 +103,26 @@ onAuthStateChanged(auth, async (user) => {
 
         clearChat();
 
+        await loadMemory();
+
         addMessage(
             "AI",
-            `Welcome ${user.displayName || ""}! 🧠\n\nYour personal notebook is connected.`
+            `Welcome ${user.displayName || ""}! 🧠\n\nI'm ready to learn. Teach me something by ending your message with 5158.`
         );
 
-        await loadMemory();
     } else {
         loginButton.classList.remove("hidden");
         userInfo.classList.add("hidden");
         userName.textContent = "";
+
+        clearChat();
     }
 });
+
+
+// ==============================
+// SEND MESSAGE
+// ==============================
 
 sendButton.addEventListener("click", sendMessage);
 
@@ -87,52 +133,118 @@ messageInput.addEventListener("keydown", (event) => {
     }
 });
 
+
 async function sendMessage() {
     const user = auth.currentUser;
 
     if (!user) {
-        addMessage("AI", "Please sign in with Google first.");
+        addMessage(
+            "AI",
+            "Please sign in with Google first."
+        );
         return;
     }
 
     const originalMessage = messageInput.value.trim();
 
-    if (!originalMessage) return;
+    if (!originalMessage) {
+        return;
+    }
 
+    // Clear input
     messageInput.value = "";
+
+    // Show user's message
     addMessage("USER", originalMessage);
 
+
+    // ==============================
+    // TEACHING MODE
+    // ==============================
+
+    /*
+     * Anything ending in 5158 is treated as something
+     * the user wants the AI to learn.
+     */
+
     if (originalMessage.endsWith("5158")) {
-        const knowledge = originalMessage.slice(0, -4).trim();
+        const knowledge =
+            originalMessage
+                .slice(0, -4)
+                .trim();
 
         if (!knowledge) {
-            addMessage("AI", "You used 5158, but there was nothing to learn.");
+            addMessage(
+                "AI",
+                "You used 5158, but there was nothing for me to learn."
+            );
             return;
         }
 
-        await saveMemory(user.uid, knowledge);
+        try {
+            await saveMemory(
+                user.uid,
+                knowledge
+            );
+
+            addMessage(
+                "AI",
+                "Got it. I've learned that. 🧠📚"
+            );
+
+        } catch (error) {
+            console.error("Save knowledge error:", error);
+
+            addMessage(
+                "AI",
+                "I understood what you wanted to teach me, but I couldn't save it. 😭"
+            );
+        }
+
+        return;
+    }
+
+
+    // ==============================
+    // LOAD TAUGHT KNOWLEDGE
+    // ==============================
+
+    let memories = [];
+
+    try {
+        memories =
+            await getAllMemories(user.uid);
+    } catch (error) {
+        console.error("Memory loading error:", error);
 
         addMessage(
             "AI",
-            "Got it. I've saved that to your personal notebook. 🧠📓"
+            "I couldn't access my learned knowledge right now. 😭"
         );
 
         return;
     }
 
-    const memories =
-        await findRelevantMemories(user.uid, originalMessage);
+
+    // ==============================
+    // ASK GEMINI
+    // ==============================
 
     try {
-        addMessage("AI", "Thinking... 🧠");
+        addMessage(
+            "AI",
+            "Thinking... 🧠"
+        );
 
         const response = await fetch(
             "https://5158-ai-backendpriv.vercel.app/api/chat",
             {
                 method: "POST",
+
                 headers: {
                     "Content-Type": "application/json"
                 },
+
                 body: JSON.stringify({
                     message: originalMessage,
                     memories: memories
@@ -143,18 +255,29 @@ async function sendMessage() {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Backend error:", data);
+            console.error(
+                "Backend error:",
+                data
+            );
+
             addMessage(
                 "AI",
                 "Sorry, I couldn't connect to my AI brain right now. 😭"
             );
+
             return;
         }
 
-        addMessage("AI", data.answer);
+        addMessage(
+            "AI",
+            data.answer
+        );
 
     } catch (error) {
-        console.error("Connection error:", error);
+        console.error(
+            "Connection error:",
+            error
+        );
 
         addMessage(
             "AI",
@@ -163,109 +286,117 @@ async function sendMessage() {
     }
 }
 
+
+// ==============================
+// SAVE KNOWLEDGE
+// ==============================
+
 async function saveMemory(userId, text) {
     const memoriesRef =
-        collection(db, "users", userId, "memories");
+        collection(
+            db,
+            "users",
+            userId,
+            "memories"
+        );
 
-    await addDoc(memoriesRef, {
-        text: text,
-        createdAt: serverTimestamp()
-    });
+    await addDoc(
+        memoriesRef,
+        {
+            text: text,
+            createdAt: serverTimestamp()
+        }
+    );
 }
+
+
+// ==============================
+// LOAD KNOWLEDGE
+// ==============================
 
 async function loadMemory() {
     const user = auth.currentUser;
 
-    if (!user) return;
-
-    const memoriesRef =
-        collection(db, "users", user.uid, "memories");
-
-    const snapshot = await getDocs(memoriesRef);
-
-    console.log(
-        "Loaded memories:",
-        snapshot.docs.map(doc => doc.data().text)
-    );
-}
-
-async function findRelevantMemories(userId, question) {
-    const memoriesRef =
-        collection(db, "users", userId, "memories");
-
-    const snapshot = await getDocs(memoriesRef);
-
-    const memories =
-        snapshot.docs.map(doc => doc.data().text);
-
-    const words =
-        normalise(question)
-            .split(/\s+/)
-            .filter(word => word.length > 2);
-
-    const scored = memories.map(memory => {
-        const memoryWords =
-            normalise(memory).split(/\s+/);
-
-        let score = 0;
-
-        for (const word of words) {
-            if (memoryWords.includes(word)) {
-                score++;
-            }
-        }
-
-        return {
-            text: memory,
-            score: score
-        };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored
-        .filter(item => item.score > 0)
-        .slice(0, 5)
-        .map(item => item.text);
-}
-
-function createBasicResponse(question, memories) {
-    if (memories.length === 0) {
-        return `I don't have anything in my notebook that seems relevant to that yet.
-
-You can teach me something by ending your message with 5158.`;
+    if (!user) {
+        return [];
     }
 
-    return `I found this in your notebook:
+    try {
+        const memories =
+            await getAllMemories(user.uid);
 
-${memories.map(x => "• " + x).join("\n")}
+        console.log(
+            "Loaded taught knowledge:",
+            memories
+        );
 
-I can retrieve this information, but I don't have a full language model connected yet. That's the next part we'll add.`;
+        return memories;
+
+    } catch (error) {
+        console.error(
+            "Could not load taught knowledge:",
+            error
+        );
+
+        return [];
+    }
 }
-function normalise(text) {
-    return text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, "");
+
+
+// ==============================
+// GET ALL TAUGHT KNOWLEDGE
+// ==============================
+
+async function getAllMemories(userId) {
+    const memoriesRef =
+        collection(
+            db,
+            "users",
+            userId,
+            "memories"
+        );
+
+    const snapshot =
+        await getDocs(memoriesRef);
+
+    return snapshot.docs
+        .map(doc => doc.data().text)
+        .filter(text => typeof text === "string" && text.trim() !== "");
 }
+
+
+// ==============================
+// ADD MESSAGE TO CHAT
+// ==============================
 
 function addMessage(sender, text) {
-    const wrapper = document.createElement("div");
+    const wrapper =
+        document.createElement("div");
 
     wrapper.className =
         sender === "USER"
             ? "message user"
             : "message ai";
 
-    const bubble = document.createElement("div");
+    const bubble =
+        document.createElement("div");
 
     bubble.className = "bubble";
+
     bubble.textContent = text;
 
     wrapper.appendChild(bubble);
+
     chat.appendChild(wrapper);
 
-    chat.scrollTop = chat.scrollHeight;
+    chat.scrollTop =
+        chat.scrollHeight;
 }
+
+
+// ==============================
+// CLEAR CHAT
+// ==============================
 
 function clearChat() {
     chat.innerHTML = "";
