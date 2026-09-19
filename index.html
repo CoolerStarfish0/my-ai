@@ -1,13 +1,14 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>5158 AI</title>
+
     <link rel="stylesheet" href="style.css">
 
-    <!-- Firebase -->
+    <!-- Firebase / App -->
     <script type="module" src="script.js"></script>
 </head>
 
@@ -16,43 +17,83 @@
     <div class="app">
 
         <header>
+
             <div>
                 <h1>5158 AI</h1>
-                <p>My AI • My Memory</p>
+                <p>My AI • My Knowledge</p>
             </div>
 
-            <button id="loginButton">Sign in with Google</button>
+            <button id="loginButton">
+                Sign in with Google
+            </button>
+
         </header>
+
 
         <main>
 
+            <!-- User information -->
+
             <div id="userInfo" class="user-info hidden">
+
                 <span id="userName"></span>
-                <button id="logoutButton">Log out</button>
+
+                <button id="logoutButton">
+                    Log out
+                </button>
+
             </div>
+
+
+            <!-- Chat -->
 
             <div id="chat" class="chat">
+
                 <div class="message ai">
+
                     <div class="bubble">
+
                         Hello! Sign in with Google to start.
+
                         <br><br>
-                        Anything you teach me ending in <b>5158</b> can be saved to your personal memory.
+
+                        I'm a learning AI. I can understand what you say,
+                        but my factual knowledge comes from what you teach me.
+
+                        <br><br>
+
+                        Teach me something by ending your message with
+                        <b>5158</b>.
+
                     </div>
+
                 </div>
+
             </div>
 
+
+            <!-- Message input -->
+
             <div class="input-area">
+
                 <textarea
                     id="messageInput"
                     placeholder="Talk to your AI..."
                     rows="2"
                 ></textarea>
 
-                <button id="sendButton">Send</button>
+                <button id="sendButton">
+                    Send
+                </button>
+
             </div>
 
+
+            <!-- Teaching hint -->
+
             <p class="hint">
-                Example: "My favorite game is Geometry Dash 5158"
+                Teach me:
+                "My favorite game is Geometry Dash 5158"
             </p>
 
         </main>
@@ -61,4 +102,3 @@
 
 </body>
 </html>
-```
