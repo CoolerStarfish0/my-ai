@@ -102,7 +102,6 @@ async function sendMessage() {
     messageInput.value = "";
     addMessage("USER", originalMessage);
 
-    // If the user ends their message with 5158, save it as a memory
     if (originalMessage.endsWith("5158")) {
         const knowledge = originalMessage.slice(0, -4).trim();
 
@@ -118,36 +117,29 @@ async function sendMessage() {
             "Got it. I've saved that to your personal notebook. 🧠📓"
         );
 
-    
-right before the comment, which **also cannot be in `script.js`**.
+        return;
+    }
 
-### Replace lines 121–144 with this:
+    const memories =
+        await findRelevantMemories(user.uid, originalMessage);
 
-```javascript
-return;
-}
+    try {
+        addMessage("AI", "Thinking... 🧠");
 
-// Find memories relevant to the user's message
-const memories =
-    await findRelevantMemories(user.uid, originalMessage);
+        const response = await fetch(
+            "https://5158-ai-backendpriv.vercel.app/api/chat",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: originalMessage,
+                    memories: memories
+                })
+            }
+        );
 
-// Send the message + memories to the Vercel backend
-try {
-    addMessage("AI", "Thinking... 🧠");
-
-const response = await fetch(
-    "https://5158-ai-backendpriv.vercel.app/api/chat",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: originalMessage,
-                memories: memories
-            })
-        }
-    );
         const data = await response.json();
 
         if (!response.ok) {
