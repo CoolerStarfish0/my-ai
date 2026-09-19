@@ -135,8 +135,8 @@ const memories =
 try {
     addMessage("AI", "Thinking... 🧠");
 
-    const response = await fetch(
-        "https://5158-ai-backendpriv.vercel.app/api/chat",
+const response = await fetch(
+    "https://5158-ai-backendpriv.vercel.app/api/chat",
         {
             method: "POST",
             headers: {
