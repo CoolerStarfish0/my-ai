@@ -20,7 +20,133 @@ import {
     "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
+    apiKey: "import { initializeApp } from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    serverTimestamp
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn\_U",
+    authDomainimport { initializeApp } from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    serverTimestamp
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "import { initializeApp } from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    serverTimestamp
+} from
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn\_U",
+    authDomain: "ai-ef2a5.firebaseapp.com",
+    projectId: "ai-ef2a5",
+    storageBucket: "ai-ef2a5.firebasestorage.app",
+    messagingSenderId: "573112672263",
+    appId: "1:573112672263:web:df128e854e3fcca7950aa2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const provider = new GoogleAuthProvider();
+
+const loginButton = document.getElementById("loginButton");
+const logoutButton = document.getElementById("logoutButton");
+const userInfo = document.getElementById("userInfo");
+const userName = document.getElementById("userName");
+const chat = document.getElementById("chat");
+const messageInput = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");_",
+    authDomain: "ai-ef2a5.firebaseapp.com",
+    projectId: "ai-ef2a5",
+    storageBucket: "ai-ef2a5.firebasestorage.app",
+    messagingSenderId: "573112672263",
+    appId: "1:573112672263:web:df128e854e3fcca7950aa2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const provider = new GoogleAuthProvider();
+
+const loginButton = document.getElementById("loginButton");
+const logoutButton = document.getElementById("logoutButton");
+const userInfo = document.getElementById("userInfo");
+const userName = document.getElementById("userName");
+const chat = document.getElementById("chat");
+const messageInput = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");: "ai-ef2a5.firebaseapp.com",
+    projectId: "ai-ef2a5",
+    storageBucket: "ai-ef2a5.firebasestorage.app",
+    messagingSenderId: "573112672263",
+    appId: "1:573112672263:web:df128e854e3fcca7950aa2"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const provider = new GoogleAuthProvider();
+
+const loginButton = document.getElementById("loginButton");
+const logoutButton = document.getElementById("logoutButton");
+const userInfo = document.getElementById("userInfo");
+const userName = document.getElementById("userName");
+const chat = document.getElementById("chat");
+const messageInput = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
@@ -102,6 +228,7 @@ async function sendMessage() {
     messageInput.value = "";
     addMessage("USER", originalMessage);
 
+    // If the user ends their message with 5158, save it as a memory
     if (originalMessage.endsWith("5158")) {
         const knowledge = originalMessage.slice(0, -4).trim();
 
@@ -120,13 +247,49 @@ async function sendMessage() {
         return;
     }
 
+    // Find memories relevant to the user's message
     const memories =
         await findRelevantMemories(user.uid, originalMessage);
 
-    const response =
-        createBasicResponse(originalMessage, memories);
+    // Send the message + memories to the Vercel backend
+    try {
+        addMessage("AI", "Thinking... 🧠");
 
-    addMessage("AI", response);
+        const response = await fetch(
+            "https://5158-ai-backendpriv.vercel.app/api/chat",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: originalMessage,
+                    memories: memories
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("Backend error:", data);
+            addMessage(
+                "AI",
+                "Sorry, I couldn't connect to my AI brain right now. 😭"
+            );
+            return;
+        }
+
+        addMessage("AI", data.answer);
+
+    } catch (error) {
+        console.error("Connection error:", error);
+
+        addMessage(
+            "AI",
+            "I couldn't reach the AI server. Check the backend connection. 😭"
+        );
+    }
 }
 
 async function saveMemory(userId, text) {
