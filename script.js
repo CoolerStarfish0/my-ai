@@ -130,7 +130,7 @@ async function sendMessage() {
         addMessage("AI", "Thinking... 🧠");
 
         const response = await fetch(
-            "https://5158-ai-backendpriv-hfbkf8chb-cooler-starfish0.vercel.app/api/chat",
+            ""https://5158-ai-backendpriv-hfbkf8chb-cooler-starfish0.vercel.app/api/chat",
             {
                 method: "POST",
                 headers: {
