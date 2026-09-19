@@ -20,7 +20,7 @@ import {
 "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
+    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
@@ -40,32 +40,7 @@ const userInfo = document.getElementById("userInfo");
 const userName = document.getElementById("userName");
 const chat = document.getElementById("chat");
 const messageInput = document.getElementById("messageInput");
-const sendButton = document.getElementById("sendButton");_",
-    authDomain: "ai-ef2a5.firebaseapp.com",
-    projectId: "ai-ef2a5",
-    storageBucket: "ai-ef2a5.firebasestorage.app",
-    messagingSenderId: "573112672263",
-    appId: "1:573112672263:web:df128e854e3fcca7950aa2"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const provider = new GoogleAuthProvider();
-
-const loginButton = document.getElementById("loginButton");
-const logoutButton = document.getElementById("logoutButton");
-const userInfo = document.getElementById("userInfo");
-const userName = document.getElementById("userName");
-const chat = document.getElementById("chat");
-const messageInput = document.getElementById("messageInput");
-const sendButton = document.getElementById("sendButton");: "ai-ef2a5.firebaseapp.com",
-    projectId: "ai-ef2a5",
-    storageBucket: "ai-ef2a5.firebasestorage.app",
-    messagingSenderId: "573112672263",
-    appId: "1:573112672263:web:df128e854e3fcca7950aa2"
-};
+const sendButton = document.getElementById("sendButton");
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
