@@ -19,7 +19,6 @@ import {
 } from
 "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-
 // ==============================
 // FIREBASE CONFIG
 // ==============================
@@ -33,7 +32,6 @@ const firebaseConfig = {
     appId: "1:573112672263:web:df128e854e3fcca7950aa2"
 };
 
-
 // ==============================
 // FIREBASE INITIALIZATION
 // ==============================
@@ -43,7 +41,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const provider = new GoogleAuthProvider();
-
 
 // ==============================
 // UI ELEMENTS
@@ -56,7 +53,6 @@ const userName = document.getElementById("userName");
 const chat = document.getElementById("chat");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
-
 
 // ==============================
 // LOGIN
@@ -75,7 +71,6 @@ loginButton.addEventListener("click", async () => {
     }
 });
 
-
 // ==============================
 // LOGOUT
 // ==============================
@@ -87,7 +82,6 @@ logoutButton.addEventListener("click", async () => {
         console.error("Logout error:", error);
     }
 });
-
 
 // ==============================
 // AUTH STATE
@@ -119,7 +113,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-
 // ==============================
 // SEND MESSAGE
 // ==============================
@@ -132,7 +125,6 @@ messageInput.addEventListener("keydown", (event) => {
         sendMessage();
     }
 });
-
 
 async function sendMessage() {
     const user = auth.currentUser;
@@ -156,7 +148,6 @@ async function sendMessage() {
 
     // Show user's message
     addMessage("USER", originalMessage);
-
 
     // ==============================
     // TEACHING MODE
@@ -204,7 +195,6 @@ async function sendMessage() {
         return;
     }
 
-
     // ==============================
     // LOAD TAUGHT KNOWLEDGE
     // ==============================
@@ -214,6 +204,12 @@ async function sendMessage() {
     try {
         memories =
             await getAllMemories(user.uid);
+
+        console.log(
+            "Loaded taught knowledge:",
+            memories
+        );
+
     } catch (error) {
         console.error("Memory loading error:", error);
 
@@ -225,9 +221,8 @@ async function sendMessage() {
         return;
     }
 
-
     // ==============================
-    // ASK GEMINI
+    // ASK 5158 AI BACKEND
     // ==============================
 
     try {
@@ -255,9 +250,10 @@ async function sendMessage() {
         const data = await response.json();
 
         if (!response.ok) {
+            // Show the COMPLETE backend error in the browser console.
             console.error(
-                "Backend error:",
-                data
+                "Backend error FULL:",
+                JSON.stringify(data, null, 2)
             );
 
             addMessage(
@@ -273,6 +269,11 @@ async function sendMessage() {
             data.answer
         );
 
+        console.log(
+            "5158 used model:",
+            data.model
+        );
+
     } catch (error) {
         console.error(
             "Connection error:",
@@ -285,7 +286,6 @@ async function sendMessage() {
         );
     }
 }
-
 
 // ==============================
 // SAVE KNOWLEDGE
@@ -308,7 +308,6 @@ async function saveMemory(userId, text) {
         }
     );
 }
-
 
 // ==============================
 // LOAD KNOWLEDGE
@@ -342,7 +341,6 @@ async function loadMemory() {
     }
 }
 
-
 // ==============================
 // GET ALL TAUGHT KNOWLEDGE
 // ==============================
@@ -361,9 +359,12 @@ async function getAllMemories(userId) {
 
     return snapshot.docs
         .map(doc => doc.data().text)
-        .filter(text => typeof text === "string" && text.trim() !== "");
+        .filter(
+            text =>
+                typeof text === "string" &&
+                text.trim() !== ""
+        );
 }
-
 
 // ==============================
 // ADD MESSAGE TO CHAT
@@ -392,7 +393,6 @@ function addMessage(sender, text) {
     chat.scrollTop =
         chat.scrollHeight;
 }
-
 
 // ==============================
 // CLEAR CHAT
