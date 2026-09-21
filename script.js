@@ -241,7 +241,10 @@ You can still understand normal language and have conversations naturally.
 
 USER TAUGHT KNOWLEDGE:
 ${memories.length > 0
-    ? memories.map((memory, index) => `${index + 1}. ${memory}`).join("\n")
+    ? memories.map(
+        (memory, index) =>
+            `${index + 1}. ${memory}`
+      ).join("\n")
     : "No knowledge has been taught yet."
 }
 `;
