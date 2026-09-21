@@ -1,5 +1,5 @@
 import { initializeApp } from
-"https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 
 import {
     getAuth,
@@ -8,7 +8,7 @@ import {
     signOut,
     onAuthStateChanged
 } from
-"https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 import {
     getFirestore,
@@ -17,14 +17,14 @@ import {
     getDocs,
     serverTimestamp
 } from
-"https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // ==============================
 // FIREBASE CONFIG
 // ==============================
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
+    apiKey: "YOUR_EXISTING_FIREBASE_API_KEY",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
@@ -103,7 +103,6 @@ onAuthStateChanged(auth, async (user) => {
             "AI",
             `Welcome ${user.displayName || ""}! 🧠\n\nI'm ready to learn. Teach me something by ending your message with 5158.`
         );
-
     } else {
         loginButton.classList.remove("hidden");
         userInfo.classList.add("hidden");
@@ -143,20 +142,13 @@ async function sendMessage() {
         return;
     }
 
-    // Clear input
     messageInput.value = "";
 
-    // Show user's message
     addMessage("USER", originalMessage);
 
     // ==============================
     // TEACHING MODE
     // ==============================
-
-    /*
-     * Anything ending in 5158 is treated as something
-     * the user wants the AI to learn.
-     */
 
     if (originalMessage.endsWith("5158")) {
         const knowledge =
@@ -182,9 +174,11 @@ async function sendMessage() {
                 "AI",
                 "Got it. I've learned that. 🧠📚"
             );
-
         } catch (error) {
-            console.error("Save knowledge error:", error);
+            console.error(
+                "Save knowledge error:",
+                error
+            );
 
             addMessage(
                 "AI",
@@ -209,9 +203,11 @@ async function sendMessage() {
             "Loaded taught knowledge:",
             memories
         );
-
     } catch (error) {
-        console.error("Memory loading error:", error);
+        console.error(
+            "Memory loading error:",
+            error
+        );
 
         addMessage(
             "AI",
@@ -222,7 +218,7 @@ async function sendMessage() {
     }
 
     // ==============================
-    // ASK 5158 AI BACKEND
+    // ASK 5158 LOCAL AI
     // ==============================
 
     try {
@@ -230,6 +226,25 @@ async function sendMessage() {
             "AI",
             "Thinking... 🧠"
         );
+
+        const systemPrompt = `
+You are 5158, a personal AI.
+
+Your factual knowledge must come ONLY from the user's taught knowledge below.
+
+If the taught knowledge does not contain enough information to answer a factual question, say:
+"I don't know yet."
+
+Do not invent facts or pretend you learned something that was not provided.
+
+You can still understand normal language and have conversations naturally.
+
+USER TAUGHT KNOWLEDGE:
+${memories.length > 0
+    ? memories.map((memory, index) => `${index + 1}. ${memory}`).join("\n")
+    : "No knowledge has been taught yet."
+}
+`;
 
         const response = await fetch(
             "https://5158-ai-backendpriv.vercel.app/api/chat",
@@ -241,8 +256,8 @@ async function sendMessage() {
                 },
 
                 body: JSON.stringify({
-                    message: originalMessage,
-                    memories: memories
+                    prompt: originalMessage,
+                    system: systemPrompt
                 })
             }
         );
@@ -250,7 +265,6 @@ async function sendMessage() {
         const data = await response.json();
 
         if (!response.ok) {
-            // Show the COMPLETE backend error in the browser console.
             console.error(
                 "Backend error FULL:",
                 JSON.stringify(data, null, 2)
@@ -266,12 +280,17 @@ async function sendMessage() {
 
         addMessage(
             "AI",
-            data.answer
+            data.answer || "I don't know yet."
         );
 
         console.log(
             "5158 used model:",
             data.model
+        );
+
+        console.log(
+            "AI source:",
+            data.source
         );
 
     } catch (error) {
@@ -330,7 +349,6 @@ async function loadMemory() {
         );
 
         return memories;
-
     } catch (error) {
         console.error(
             "Could not load taught knowledge:",
