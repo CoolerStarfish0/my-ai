@@ -205,10 +205,12 @@ onAuthStateChanged(
                 user.email ||
                 "there";
 
-            const rank =
-                getCurrentRank(user);
+ const rank =
+    getCurrentRank(user);
 
-            addMessage(
+playRankAnimation(rank.name);
+
+addMessage(
                 "AI",
                 `Welcome ${displayName}! 🧠\n\n` +
                 `I'm Axon, also known as 5158. ` +
@@ -1140,4 +1142,215 @@ function addMessage(
 
 function clearChat() {
     chat.innerHTML = "";
+}
+
+// ==========================================
+// AXON RANK ANIMATION
+// ==========================================
+
+const rankAnimation =
+    document.getElementById("rankAnimation");
+
+const axonMascot =
+    document.getElementById("axonMascot");
+
+const rankAnimationTitle =
+    document.getElementById("rankAnimationTitle");
+
+const rankAnimationRank =
+    document.getElementById("rankAnimationRank");
+
+
+function playRankAnimation(rankName) {
+
+    if (!rankAnimation || !axonMascot) {
+        return;
+    }
+
+    // Reset everything
+    rankAnimation.classList.remove(
+        "hidden",
+        "closing",
+        "ai-awakened",
+        "wings-open",
+        "flying-up",
+        "spinning",
+        "landed",
+        "show-text"
+    );
+
+    // Restart CSS animations
+    axonMascot.style.animation = "none";
+
+    void axonMascot.offsetWidth;
+
+    axonMascot.style.animation = "";
+
+    rankAnimationTitle.textContent = "AXON";
+    rankAnimationRank.textContent = rankName;
+
+    // --------------------------------------
+    // USER
+    // --------------------------------------
+
+    if (rankName === "USER") {
+
+        rankAnimationTitle.textContent =
+            "WELCOME";
+
+        rankAnimationRank.textContent =
+            "USER";
+
+        setTimeout(() => {
+            rankAnimation.classList.add(
+                "show-text"
+            );
+        }, 250);
+
+        setTimeout(() => {
+            closeRankAnimation();
+        }, 1500);
+
+        return;
+    }
+
+
+    // --------------------------------------
+    // ADMIN
+    // --------------------------------------
+
+    if (rankName === "ADMIN") {
+
+        rankAnimationTitle.textContent =
+            "AXON";
+
+        rankAnimationRank.textContent =
+            "ADMIN";
+
+        setTimeout(() => {
+            rankAnimation.classList.add(
+                "ai-awakened"
+            );
+        }, 350);
+
+        setTimeout(() => {
+            rankAnimation.classList.add(
+                "show-text"
+            );
+        }, 600);
+
+        setTimeout(() => {
+            closeRankAnimation();
+        }, 2200);
+
+        return;
+    }
+
+
+    // --------------------------------------
+    // OWNER
+    // --------------------------------------
+
+    rankAnimationTitle.textContent =
+        "AXON";
+
+    rankAnimationRank.textContent =
+        "OWNER";
+
+    // 1. Toucan idles
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "ai-awakened"
+        );
+
+    }, 700);
+
+
+    // 2. AI eyes activate
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "wings-open"
+        );
+
+    }, 1300);
+
+
+    // 3. Flies upward
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "flying-up"
+        );
+
+    }, 1900);
+
+
+    // 4. Hold + show OWNER
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "show-text"
+        );
+
+    }, 2700);
+
+
+    // 5. Backward 360° flight
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "spinning"
+        );
+
+    }, 3300);
+
+
+    // 6. Landing
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "landed"
+        );
+
+    }, 5100);
+
+
+    // 7. Finish
+    setTimeout(() => {
+
+        closeRankAnimation();
+
+    }, 6500);
+}
+
+
+function closeRankAnimation() {
+
+    if (!rankAnimation) {
+        return;
+    }
+
+    rankAnimation.classList.add(
+        "closing"
+    );
+
+    setTimeout(() => {
+
+        rankAnimation.classList.add(
+            "hidden"
+        );
+
+        rankAnimation.classList.remove(
+            "closing",
+            "ai-awakened",
+            "wings-open",
+            "flying-up",
+            "spinning",
+            "landed",
+            "show-text"
+        );
+
+    }, 500);
 }
