@@ -8,11 +8,134 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- Firebase / App -->
     <script type="module" src="script.js"></script>
 </head>
 
 <body>
+
+    <!-- ==========================================
+         AXON RANK ANIMATION
+         ========================================== -->
+
+    <div id="rankAnimation" class="rank-animation hidden">
+
+        <div class="rank-glow"></div>
+
+        <div id="axonMascot" class="axon-mascot">
+
+            <!-- Original SVG toucan -->
+            <svg
+                class="toucan"
+                viewBox="0 0 300 300"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="Axon mascot"
+            >
+
+                <!-- Tail -->
+                <path
+                    class="toucan-tail"
+                    d="M105 210 L55 270 L110 240 L135 275 L145 210"
+                />
+
+                <!-- Body -->
+                <ellipse
+                    class="toucan-body"
+                    cx="145"
+                    cy="170"
+                    rx="67"
+                    ry="82"
+                />
+
+                <!-- Wing -->
+                <path
+                    class="toucan-wing"
+                    d="M115 145
+                       C70 160 65 215 105 235
+                       C130 247 153 220 153 190
+                       C153 170 140 152 115 145Z"
+                />
+
+                <!-- Head -->
+                <circle
+                    class="toucan-head"
+                    cx="145"
+                    cy="95"
+                    r="58"
+                />
+
+                <!-- Beak -->
+                <path
+                    class="toucan-beak"
+                    d="M174 80
+                       C230 55 278 72 270 102
+                       C263 128 214 133 169 112
+                       C160 106 160 88 174 80Z"
+                />
+
+                <!-- Beak detail -->
+                <path
+                    class="beak-detail"
+                    d="M178 104
+                       C215 112 250 106 270 91"
+                />
+
+                <!-- Normal eyes -->
+                <circle
+                    class="toucan-eye left-eye"
+                    cx="126"
+                    cy="83"
+                    r="8"
+                />
+
+                <circle
+                    class="toucan-eye right-eye"
+                    cx="165"
+                    cy="83"
+                    r="8"
+                />
+
+                <!-- AI eyes -->
+                <g class="ai-eyes">
+                    <path
+                        d="M116 83 L126 73 L136 83 L126 93 Z"
+                    />
+
+                    <path
+                        d="M155 83 L165 73 L175 83 L165 93 Z"
+                    />
+                </g>
+
+                <!-- Feet -->
+                <path
+                    class="toucan-foot"
+                    d="M120 238 L110 252 M120 238 L128 253"
+                />
+
+                <path
+                    class="toucan-foot"
+                    d="M166 238 L158 253 M166 238 L176 251"
+                />
+
+            </svg>
+
+        </div>
+
+        <div class="rank-animation-text">
+            <div id="rankAnimationTitle">
+                AXON
+            </div>
+
+            <div id="rankAnimationRank">
+                OWNER
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         MAIN APP
+         ========================================== -->
 
     <div class="app">
 
