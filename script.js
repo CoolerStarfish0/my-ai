@@ -42,7 +42,7 @@ const firebaseConfig = {
 // owner-only operations.
 //
 
-const OWNER_UID = "YOUR_FIREBASE_OWNER_UID";
+const OWNER_UID = "aa6pyqU8TsdWsrKsIdGmhlN2ycm1";
 
 // ==============================
 // RANK CONFIG
