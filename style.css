@@ -35,12 +35,19 @@ header p {
     color: #999;
 }
 
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 button {
     border: none;
     border-radius: 10px;
     padding: 11px 16px;
     cursor: pointer;
     font-weight: bold;
+
     transition:
         opacity 0.15s ease,
         transform 0.1s ease;
@@ -59,6 +66,11 @@ button:active {
     color: black;
 }
 
+#guestButton {
+    background: #292933;
+    color: white;
+}
+
 #logoutButton {
     background: #292933;
     color: white;
@@ -69,8 +81,10 @@ button:active {
     justify-content: space-between;
     align-items: center;
     gap: 15px;
+
     margin: 15px 0;
     padding: 10px 14px;
+
     background: #17171f;
     border-radius: 10px;
 }
@@ -82,8 +96,11 @@ button:active {
 .chat {
     height: 60vh;
     min-height: 400px;
+
     overflow-y: auto;
+
     padding: 20px 0;
+
     scroll-behavior: smooth;
 }
 
@@ -98,10 +115,15 @@ button:active {
 
 .bubble {
     max-width: 75%;
+
     padding: 13px 16px;
+
     border-radius: 16px;
+
     line-height: 1.5;
+
     white-space: pre-wrap;
+
     overflow-wrap: anywhere;
 }
 
@@ -120,14 +142,22 @@ button:active {
 
 textarea {
     flex: 1;
+
     resize: none;
+
     border: 1px solid #30303b;
+
     background: #17171f;
     color: white;
+
     border-radius: 12px;
+
     padding: 14px;
+
     font-size: 16px;
+
     outline: none;
+
     font-family: Arial, sans-serif;
 }
 
@@ -138,13 +168,17 @@ textarea:focus {
 #sendButton {
     background: white;
     color: black;
+
     min-width: 80px;
 }
 
 .hint {
     text-align: center;
+
     color: #777;
+
     font-size: 13px;
+
     margin-top: 12px;
 }
 
@@ -155,12 +189,16 @@ textarea:focus {
 
 .rank-animation {
     position: fixed;
+
     inset: 0;
+
     z-index: 9999;
 
     display: flex;
+
     align-items: center;
     justify-content: center;
+
     flex-direction: column;
 
     background:
@@ -188,9 +226,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Glow
-   ------------------------------------------ */
+/* Glow */
 
 .rank-glow {
     position: absolute;
@@ -200,7 +236,13 @@ textarea:focus {
 
     border-radius: 50%;
 
-    background: rgba(255, 255, 255, 0.08);
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
 
     filter: blur(40px);
 
@@ -214,9 +256,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Mascot
-   ------------------------------------------ */
+/* Mascot */
 
 .axon-mascot {
     position: relative;
@@ -232,7 +272,8 @@ textarea:focus {
         scale(1);
 
     transition:
-        transform 0.8s cubic-bezier(
+        transform 0.8s
+        cubic-bezier(
             0.2,
             0.8,
             0.2,
@@ -248,32 +289,38 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Toucan artwork
-   ------------------------------------------ */
+/* Toucan artwork */
 
 .toucan-body {
     fill: #15151c;
+
     stroke: #ffffff;
+
     stroke-width: 3;
 }
 
 .toucan-head {
     fill: #181820;
+
     stroke: #ffffff;
+
     stroke-width: 3;
 }
 
 .toucan-wing {
     fill: #30303d;
+
     stroke: #ffffff;
+
     stroke-width: 3;
 
     transform-box: fill-box;
+
     transform-origin: right center;
 
     transition:
-        transform 0.8s cubic-bezier(
+        transform 0.8s
+        cubic-bezier(
             0.2,
             0.8,
             0.2,
@@ -283,20 +330,27 @@ textarea:focus {
 
 .toucan-beak {
     fill: #8fa8ff;
+
     stroke: white;
+
     stroke-width: 3;
 }
 
 .beak-detail {
     fill: none;
+
     stroke: #181820;
+
     stroke-width: 4;
+
     stroke-linecap: round;
 }
 
 .toucan-tail {
     fill: #30303d;
+
     stroke: white;
+
     stroke-width: 3;
 }
 
@@ -315,7 +369,13 @@ textarea:focus {
 
     filter:
         drop-shadow(
-            0 0 8px rgba(255, 255, 255, 0.9)
+            0 0 8px
+            rgba(
+                255,
+                255,
+                255,
+                0.9
+            )
         );
 
     transition:
@@ -324,15 +384,16 @@ textarea:focus {
 
 .toucan-foot {
     fill: none;
+
     stroke: white;
+
     stroke-width: 4;
+
     stroke-linecap: round;
 }
 
 
-/* ------------------------------------------
-   Animation states
-   ------------------------------------------ */
+/* Animation states */
 
 .rank-animation.ai-awakened
 .toucan-eye {
@@ -347,13 +408,12 @@ textarea:focus {
 .rank-animation.ai-awakened
 .rank-glow {
     opacity: 1;
+
     transform: scale(1.4);
 }
 
 
-/* ------------------------------------------
-   Wing opening
-   ------------------------------------------ */
+/* Wing */
 
 .rank-animation.wings-open
 .toucan-wing {
@@ -364,9 +424,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Flying upward
-   ------------------------------------------ */
+/* Flying */
 
 .rank-animation.flying-up
 .axon-mascot {
@@ -376,9 +434,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   360° backward flight
-   ------------------------------------------ */
+/* Spin */
 
 .rank-animation.spinning
 .axon-mascot {
@@ -438,9 +494,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Landing
-   ------------------------------------------ */
+/* Landing */
 
 .rank-animation.landed
 .axon-mascot {
@@ -461,13 +515,19 @@ textarea:focus {
     45% {
         transform:
             translateY(8px)
-            scale(1.08, 0.94);
+            scale(
+                1.08,
+                0.94
+            );
     }
 
     75% {
         transform:
             translateY(-4px)
-            scale(0.98, 1.02);
+            scale(
+                0.98,
+                1.02
+            );
     }
 
     100% {
@@ -478,9 +538,7 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Text
-   ------------------------------------------ */
+/* Text */
 
 .rank-animation-text {
     position: relative;
@@ -492,7 +550,9 @@ textarea:focus {
     text-align: center;
 
     opacity: 0;
-    transform: translateY(15px);
+
+    transform:
+        translateY(15px);
 
     transition:
         opacity 0.5s ease,
@@ -502,12 +562,16 @@ textarea:focus {
 .rank-animation.show-text
 .rank-animation-text {
     opacity: 1;
-    transform: translateY(0);
+
+    transform:
+        translateY(0);
 }
 
 #rankAnimationTitle {
     font-size: 28px;
+
     font-weight: 800;
+
     letter-spacing: 5px;
 }
 
@@ -515,6 +579,7 @@ textarea:focus {
     margin-top: 6px;
 
     font-size: 13px;
+
     font-weight: bold;
 
     letter-spacing: 4px;
@@ -523,11 +588,17 @@ textarea:focus {
 }
 
 
-/* ------------------------------------------
-   Mobile
-   ------------------------------------------ */
+/* Mobile */
 
 @media (max-width: 600px) {
+
+    header {
+        align-items: flex-start;
+    }
+
+    .auth-buttons {
+        flex-direction: column;
+    }
 
     .axon-mascot {
         width: 180px;
