@@ -1121,7 +1121,8 @@ to the current user.
 
 USER MEMORIES:
 
-${userMemories}
+${memories.join("
+")}
 
 These memories belong to the USER.
 
