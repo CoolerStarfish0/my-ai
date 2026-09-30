@@ -27,6 +27,7 @@ import {
 
 const firebaseConfig = {
     // KEEP YOUR EXISTING FIREBASE CONFIG VALUES HERE.
+    // Restore your existing apiKey locally.
     apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
@@ -147,6 +148,7 @@ const workModeStopButton =
 
 let workModeEnabled = false;
 let workModeBusy = false;
+let workActionBusy = false;
 
 // ==========================================
 // CONVERSATION
@@ -166,6 +168,7 @@ const SESSION_ID_KEY =
     "axon_session_id_v1";
 
 function generateId(prefix) {
+
     return prefix + "_" + crypto.randomUUID();
 }
 
@@ -577,7 +580,6 @@ logoutButton.addEventListener(
 
         try {
 
-            // Always stop Work Mode before logout.
             if (workModeEnabled) {
                 await stopWorkMode();
             }
@@ -604,8 +606,6 @@ onAuthStateChanged(
 
         await trackVisitor(user);
 
-        // Work Mode must always start disabled
-        // after an auth-state transition.
         workModeEnabled = false;
         updateWorkModeUI();
 
@@ -727,7 +727,7 @@ function getCurrentRank(user) {
 }
 
 // ==========================================
-// WORK MODE
+// WORK MODE UI
 // ==========================================
 
 function updateWorkModeUI() {
@@ -780,6 +780,10 @@ function updateWorkModeUI() {
     }
 }
 
+// ==========================================
+// WORK MODE STATUS
+// ==========================================
+
 async function getWorkModeStatus() {
 
     try {
@@ -826,6 +830,10 @@ async function getWorkModeStatus() {
         return false;
     }
 }
+
+// ==========================================
+// START WORK MODE
+// ==========================================
 
 async function startWorkMode() {
 
@@ -927,6 +935,10 @@ async function startWorkMode() {
     }
 }
 
+// ==========================================
+// STOP WORK MODE
+// ==========================================
+
 async function stopWorkMode() {
 
     if (workModeBusy) {
@@ -1001,7 +1013,6 @@ async function stopWorkMode() {
 
     } finally {
 
-        // Local UI is immediately considered OFF.
         workModeEnabled =
             false;
 
@@ -1016,6 +1027,10 @@ async function stopWorkMode() {
         );
     }
 }
+
+// ==========================================
+// WORK MODE BUTTONS
+// ==========================================
 
 if (workModeStartButton) {
 
@@ -1034,6 +1049,435 @@ if (workModeStopButton) {
 }
 
 updateWorkModeUI();
+
+// ==========================================
+// WORK MODE COMPUTER ACTIONS
+// ==========================================
+
+async function getWorkToken() {
+
+    const user =
+        auth.currentUser;
+
+    if (!user) {
+        throw new Error(
+            "No authenticated user."
+        );
+    }
+
+    return await user.getIdToken();
+}
+
+async function workRequest(
+    endpoint,
+    method = "POST",
+    body = null
+) {
+
+    if (!workModeEnabled) {
+
+        throw new Error(
+            "Work Mode is disabled."
+        );
+    }
+
+    const token =
+        await getWorkToken();
+
+    const options = {
+        method,
+
+        headers: {
+            "Authorization":
+                `Bearer ${token}`
+        }
+    };
+
+    if (body !== null) {
+
+        options.headers[
+            "Content-Type"
+        ] = "application/json";
+
+        options.body =
+            JSON.stringify(body);
+    }
+
+    const response =
+        await fetch(
+            `${BACKEND_URL}${endpoint}`,
+            options
+        );
+
+    const data =
+        await response.json();
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.error ||
+            `Work action failed: ${response.status}`
+        );
+    }
+
+    return data;
+}
+
+async function workMouseMove(
+    x,
+    y
+) {
+
+    if (
+        !Number.isFinite(x) ||
+        !Number.isFinite(y)
+    ) {
+
+        throw new Error(
+            "Invalid mouse coordinates."
+        );
+    }
+
+    return await workRequest(
+        "/api/work/mouse/move",
+        "POST",
+        {
+            x,
+            y
+        }
+    );
+}
+
+async function workMouseClick(
+    button = "left"
+) {
+
+    return await workRequest(
+        "/api/work/mouse/click",
+        "POST",
+        {
+            button
+        }
+    );
+}
+
+async function workMouseDoubleClick() {
+
+    return await workRequest(
+        "/api/work/mouse/double-click",
+        "POST",
+        {}
+    );
+}
+
+async function workMouseScroll(
+    amount
+) {
+
+    if (!Number.isFinite(amount)) {
+
+        throw new Error(
+            "Invalid scroll amount."
+        );
+    }
+
+    return await workRequest(
+        "/api/work/mouse/scroll",
+        "POST",
+        {
+            amount
+        }
+    );
+}
+
+async function workKeyboardType(
+    text
+) {
+
+    return await workRequest(
+        "/api/work/keyboard/type",
+        "POST",
+        {
+            text: String(text || "")
+        }
+    );
+}
+
+async function workKeyboardKey(
+    key,
+    modifiers = []
+) {
+
+    return await workRequest(
+        "/api/work/keyboard/key",
+        "POST",
+        {
+            key: String(key),
+            modifiers:
+                Array.isArray(modifiers)
+                    ? modifiers
+                    : []
+        }
+    );
+}
+
+async function workGetScreenSize() {
+
+    return await workRequest(
+        "/api/work/screen-size",
+        "GET"
+    );
+}
+
+async function workVision(
+    prompt = ""
+) {
+
+    return await workRequest(
+        "/api/work/vision",
+        "POST",
+        {
+            prompt:
+                String(prompt || "")
+        }
+    );
+}
+
+// ==========================================
+// AXON ACTION INTERPRETER
+// ==========================================
+
+async function executeAxonAction(
+    action
+) {
+
+    if (!workModeEnabled) {
+
+        throw new Error(
+            "Work Mode is disabled."
+        );
+    }
+
+    if (
+        !action ||
+        typeof action !== "object"
+    ) {
+
+        throw new Error(
+            "Invalid Axon action."
+        );
+    }
+
+    switch (action.action) {
+
+        case "mouse_move":
+
+            return await workMouseMove(
+                Number(action.x),
+                Number(action.y)
+            );
+
+        case "mouse_click":
+
+            return await workMouseClick(
+                action.button ||
+                "left"
+            );
+
+        case "mouse_double_click":
+
+            return await workMouseDoubleClick();
+
+        case "mouse_scroll":
+
+            return await workMouseScroll(
+                Number(action.amount)
+            );
+
+        case "keyboard_type":
+
+            return await workKeyboardType(
+                String(
+                    action.text || ""
+                )
+            );
+
+        case "keyboard_key":
+
+            return await workKeyboardKey(
+                String(
+                    action.key
+                ),
+                Array.isArray(
+                    action.modifiers
+                )
+                    ? action.modifiers
+                    : []
+            );
+
+        case "screen_size":
+
+            return await workGetScreenSize();
+
+        case "vision":
+
+            return await workVision(
+                String(
+                    action.prompt || ""
+                )
+            );
+
+        default:
+
+            throw new Error(
+                `Unknown Axon action: ${action.action}`
+            );
+    }
+}
+
+// ==========================================
+// ACTION PARSER
+// ==========================================
+
+function extractAxonActions(
+    text
+) {
+
+    const markerStart =
+        "[[AXON_ACTIONS]]";
+
+    const markerEnd =
+        "[[/AXON_ACTIONS]]";
+
+    const start =
+        text.indexOf(
+            markerStart
+        );
+
+    const end =
+        text.indexOf(
+            markerEnd
+        );
+
+    if (
+        start === -1 ||
+        end === -1 ||
+        end <= start
+    ) {
+
+        return null;
+    }
+
+    const jsonText =
+        text
+            .slice(
+                start +
+                markerStart.length,
+                end
+            )
+            .trim();
+
+    try {
+
+        const parsed =
+            JSON.parse(
+                jsonText
+            );
+
+        if (
+            !Array.isArray(parsed)
+        ) {
+
+            return null;
+        }
+
+        return {
+
+            actions:
+                parsed,
+
+            visibleText:
+                (
+                    text.slice(
+                        0,
+                        start
+                    ) +
+                    text.slice(
+                        end +
+                        markerEnd.length
+                    )
+                ).trim()
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Failed to parse Axon actions:",
+            error
+        );
+
+        return null;
+    }
+}
+
+// ==========================================
+// EXECUTE ACTIONS
+// ==========================================
+
+async function executeAxonActions(
+    actions
+) {
+
+    if (
+        !Array.isArray(actions)
+    ) {
+
+        throw new Error(
+            "Invalid action list."
+        );
+    }
+
+    if (
+        actions.length > 20
+    ) {
+
+        throw new Error(
+            "Too many computer actions in one step."
+        );
+    }
+
+    const results = [];
+
+    for (
+        const action
+        of actions
+    ) {
+
+        if (!workModeEnabled) {
+
+            throw new Error(
+                "Work Mode was disabled."
+            );
+        }
+
+        const result =
+            await executeAxonAction(
+                action
+            );
+
+        results.push({
+
+            action,
+
+            success:
+                true,
+
+            result
+        });
+    }
+
+    return results;
+}
 
 // ==========================================
 // SEND MESSAGE
@@ -1060,116 +1504,14 @@ messageInput.addEventListener(
     }
 );
 
-async function sendMessage() {
+// ==========================================
+// BUILD SYSTEM PROMPT
+// ==========================================
 
-    const user =
-        auth.currentUser;
-
-    if (!user) {
-
-        addMessage(
-            "AI",
-            "Choose Google Login or Guest Mode first. 👋"
-        );
-
-        return;
-    }
-
-    const originalMessage =
-        messageInput.value.trim();
-
-    if (!originalMessage) {
-        return;
-    }
-
-    messageInput.value =
-        "";
-
-    addMessage(
-        "USER",
-        originalMessage
-    );
-
-    addConversationMessage(
-        "USER",
-        originalMessage
-    );
-
-    // ======================================
-    // AUTOMATIC MEMORY
-    // ======================================
-
-    let learnedThisMessage =
-        null;
-
-    if (
-        shouldLearnMessage(
-            originalMessage
-        )
-    ) {
-
-        const knowledge =
-            cleanMemoryText(
-                originalMessage
-            );
-
-        if (knowledge) {
-
-            try {
-
-                if (
-                    user.isAnonymous
-                ) {
-
-                    saveGuestMemory(
-                        knowledge
-                    );
-
-                } else {
-
-                    await saveMemory(
-                        user.uid,
-                        knowledge
-                    );
-                }
-
-                learnedThisMessage =
-                    knowledge;
-
-            } catch (error) {
-
-                console.error(
-                    "Memory save error:",
-                    error
-                );
-            }
-        }
-    }
-
-    // ======================================
-    // MEMORIES
-    // ======================================
-
-    let memories = [];
-
-    try {
-
-        memories =
-            await getAllMemoriesForCurrentUser(
-                user
-            );
-
-    } catch (error) {
-
-        console.error(
-            "Memory load error:",
-            error
-        );
-    }
-
-    // ======================================
-    // IDENTITY
-    // ======================================
+function buildSystemPrompt(
+    user,
+    memories
+) {
 
     const isOwner =
         !user.isAnonymous &&
@@ -1197,11 +1539,7 @@ async function sendMessage() {
     const recentConversation =
         buildConversationContext();
 
-    // ======================================
-    // SYSTEM PROMPT
-    // ======================================
-
-    const systemPrompt = `
+    return `
 
 # AXON — CORE SYSTEM
 
@@ -1469,6 +1807,124 @@ currently move the mouse, type, click, scroll, or otherwise
 control the computer.
 
 ==================================================
+15A. COMPUTER ACTION PROTOCOL
+==================================================
+
+When Work Mode is ENABLED, you may request computer actions by
+outputting EXACTLY this format:
+
+[[AXON_ACTIONS]]
+[
+  {
+    "action": "keyboard_key",
+    "key": "ENTER",
+    "modifiers": []
+  }
+]
+[[/AXON_ACTIONS]]
+
+The application will execute the requested actions and provide
+their results.
+
+Available actions:
+
+mouse_move:
+{
+  "action": "mouse_move",
+  "x": 500,
+  "y": 300
+}
+
+mouse_click:
+{
+  "action": "mouse_click",
+  "button": "left"
+}
+
+Valid buttons:
+
+left
+right
+middle
+
+mouse_double_click:
+{
+  "action": "mouse_double_click"
+}
+
+mouse_scroll:
+{
+  "action": "mouse_scroll",
+  "amount": -5
+}
+
+keyboard_type:
+{
+  "action": "keyboard_type",
+  "text": "hello world"
+}
+
+keyboard_key:
+{
+  "action": "keyboard_key",
+  "key": "ENTER",
+  "modifiers": []
+}
+
+Valid modifiers:
+
+shift
+control
+alt
+command
+
+screen_size:
+{
+  "action": "screen_size"
+}
+
+vision:
+{
+  "action": "vision",
+  "prompt": "Describe what is currently visible on the screen."
+}
+
+IMPORTANT:
+
+When you need to perform computer actions, output the action
+block instead of merely saying that you will perform the action.
+
+Do not claim an action succeeded until the application reports
+success.
+
+Use vision when you need to determine where something is on the
+screen.
+
+For example:
+
+[[AXON_ACTIONS]]
+[
+  {
+    "action": "vision",
+    "prompt": "Identify the relevant buttons, fields, links, and their approximate screen positions."
+  }
+]
+[[/AXON_ACTIONS]]
+
+Then use the returned observation to determine the next action.
+
+Do not invent screen coordinates.
+
+If the screen cannot be reliably understood, ask the user for
+help rather than blindly clicking.
+
+If a CAPTCHA, verification challenge, password prompt, payment
+confirmation, or other security-sensitive human verification
+appears, STOP and return control to the user.
+
+Never attempt to bypass security or verification systems.
+
+==================================================
 16. COMPUTER VISION
 ==================================================
 
@@ -1553,119 +2009,383 @@ Understand intent rather than matching isolated words.
 END OF AXON CORE SYSTEM
 ==================================================
 `;
+}
 
-    const fullPrompt = `
+// ==========================================
+// BACKEND CHAT REQUEST
+// ==========================================
 
-Use the system instructions, learned knowledge, and recent
-conversation.
+async function callAxonBackend(
+    user,
+    systemPrompt,
+    originalMessage,
+    isOwner
+) {
 
-The current user's latest message is:
+    const idToken =
+        await user.getIdToken();
 
-USER:
-${originalMessage}
+    const response =
+        await fetch(
+            `${BACKEND_URL}/api/chat`,
+            {
+                method: "POST",
 
-Respond naturally.
+                headers: {
 
-Remember:
+                    "Content-Type":
+                        "application/json",
 
-- USER and AXON are different identities.
-- User memories belong to USER.
-- Use recent conversation for context.
-- Use learned memories when relevant.
-- Do not claim to be the user's coder.
-`;
+                    "Authorization":
+                        `Bearer ${idToken}`
+                },
 
-    // ======================================
-    // CALL BACKEND
-    // ======================================
+                body: JSON.stringify({
 
-    try {
+                    prompt: originalMessage,
 
-        addMessage(
-            "AI",
-            "Thinking... 🧠"
+                    system: systemPrompt,
+
+                    adminAction:
+                        detectAdminMemoryRequest(
+                            originalMessage,
+                            isOwner
+                        ),
+
+                    targetUser:
+                        detectMemoryTarget(
+                            originalMessage,
+                            isOwner
+                        )
+                })
+            }
         );
 
-        const idToken =
-            await user.getIdToken();
+    const data =
+        await response.json();
 
-        const response =
-            await fetch(
-                `${BACKEND_URL}/api/chat`,
-                {
-                    method: "POST",
+    if (!response.ok) {
 
-                    headers: {
+        throw new Error(
+            data.error ||
+            "Backend request failed."
+        );
+    }
 
-                        "Content-Type":
-                            "application/json",
+    return data;
+}
 
-                        "Authorization":
-                            `Bearer ${idToken}`
-                    },
+// ==========================================
+// ACTION LOOP
+// ==========================================
 
-                    body: JSON.stringify({
+async function runAxonWorkLoop(
+    user,
+    systemPrompt,
+    originalMessage,
+    isOwner
+) {
 
-                        prompt:
-                            fullPrompt,
+    let currentPrompt =
+        originalMessage;
 
-                        system:
-                            systemPrompt,
+    const MAX_ACTION_ROUNDS = 8;
 
-                        adminAction:
-                            detectAdminMemoryRequest(
-                                originalMessage,
-                                isOwner
-                            ),
-
-                        targetUser:
-                            detectMemoryTarget(
-                                originalMessage,
-                                isOwner
-                            )
-                    })
-                }
-            );
+    for (
+        let round = 0;
+        round < MAX_ACTION_ROUNDS;
+        round++
+    ) {
 
         const data =
-            await response.json();
-
-        if (!response.ok) {
-
-            console.error(
-                "Backend error:",
-                data
+            await callAxonBackend(
+                user,
+                systemPrompt,
+                currentPrompt,
+                isOwner
             );
 
-            removeThinkingBubble();
-
-            addMessage(
-                "AI",
-                "Sorry, I couldn't connect to my AI brain right now. 😭"
-            );
-
-            return;
-        }
-
-        const answer =
+        const rawAnswer =
             typeof data.answer === "string" &&
             data.answer.trim()
                 ? data.answer.trim()
                 : "I don't know yet.";
 
-        removeThinkingBubble();
+        const actionData =
+            extractAxonActions(
+                rawAnswer
+            );
 
-        addConversationMessage(
-            "AXON",
-            answer
+        if (
+            !actionData ||
+            !workModeEnabled
+        ) {
+
+            return {
+                answer:
+                    actionData
+                        ? actionData.visibleText
+                        : rawAnswer,
+
+                actionPerformed:
+                    false
+            };
+        }
+
+        if (
+            actionData.visibleText
+        ) {
+
+            addConversationMessage(
+                "AXON",
+                actionData.visibleText
+            );
+
+            addMessage(
+                "AI",
+                actionData.visibleText
+            );
+        }
+
+        let results;
+
+        try {
+
+            results =
+                await executeAxonActions(
+                    actionData.actions
+                );
+
+        } catch (error) {
+
+            return {
+
+                answer:
+                    `⚠️ I stopped the computer action: ${error.message}`,
+
+                actionPerformed:
+                    true
+            };
+        }
+
+        console.log(
+            "Axon computer action results:",
+            results
         );
+
+        const resultText =
+            JSON.stringify(
+                results
+            );
+
+        currentPrompt = `
+
+The user originally asked:
+
+${originalMessage}
+
+You requested computer actions.
+
+The application executed them and returned these results:
+
+${resultText}
+
+Continue the task from the current state.
+
+If another computer action is required, output another
+[[AXON_ACTIONS]] block.
+
+If the task is complete, respond normally.
+
+Do not claim success unless the action results support it.
+
+If a security verification, CAPTCHA, password prompt, payment
+confirmation, or other human verification appears, stop and tell
+the user to take control.
+`;
+    }
+
+    return {
+
+        answer:
+            "I stopped because the computer task reached the maximum number of action steps.",
+
+        actionPerformed:
+            true
+    };
+}
+
+// ==========================================
+// SEND MESSAGE
+// ==========================================
+
+async function sendMessage() {
+
+    const user =
+        auth.currentUser;
+
+    if (!user) {
 
         addMessage(
             "AI",
-            answer
+            "Choose Google Login or Guest Mode first. 👋"
         );
 
-        if (learnedThisMessage) {
+        return;
+    }
+
+    if (workActionBusy) {
+        return;
+    }
+
+    const originalMessage =
+        messageInput.value.trim();
+
+    if (!originalMessage) {
+        return;
+    }
+
+    messageInput.value =
+        "";
+
+    addMessage(
+        "USER",
+        originalMessage
+    );
+
+    addConversationMessage(
+        "USER",
+        originalMessage
+    );
+
+    // ======================================
+    // AUTOMATIC MEMORY
+    // ======================================
+
+    let learnedThisMessage =
+        null;
+
+    if (
+        shouldLearnMessage(
+            originalMessage
+        )
+    ) {
+
+        const knowledge =
+            cleanMemoryText(
+                originalMessage
+            );
+
+        if (knowledge) {
+
+            try {
+
+                if (
+                    user.isAnonymous
+                ) {
+
+                    saveGuestMemory(
+                        knowledge
+                    );
+
+                } else {
+
+                    await saveMemory(
+                        user.uid,
+                        knowledge
+                    );
+                }
+
+                learnedThisMessage =
+                    knowledge;
+
+            } catch (error) {
+
+                console.error(
+                    "Memory save error:",
+                    error
+                );
+            }
+        }
+    }
+
+    // ======================================
+    // MEMORIES
+    // ======================================
+
+    let memories = [];
+
+    try {
+
+        memories =
+            await getAllMemoriesForCurrentUser(
+                user
+            );
+
+    } catch (error) {
+
+        console.error(
+            "Memory load error:",
+            error
+        );
+    }
+
+    // ======================================
+    // IDENTITY
+    // ======================================
+
+    const isOwner =
+        !user.isAnonymous &&
+        user.uid === OWNER_UID;
+
+    const systemPrompt =
+        buildSystemPrompt(
+            user,
+            memories
+        );
+
+    // ======================================
+    // THINKING
+    // ======================================
+
+    addMessage(
+        "AI",
+        "Thinking... 🧠"
+    );
+
+    workActionBusy = true;
+
+    try {
+
+        const result =
+            await runAxonWorkLoop(
+                user,
+                systemPrompt,
+                originalMessage,
+                isOwner
+            );
+
+        removeThinkingBubble();
+
+        if (
+            result.answer &&
+            result.answer.trim()
+        ) {
+
+            addConversationMessage(
+                "AXON",
+                result.answer
+            );
+
+            addMessage(
+                "AI",
+                result.answer
+            );
+        }
+
+        if (
+            learnedThisMessage
+        ) {
 
             addMessage(
                 "AI",
@@ -1686,6 +2406,11 @@ Remember:
             "AI",
             "I couldn't reach the AI server. Check the backend connection. 😭"
         );
+
+    } finally {
+
+        workActionBusy =
+            false;
     }
 }
 
@@ -1693,7 +2418,9 @@ Remember:
 // MEMORY DETECTION
 // ==========================================
 
-function shouldLearnMessage(message) {
+function shouldLearnMessage(
+    message
+) {
 
     const text =
         message.trim();
@@ -1772,7 +2499,9 @@ function shouldLearnMessage(message) {
 // CLEAN MEMORY
 // ==========================================
 
-function cleanMemoryText(message) {
+function cleanMemoryText(
+    message
+) {
 
     return message
         .trim()
