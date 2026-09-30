@@ -26,8 +26,7 @@ import {
 // ==========================================
 
 const firebaseConfig = {
-    // KEEP YOUR EXISTING FIREBASE CONFIG VALUES HERE.
-    // Restore your existing apiKey locally.
+    // RESTORE YOUR EXISTING FIREBASE API KEY HERE.
     apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
@@ -1786,7 +1785,8 @@ tool reports success.
 15. WORK MODE
 ==================================================
 
-Work Mode is separate from ordinary conversation.
+Work Mode is a REAL computer-control capability provided by the
+application.
 
 Current Work Mode state:
 
@@ -1796,22 +1796,37 @@ Never assume Work Mode is enabled.
 
 Never assume permission to control the computer.
 
-Only perform computer actions when Work Mode is enabled and the
-requested action is authorized.
+Only perform computer actions when Work Mode is enabled.
 
 When Work Mode is disabled, do not pretend to control the
 computer.
 
-If Work Mode is disabled, you must not claim that you can
-currently move the mouse, type, click, scroll, or otherwise
-control the computer.
+When Work Mode is ENABLED and the user asks you to interact with
+their computer, browser, mouse, keyboard, screen, or applications,
+YOU MUST USE THE COMPUTER ACTION PROTOCOL BELOW.
+
+IMPORTANT:
+
+Do NOT respond with statements such as:
+
+"I can't interact with your browser."
+
+"I can't control your computer."
+
+"My capabilities are limited to conversational interaction."
+
+"I don't have access to your computer."
+
+Those statements are WRONG when Work Mode is ENABLED.
+
+Instead, generate the appropriate AXON_ACTIONS block.
 
 ==================================================
 15A. COMPUTER ACTION PROTOCOL
 ==================================================
 
-When Work Mode is ENABLED, you may request computer actions by
-outputting EXACTLY this format:
+When Work Mode is ENABLED, computer actions MUST be requested
+using EXACTLY this format:
 
 [[AXON_ACTIONS]]
 [
@@ -1823,8 +1838,7 @@ outputting EXACTLY this format:
 ]
 [[/AXON_ACTIONS]]
 
-The application will execute the requested actions and provide
-their results.
+The application will execute the actions and return the results.
 
 Available actions:
 
@@ -1840,12 +1854,6 @@ mouse_click:
   "action": "mouse_click",
   "button": "left"
 }
-
-Valid buttons:
-
-left
-right
-middle
 
 mouse_double_click:
 {
@@ -1871,13 +1879,6 @@ keyboard_key:
   "modifiers": []
 }
 
-Valid modifiers:
-
-shift
-control
-alt
-command
-
 screen_size:
 {
   "action": "screen_size"
@@ -1889,40 +1890,125 @@ vision:
   "prompt": "Describe what is currently visible on the screen."
 }
 
-IMPORTANT:
+Valid mouse buttons:
 
-When you need to perform computer actions, output the action
-block instead of merely saying that you will perform the action.
+left
+right
+middle
 
-Do not claim an action succeeded until the application reports
-success.
+Valid keyboard modifiers:
 
-Use vision when you need to determine where something is on the
-screen.
+shift
+control
+alt
+command
 
-For example:
+==================================================
+15B. CRITICAL COMPUTER ACTION RULE
+==================================================
+
+If Work Mode is ENABLED and the user requests a computer task:
+
+1. DO NOT give a capability refusal.
+2. DO NOT merely explain how the user could do it themselves.
+3. DO NOT say you cannot control the computer.
+4. DO NOT claim the action was completed without executing it.
+5. OUTPUT A [[AXON_ACTIONS]] BLOCK.
+6. Use the available actions to perform the requested task.
+7. After the application returns the results, continue from the
+   new computer state.
+
+For example, if the user says:
+
+"Type hello axon in the search bar of a new tab."
+
+You should output:
+
+[[AXON_ACTIONS]]
+[
+  {
+    "action": "keyboard_key",
+    "key": "T",
+    "modifiers": ["control"]
+  },
+  {
+    "action": "keyboard_type",
+    "text": "hello axon"
+  }
+]
+[[/AXON_ACTIONS]]
+
+Do NOT respond:
+
+"I'm unable to perform actions in your browser."
+
+That response is forbidden when Work Mode is ENABLED.
+
+==================================================
+15C. COMPUTER ACTION REASONING
+==================================================
+
+Use vision when you need to identify something on the screen.
+
+Use screen_size when screen dimensions are needed.
+
+Do not invent coordinates.
+
+If you already know a keyboard shortcut can accomplish a task,
+prefer the keyboard action instead of unnecessary mouse movement.
+
+For tasks requiring a visible UI element, use vision first when
+necessary.
+
+Example:
 
 [[AXON_ACTIONS]]
 [
   {
     "action": "vision",
-    "prompt": "Identify the relevant buttons, fields, links, and their approximate screen positions."
+    "prompt": "Identify the relevant button, field, or UI element and give its approximate screen position."
   }
 ]
 [[/AXON_ACTIONS]]
 
-Then use the returned observation to determine the next action.
+After the application returns the observation, use it to decide
+the next action.
 
-Do not invent screen coordinates.
+==================================================
+15D. MULTI-STEP COMPUTER TASKS
+==================================================
 
-If the screen cannot be reliably understood, ask the user for
-help rather than blindly clicking.
+Computer tasks may require multiple action rounds.
+
+After receiving action results, continue the task.
+
+If another action is required, output another:
+
+[[AXON_ACTIONS]]
+[
+  ...
+]
+[[/AXON_ACTIONS]]
+
+If the task is complete, respond normally.
+
+Never claim success unless the returned action results support it.
+
+==================================================
+15E. SECURITY AND HUMAN VERIFICATION
+==================================================
 
 If a CAPTCHA, verification challenge, password prompt, payment
 confirmation, or other security-sensitive human verification
-appears, STOP and return control to the user.
+appears:
 
-Never attempt to bypass security or verification systems.
+STOP.
+
+Do not attempt to bypass it.
+
+Do not solve or circumvent security verification.
+
+Return control to the user.
 
 ==================================================
 16. COMPUTER VISION
@@ -1998,6 +2084,10 @@ Before answering, determine:
 6. Does answering require a tool?
 7. Is the requested action authorized?
 8. What is the simplest useful response?
+
+If Work Mode is ENABLED and the request is a computer-control
+task, the computer action protocol takes priority over a normal
+conversational response.
 
 Do not mention information merely because it exists.
 
@@ -2097,6 +2187,49 @@ async function runAxonWorkLoop(
         round++
     ) {
 
+        /*
+         * When Work Mode is enabled, explicitly reinforce the
+         * computer-control requirement on every round.
+         *
+         * This is especially important for Qwen because it may
+         * otherwise fall back to a generic capability refusal.
+         */
+
+        if (workModeEnabled) {
+
+            currentPrompt = `
+WORK MODE IS CURRENTLY ENABLED.
+
+You have authorized computer-control actions.
+
+If the user's request requires interacting with the computer,
+browser, mouse, keyboard, screen, or an application:
+
+YOU MUST OUTPUT A [[AXON_ACTIONS]] BLOCK.
+
+DO NOT SAY THAT YOU CANNOT CONTROL THE COMPUTER.
+
+DO NOT GIVE A NORMAL CAPABILITY REFUSAL.
+
+DO NOT CLAIM THE ACTION IS COMPLETE WITHOUT EXECUTING IT.
+
+Use the available action types from the system instructions.
+
+USER REQUEST:
+
+${originalMessage}
+
+${
+    round > 0
+        ? `
+This is a continuation after previous computer actions.
+Continue from the current state using the returned action results.
+`
+        : ""
+}
+`;
+        }
+
         const data =
             await callAxonBackend(
                 user,
@@ -2110,6 +2243,11 @@ async function runAxonWorkLoop(
             data.answer.trim()
                 ? data.answer.trim()
                 : "I don't know yet.";
+
+        console.log(
+            "Axon raw answer:",
+            rawAnswer
+        );
 
         const actionData =
             extractAxonActions(
@@ -2190,10 +2328,16 @@ The application executed them and returned these results:
 
 ${resultText}
 
-Continue the task from the current state.
+Continue the task from the current computer state.
 
-If another computer action is required, output another
+IMPORTANT:
+
+If another computer action is required, you MUST output another
 [[AXON_ACTIONS]] block.
+
+Do NOT say that you cannot control the computer.
+
+Do NOT give a generic capability refusal.
 
 If the task is complete, respond normally.
 
