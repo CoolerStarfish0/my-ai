@@ -39,8 +39,7 @@ const firebaseConfig = {
 // OWNER
 // ==========================================
 
-// KEEP YOUR EXISTING OWNER UID HERE.
-const OWNER_UID = "YOUR_EXISTING_OWNER_UID";
+const OWNER_UID = "aa6pyqU8TsdWsrKsIdGmhlN2ycm1";
 
 // ==========================================
 // AXON
@@ -57,6 +56,13 @@ const AXON_CONFIG = {
     frontend: "GitHub Pages",
     gpu: "RTX 4070 Super 12GB"
 };
+
+// ==========================================
+// BACKEND
+// ==========================================
+
+const BACKEND_URL =
+    "https://5158-ai-backendpriv.vercel.app";
 
 // ==========================================
 // RANKS
@@ -92,14 +98,55 @@ const provider = new GoogleAuthProvider();
 // UI
 // ==========================================
 
-const loginButton = document.getElementById("loginButton");
-const guestButton = document.getElementById("guestButton");
-const logoutButton = document.getElementById("logoutButton");
-const userInfo = document.getElementById("userInfo");
-const userName = document.getElementById("userName");
-const chat = document.getElementById("chat");
-const messageInput = document.getElementById("messageInput");
-const sendButton = document.getElementById("sendButton");
+const loginButton =
+    document.getElementById("loginButton");
+
+const guestButton =
+    document.getElementById("guestButton");
+
+const logoutButton =
+    document.getElementById("logoutButton");
+
+const userInfo =
+    document.getElementById("userInfo");
+
+const userName =
+    document.getElementById("userName");
+
+const chat =
+    document.getElementById("chat");
+
+const messageInput =
+    document.getElementById("messageInput");
+
+const sendButton =
+    document.getElementById("sendButton");
+
+// ==========================================
+// WORK MODE UI
+// ==========================================
+
+const workModePanel =
+    document.getElementById("workModePanel");
+
+const workModeStatus =
+    document.getElementById("workModeStatus");
+
+const workModeIndicator =
+    document.getElementById("workModeIndicator");
+
+const workModeStartButton =
+    document.getElementById("workModeStartButton");
+
+const workModeStopButton =
+    document.getElementById("workModeStopButton");
+
+// ==========================================
+// WORK MODE STATE
+// ==========================================
+
+let workModeEnabled = false;
+let workModeBusy = false;
 
 // ==========================================
 // CONVERSATION
@@ -112,18 +159,27 @@ const MAX_CONTEXT_MESSAGES = 16;
 // VISITOR TRACKING
 // ==========================================
 
-const VISITOR_ID_KEY = "axon_visitor_id_v1";
-const SESSION_ID_KEY = "axon_session_id_v1";
+const VISITOR_ID_KEY =
+    "axon_visitor_id_v1";
+
+const SESSION_ID_KEY =
+    "axon_session_id_v1";
 
 function generateId(prefix) {
     return prefix + "_" + crypto.randomUUID();
 }
 
 function getVisitorId() {
-    let visitorId = localStorage.getItem(VISITOR_ID_KEY);
+
+    let visitorId =
+        localStorage.getItem(
+            VISITOR_ID_KEY
+        );
 
     if (!visitorId) {
-        visitorId = generateId("visitor");
+
+        visitorId =
+            generateId("visitor");
 
         localStorage.setItem(
             VISITOR_ID_KEY,
@@ -135,11 +191,16 @@ function getVisitorId() {
 }
 
 function getSessionId() {
+
     let sessionId =
-        sessionStorage.getItem(SESSION_ID_KEY);
+        sessionStorage.getItem(
+            SESSION_ID_KEY
+        );
 
     if (!sessionId) {
-        sessionId = generateId("session");
+
+        sessionId =
+            generateId("session");
 
         sessionStorage.setItem(
             SESSION_ID_KEY,
@@ -158,18 +219,22 @@ const sessionId = getSessionId();
 // ==========================================
 
 async function trackVisitor(user = null) {
+
     try {
-        const visitorRef = doc(
-            db,
-            "visitors",
-            visitorId
-        );
+
+        const visitorRef =
+            doc(
+                db,
+                "visitors",
+                visitorId
+            );
 
         const isGuest =
             !user ||
             user.isAnonymous;
 
         const visitorData = {
+
             visitorId,
             sessionId,
 
@@ -235,17 +300,19 @@ async function trackVisitor(user = null) {
             }
         );
 
-        const sessionRef = doc(
-            db,
-            "visitors",
-            visitorId,
-            "sessions",
-            sessionId
-        );
+        const sessionRef =
+            doc(
+                db,
+                "visitors",
+                visitorId,
+                "sessions",
+                sessionId
+            );
 
         await setDoc(
             sessionRef,
             {
+
                 visitorId,
                 sessionId,
 
@@ -284,6 +351,7 @@ async function trackVisitor(user = null) {
         );
 
     } catch (error) {
+
         console.error(
             "Visitor tracking error:",
             error
@@ -298,7 +366,9 @@ async function trackVisitor(user = null) {
 let lastActivityUpdate = 0;
 
 async function updateVisitorActivity() {
-    const now = Date.now();
+
+    const now =
+        Date.now();
 
     if (
         now -
@@ -308,18 +378,22 @@ async function updateVisitorActivity() {
         return;
     }
 
-    lastActivityUpdate = now;
+    lastActivityUpdate =
+        now;
 
     try {
-        const visitorRef = doc(
-            db,
-            "visitors",
-            visitorId
-        );
+
+        const visitorRef =
+            doc(
+                db,
+                "visitors",
+                visitorId
+            );
 
         await updateDoc(
             visitorRef,
             {
+
                 lastSeen:
                     serverTimestamp(),
 
@@ -328,23 +402,26 @@ async function updateVisitorActivity() {
             }
         );
 
-        const sessionRef = doc(
-            db,
-            "visitors",
-            visitorId,
-            "sessions",
-            sessionId
-        );
+        const sessionRef =
+            doc(
+                db,
+                "visitors",
+                visitorId,
+                "sessions",
+                sessionId
+            );
 
         await updateDoc(
             sessionRef,
             {
+
                 lastActivity:
                     serverTimestamp()
             }
         );
 
     } catch (error) {
+
         console.error(
             "Visitor activity error:",
             error
@@ -355,10 +432,12 @@ async function updateVisitorActivity() {
 document.addEventListener(
     "visibilitychange",
     () => {
+
         if (
             document.visibilityState ===
             "visible"
         ) {
+
             updateVisitorActivity();
         }
     }
@@ -367,6 +446,7 @@ document.addEventListener(
 window.addEventListener(
     "beforeunload",
     () => {
+
         updateVisitorActivity();
     }
 );
@@ -379,7 +459,9 @@ const GUEST_MEMORY_KEY =
     "axon_guest_memories_v1";
 
 function getGuestMemories() {
+
     try {
+
         const saved =
             localStorage.getItem(
                 GUEST_MEMORY_KEY
@@ -397,11 +479,13 @@ function getGuestMemories() {
             : [];
 
     } catch {
+
         return [];
     }
 }
 
 function saveGuestMemory(text) {
+
     const memories =
         getGuestMemories();
 
@@ -412,6 +496,7 @@ function saveGuestMemory(text) {
                 text.toLowerCase()
         )
     ) {
+
         return;
     }
 
@@ -430,13 +515,16 @@ function saveGuestMemory(text) {
 loginButton.addEventListener(
     "click",
     async () => {
+
         try {
+
             await signInWithPopup(
                 auth,
                 provider
             );
 
         } catch (error) {
+
             console.error(
                 "Google login error:",
                 error
@@ -457,12 +545,15 @@ loginButton.addEventListener(
 guestButton.addEventListener(
     "click",
     async () => {
+
         try {
+
             await signInAnonymously(
                 auth
             );
 
         } catch (error) {
+
             console.error(
                 "Guest login error:",
                 error
@@ -483,10 +574,18 @@ guestButton.addEventListener(
 logoutButton.addEventListener(
     "click",
     async () => {
+
         try {
+
+            // Always stop Work Mode before logout.
+            if (workModeEnabled) {
+                await stopWorkMode();
+            }
+
             await signOut(auth);
 
         } catch (error) {
+
             console.error(
                 "Logout error:",
                 error
@@ -504,6 +603,11 @@ onAuthStateChanged(
     async user => {
 
         await trackVisitor(user);
+
+        // Work Mode must always start disabled
+        // after an auth-state transition.
+        workModeEnabled = false;
+        updateWorkModeUI();
 
         if (user) {
 
@@ -539,7 +643,8 @@ onAuthStateChanged(
                     "Log out";
             }
 
-            conversationHistory.length = 0;
+            conversationHistory.length =
+                0;
 
             clearChat();
 
@@ -586,9 +691,11 @@ onAuthStateChanged(
                 "hidden"
             );
 
-            userName.textContent = "";
+            userName.textContent =
+                "";
 
-            conversationHistory.length = 0;
+            conversationHistory.length =
+                0;
 
             clearChat();
 
@@ -612,11 +719,321 @@ function getCurrentRank(user) {
         !user.isAnonymous &&
         user.uid === OWNER_UID
     ) {
+
         return RANKS.OWNER;
     }
 
     return RANKS.USER;
 }
+
+// ==========================================
+// WORK MODE
+// ==========================================
+
+function updateWorkModeUI() {
+
+    if (!workModeStatus) {
+        return;
+    }
+
+    if (workModeEnabled) {
+
+        workModeStatus.textContent =
+            "Work Mode is ON";
+
+        workModeIndicator.textContent =
+            "ON";
+
+        workModeStartButton.disabled =
+            true;
+
+        workModeStopButton.disabled =
+            false;
+
+        if (workModePanel) {
+
+            workModePanel.classList.add(
+                "work-mode-active"
+            );
+        }
+
+    } else {
+
+        workModeStatus.textContent =
+            "Work Mode is OFF";
+
+        workModeIndicator.textContent =
+            "OFF";
+
+        workModeStartButton.disabled =
+            false;
+
+        workModeStopButton.disabled =
+            true;
+
+        if (workModePanel) {
+
+            workModePanel.classList.remove(
+                "work-mode-active"
+            );
+        }
+    }
+}
+
+async function getWorkModeStatus() {
+
+    try {
+
+        const user =
+            auth.currentUser;
+
+        if (!user) {
+            return false;
+        }
+
+        const idToken =
+            await user.getIdToken();
+
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/work/status`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${idToken}`
+                    }
+                }
+            );
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const data =
+            await response.json();
+
+        return data.workMode === true;
+
+    } catch (error) {
+
+        console.error(
+            "Work Mode status error:",
+            error
+        );
+
+        return false;
+    }
+}
+
+async function startWorkMode() {
+
+    if (workModeBusy) {
+        return;
+    }
+
+    const user =
+        auth.currentUser;
+
+    if (!user) {
+
+        addMessage(
+            "AI",
+            "You need to sign in before enabling Work Mode."
+        );
+
+        return;
+    }
+
+    workModeBusy = true;
+
+    workModeStartButton.disabled =
+        true;
+
+    workModeStatus.textContent =
+        "Starting Work Mode...";
+
+    try {
+
+        const idToken =
+            await user.getIdToken();
+
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/work/start`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${idToken}`
+                    },
+
+                    body: JSON.stringify({
+                        source:
+                            "axon_web"
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to start Work Mode."
+            );
+        }
+
+        workModeEnabled =
+            true;
+
+        updateWorkModeUI();
+
+        addMessage(
+            "AI",
+            "🖥️ Work Mode enabled.\n\nAxon can now use authorized computer-control capabilities."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Work Mode start error:",
+            error
+        );
+
+        workModeEnabled =
+            false;
+
+        updateWorkModeUI();
+
+        addMessage(
+            "AI",
+            "I couldn't enable Work Mode. The Work Mode backend may not be connected yet."
+        );
+
+    } finally {
+
+        workModeBusy =
+            false;
+
+        updateWorkModeUI();
+    }
+}
+
+async function stopWorkMode() {
+
+    if (workModeBusy) {
+        return;
+    }
+
+    const user =
+        auth.currentUser;
+
+    if (!user) {
+
+        workModeEnabled =
+            false;
+
+        updateWorkModeUI();
+
+        return;
+    }
+
+    workModeBusy =
+        true;
+
+    workModeStopButton.disabled =
+        true;
+
+    workModeStatus.textContent =
+        "Stopping Work Mode...";
+
+    try {
+
+        const idToken =
+            await user.getIdToken();
+
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/work/stop`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${idToken}`
+                    },
+
+                    body: JSON.stringify({
+                        source:
+                            "axon_web"
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to stop Work Mode."
+            );
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Work Mode stop error:",
+            error
+        );
+
+    } finally {
+
+        // Local UI is immediately considered OFF.
+        workModeEnabled =
+            false;
+
+        updateWorkModeUI();
+
+        workModeBusy =
+            false;
+
+        addMessage(
+            "AI",
+            "🛑 Work Mode disabled."
+        );
+    }
+}
+
+if (workModeStartButton) {
+
+    workModeStartButton.addEventListener(
+        "click",
+        startWorkMode
+    );
+}
+
+if (workModeStopButton) {
+
+    workModeStopButton.addEventListener(
+        "click",
+        stopWorkMode
+    );
+}
+
+updateWorkModeUI();
 
 // ==========================================
 // SEND MESSAGE
@@ -635,6 +1052,7 @@ messageInput.addEventListener(
             event.key === "Enter" &&
             !event.shiftKey
         ) {
+
             event.preventDefault();
 
             sendMessage();
@@ -664,7 +1082,8 @@ async function sendMessage() {
         return;
     }
 
-    messageInput.value = "";
+    messageInput.value =
+        "";
 
     addMessage(
         "USER",
@@ -680,7 +1099,8 @@ async function sendMessage() {
     // AUTOMATIC MEMORY
     // ======================================
 
-    let learnedThisMessage = null;
+    let learnedThisMessage =
+        null;
 
     if (
         shouldLearnMessage(
@@ -1030,6 +1450,10 @@ tool reports success.
 
 Work Mode is separate from ordinary conversation.
 
+Current Work Mode state:
+
+${workModeEnabled ? "ENABLED" : "DISABLED"}
+
 Never assume Work Mode is enabled.
 
 Never assume permission to control the computer.
@@ -1039,6 +1463,10 @@ requested action is authorized.
 
 When Work Mode is disabled, do not pretend to control the
 computer.
+
+If Work Mode is disabled, you must not claim that you can
+currently move the mouse, type, click, scroll, or otherwise
+control the computer.
 
 ==================================================
 16. COMPUTER VISION
@@ -1163,11 +1591,12 @@ Remember:
 
         const response =
             await fetch(
-                "https://5158-ai-backendpriv.vercel.app/api/chat",
+                `${BACKEND_URL}/api/chat`,
                 {
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json",
 
@@ -1283,6 +1712,7 @@ function shouldLearnMessage(message) {
     }
 
     const sensitivePatterns = [
+
         /password/i,
         /api[_ -]?key/i,
         /secret/i,
@@ -1301,6 +1731,7 @@ function shouldLearnMessage(message) {
     }
 
     const patterns = [
+
         /\bi like\b/i,
         /\bi love\b/i,
         /\bi hate\b/i,
@@ -1401,6 +1832,7 @@ async function saveMemory(
     await addDoc(
         memoriesRef,
         {
+
             text,
 
             createdAt:
@@ -1442,6 +1874,7 @@ async function getAllMemoriesForCurrentUser(
 ) {
 
     if (user.isAnonymous) {
+
         return getGuestMemories();
     }
 
@@ -1481,6 +1914,7 @@ function detectAdminMemoryRequest(
         message.toLowerCase();
 
     const memoryWords = [
+
         "memory",
         "memories",
         "saved",
@@ -1489,6 +1923,7 @@ function detectAdminMemoryRequest(
     ];
 
     const userWords = [
+
         "other users",
         "all users",
         "another user",
@@ -1528,14 +1963,21 @@ function detectMemoryTarget(
     if (emailMatch) {
 
         return {
+
             type: "email",
-            value: emailMatch[0]
+
+            value:
+                emailMatch[0]
         };
     }
 
     return {
-        type: "natural_language",
-        value: message
+
+        type:
+            "natural_language",
+
+        value:
+            message
     };
 }
 
@@ -1549,6 +1991,7 @@ function addConversationMessage(
 ) {
 
     conversationHistory.push({
+
         role,
         content
     });
@@ -1641,7 +2084,9 @@ function removeThinkingBubble() {
 }
 
 function clearChat() {
-    chat.innerHTML = "";
+
+    chat.innerHTML =
+        "";
 }
 
 // ==========================================
@@ -1716,16 +2161,20 @@ function playRankAnimation(
 
         setTimeout(
             () => {
+
                 rankAnimation.classList.add(
                     "show-text"
                 );
+
             },
             250
         );
 
         setTimeout(
             () => {
+
                 closeRankAnimation();
+
             },
             1500
         );
@@ -1742,25 +2191,31 @@ function playRankAnimation(
 
         setTimeout(
             () => {
+
                 rankAnimation.classList.add(
                     "ai-awakened"
                 );
+
             },
             350
         );
 
         setTimeout(
             () => {
+
                 rankAnimation.classList.add(
                     "show-text"
                 );
+
             },
             600
         );
 
         setTimeout(
             () => {
+
                 closeRankAnimation();
+
             },
             2200
         );
@@ -1768,68 +2223,80 @@ function playRankAnimation(
         return;
     }
 
-    // OWNER
-
     rankAnimationRank.textContent =
         "OWNER";
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "ai-awakened"
             );
+
         },
         700
     );
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "wings-open"
             );
+
         },
         1300
     );
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "flying-up"
             );
+
         },
         1900
     );
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "show-text"
             );
+
         },
         2700
     );
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "spinning"
             );
+
         },
         3300
     );
 
     setTimeout(
         () => {
+
             rankAnimation.classList.add(
                 "landed"
             );
+
         },
         5100
     );
 
     setTimeout(
         () => {
+
             closeRankAnimation();
+
         },
         6500
     );
