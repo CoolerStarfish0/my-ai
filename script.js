@@ -26,7 +26,6 @@ import {
 // ==========================================
 
 const firebaseConfig = {
-    // RESTORE YOUR EXISTING FIREBASE API KEY HERE.
     apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
@@ -167,7 +166,6 @@ const SESSION_ID_KEY =
     "axon_session_id_v1";
 
 function generateId(prefix) {
-
     return prefix + "_" + crypto.randomUUID();
 }
 
@@ -1420,6 +1418,26 @@ function extractAxonActions(
 }
 
 // ==========================================
+// ACTION SIGNATURE
+// ==========================================
+
+function getActionSignature(
+    actions
+) {
+
+    try {
+
+        return JSON.stringify(
+            actions
+        );
+
+    } catch {
+
+        return String(actions);
+    }
+}
+
+// ==========================================
 // EXECUTE ACTIONS
 // ==========================================
 
@@ -1801,32 +1819,39 @@ Only perform computer actions when Work Mode is enabled.
 When Work Mode is disabled, do not pretend to control the
 computer.
 
+==================================================
+15A. CRITICAL WORK MODE RULE
+==================================================
+
 When Work Mode is ENABLED and the user asks you to interact with
-their computer, browser, mouse, keyboard, screen, or applications,
-YOU MUST USE THE COMPUTER ACTION PROTOCOL BELOW.
+the computer, browser, mouse, keyboard, screen, or applications:
 
-IMPORTANT:
+YOU MUST USE THE AXON ACTION PROTOCOL.
 
-Do NOT respond with statements such as:
+You MUST output a valid [[AXON_ACTIONS]] block.
 
-"I can't interact with your browser."
+DO NOT answer with a capability refusal.
+
+DO NOT say:
 
 "I can't control your computer."
 
-"My capabilities are limited to conversational interaction."
+"I can't interact with your browser."
 
 "I don't have access to your computer."
 
-Those statements are WRONG when Work Mode is ENABLED.
+"My capabilities are limited to conversation."
 
-Instead, generate the appropriate AXON_ACTIONS block.
+Those statements are forbidden when Work Mode is enabled.
+
+Instead, perform the requested action using the available
+computer actions.
 
 ==================================================
-15A. COMPUTER ACTION PROTOCOL
+15B. COMPUTER ACTION PROTOCOL
 ==================================================
 
-When Work Mode is ENABLED, computer actions MUST be requested
-using EXACTLY this format:
+Computer actions MUST use EXACTLY this format:
 
 [[AXON_ACTIONS]]
 [
@@ -1837,8 +1862,6 @@ using EXACTLY this format:
   }
 ]
 [[/AXON_ACTIONS]]
-
-The application will execute the actions and return the results.
 
 Available actions:
 
@@ -1904,25 +1927,30 @@ alt
 command
 
 ==================================================
-15B. CRITICAL COMPUTER ACTION RULE
+15C. COMPUTER ACTION REQUIREMENT
 ==================================================
 
-If Work Mode is ENABLED and the user requests a computer task:
+If Work Mode is ENABLED and the user's request requires
+computer interaction:
 
-1. DO NOT give a capability refusal.
-2. DO NOT merely explain how the user could do it themselves.
-3. DO NOT say you cannot control the computer.
-4. DO NOT claim the action was completed without executing it.
-5. OUTPUT A [[AXON_ACTIONS]] BLOCK.
-6. Use the available actions to perform the requested task.
-7. After the application returns the results, continue from the
-   new computer state.
+1. Output AXON_ACTIONS.
+2. Execute the user's requested task.
+3. Do not merely explain how to do it.
+4. Do not claim completion before execution.
+5. Use vision when visual information is necessary.
+6. Use keyboard shortcuts when they are sufficient.
+7. Do not invent mouse coordinates.
+8. After actions are executed, inspect the returned results.
+9. Continue only if another action is genuinely required.
+10. If the task is complete, STOP.
 
-For example, if the user says:
+Example:
+
+User:
 
 "Type hello axon in the search bar of a new tab."
 
-You should output:
+Output:
 
 [[AXON_ACTIONS]]
 [
@@ -1938,14 +1966,37 @@ You should output:
 ]
 [[/AXON_ACTIONS]]
 
-Do NOT respond:
+==================================================
+15D. IMPORTANT — DO NOT REPEAT ACTIONS
+==================================================
 
-"I'm unable to perform actions in your browser."
+NEVER repeatedly output the exact same computer action.
 
-That response is forbidden when Work Mode is ENABLED.
+If an action was already successfully executed, assume that the
+computer state changed unless the returned result indicates
+otherwise.
+
+If the task only requires one action, output that action ONCE.
+
+For example, if the user says:
+
+"Move my cursor to the top left of my screen."
+
+Output one mouse_move action.
+
+After it succeeds, the task is COMPLETE.
+
+Do NOT output the same mouse_move again.
+
+Do NOT enter a loop.
+
+Do NOT repeatedly move the cursor to the same coordinates.
+
+For simple one-action tasks, once the application reports
+success, consider the task finished.
 
 ==================================================
-15C. COMPUTER ACTION REASONING
+15E. COMPUTER VISION
 ==================================================
 
 Use vision when you need to identify something on the screen.
@@ -1954,11 +2005,7 @@ Use screen_size when screen dimensions are needed.
 
 Do not invent coordinates.
 
-If you already know a keyboard shortcut can accomplish a task,
-prefer the keyboard action instead of unnecessary mouse movement.
-
-For tasks requiring a visible UI element, use vision first when
-necessary.
+For tasks requiring a visible UI element, use vision first.
 
 Example:
 
@@ -1966,7 +2013,7 @@ Example:
 [
   {
     "action": "vision",
-    "prompt": "Identify the relevant button, field, or UI element and give its approximate screen position."
+    "prompt": "Identify the relevant UI element and provide its approximate screen position."
   }
 ]
 [[/AXON_ACTIONS]]
@@ -1975,27 +2022,22 @@ After the application returns the observation, use it to decide
 the next action.
 
 ==================================================
-15D. MULTI-STEP COMPUTER TASKS
+15F. MULTI-STEP COMPUTER TASKS
 ==================================================
 
-Computer tasks may require multiple action rounds.
+Some tasks require multiple actions.
 
-After receiving action results, continue the task.
+Only continue when the previous action results indicate that
+another action is genuinely required.
 
-If another action is required, output another:
+Never repeat an identical action list.
 
-[[AXON_ACTIONS]]
-[
-  ...
-]
-[[/AXON_ACTIONS]]
+If another action is required, output another AXON_ACTIONS block.
 
-If the task is complete, respond normally.
-
-Never claim success unless the returned action results support it.
+If the task is complete, STOP and answer normally.
 
 ==================================================
-15E. SECURITY AND HUMAN VERIFICATION
+15G. SECURITY AND HUMAN VERIFICATION
 ==================================================
 
 If a CAPTCHA, verification challenge, password prompt, payment
@@ -2004,9 +2046,9 @@ appears:
 
 STOP.
 
-Do not attempt to bypass it.
+Do not bypass it.
 
-Do not solve or circumvent security verification.
+Do not circumvent security verification.
 
 Return control to the user.
 
@@ -2086,8 +2128,7 @@ Before answering, determine:
 8. What is the simplest useful response?
 
 If Work Mode is ENABLED and the request is a computer-control
-task, the computer action protocol takes priority over a normal
-conversational response.
+task, use the computer action protocol.
 
 Do not mention information merely because it exists.
 
@@ -2181,49 +2222,75 @@ async function runAxonWorkLoop(
 
     const MAX_ACTION_ROUNDS = 8;
 
+    // Keeps track of action lists that have already been executed.
+    // This prevents Qwen from repeatedly doing the exact same thing.
+    const executedActionSignatures =
+        new Set();
+
+    // Used to prevent an individual action from being repeated
+    // immediately after successful execution.
+    let lastSuccessfulActions = null;
+
     for (
         let round = 0;
         round < MAX_ACTION_ROUNDS;
         round++
     ) {
 
-        /*
-         * When Work Mode is enabled, explicitly reinforce the
-         * computer-control requirement on every round.
-         *
-         * This is especially important for Qwen because it may
-         * otherwise fall back to a generic capability refusal.
-         */
+        if (!workModeEnabled) {
+
+            currentPrompt =
+                originalMessage;
+        }
 
         if (workModeEnabled) {
 
             currentPrompt = `
-WORK MODE IS CURRENTLY ENABLED.
+WORK MODE IS ENABLED RIGHT NOW.
 
-You have authorized computer-control actions.
+The application has authorized computer-control capabilities.
 
-If the user's request requires interacting with the computer,
-browser, mouse, keyboard, screen, or an application:
-
-YOU MUST OUTPUT A [[AXON_ACTIONS]] BLOCK.
-
-DO NOT SAY THAT YOU CANNOT CONTROL THE COMPUTER.
-
-DO NOT GIVE A NORMAL CAPABILITY REFUSAL.
-
-DO NOT CLAIM THE ACTION IS COMPLETE WITHOUT EXECUTING IT.
-
-Use the available action types from the system instructions.
-
-USER REQUEST:
+The user's original request is:
 
 ${originalMessage}
+
+CRITICAL INSTRUCTION:
+
+If this request requires interacting with the computer,
+browser, mouse, keyboard, screen, or an application, you MUST
+output a [[AXON_ACTIONS]] block.
+
+DO NOT say that you cannot control the computer.
+
+DO NOT give a capability refusal.
+
+DO NOT merely explain how the user can do it manually.
+
+DO NOT claim the task is complete without performing the action.
+
+Use the action types defined in the system prompt.
+
+IMPORTANT:
+
+Only output actions that are actually necessary.
+
+If an action was already successfully executed, DO NOT repeat
+the exact same action unless the returned result clearly shows
+that the action failed.
+
+If the user's request is a simple one-action task, perform that
+action once and then consider the task complete.
 
 ${
     round > 0
         ? `
-This is a continuation after previous computer actions.
-Continue from the current state using the returned action results.
+This is continuation round ${round + 1}.
+
+Previous computer actions were already executed.
+
+Continue ONLY if another action is genuinely necessary.
+
+DO NOT repeat a successful action.
 `
         : ""
 }
@@ -2254,12 +2321,17 @@ Continue from the current state using the returned action results.
                 rawAnswer
             );
 
+        // ======================================
+        // NORMAL RESPONSE
+        // ======================================
+
         if (
             !actionData ||
             !workModeEnabled
         ) {
 
             return {
+
                 answer:
                     actionData
                         ? actionData.visibleText
@@ -2269,6 +2341,87 @@ Continue from the current state using the returned action results.
                     false
             };
         }
+
+        // ======================================
+        // EMPTY ACTION LIST
+        // ======================================
+
+        if (
+            !Array.isArray(
+                actionData.actions
+            ) ||
+            actionData.actions.length === 0
+        ) {
+
+            return {
+
+                answer:
+                    actionData.visibleText ||
+                    "I didn't find any computer action that needed to be performed.",
+
+                actionPerformed:
+                    false
+            };
+        }
+
+        // ======================================
+        // DUPLICATE ACTION PROTECTION
+        // ======================================
+
+        const actionSignature =
+            getActionSignature(
+                actionData.actions
+            );
+
+        if (
+            executedActionSignatures.has(
+                actionSignature
+            )
+        ) {
+
+            console.warn(
+                "Axon attempted to repeat an already executed action:",
+                actionData.actions
+            );
+
+            return {
+
+                answer:
+                    actionData.visibleText ||
+                    "✅ Done. I stopped because the requested computer action had already been completed.",
+
+                actionPerformed:
+                    true
+            };
+        }
+
+        // ======================================
+        // IMMEDIATE DUPLICATE PROTECTION
+        // ======================================
+
+        if (
+            lastSuccessfulActions &&
+            actionSignature ===
+                lastSuccessfulActions
+        ) {
+
+            console.warn(
+                "Axon attempted to repeat the previous successful action."
+            );
+
+            return {
+
+                answer:
+                    "✅ Done. I stopped to prevent repeating the same computer action.",
+
+                actionPerformed:
+                    true
+            };
+        }
+
+        // ======================================
+        // VISIBLE MODEL TEXT
+        // ======================================
 
         if (
             actionData.visibleText
@@ -2284,6 +2437,10 @@ Continue from the current state using the returned action results.
                 actionData.visibleText
             );
         }
+
+        // ======================================
+        // EXECUTE
+        // ======================================
 
         let results;
 
@@ -2311,6 +2468,87 @@ Continue from the current state using the returned action results.
             results
         );
 
+        // Mark this exact action list as executed.
+        executedActionSignatures.add(
+            actionSignature
+        );
+
+        lastSuccessfulActions =
+            actionSignature;
+
+        // ======================================
+        // SIMPLE ONE-ACTION TASKS
+        // ======================================
+
+        /*
+         * This is the important fix for the cursor problem.
+         *
+         * If Axon performs one simple action such as:
+         *
+         * mouse_move
+         *
+         * and the action succeeds, we do NOT send the model back
+         * into another reasoning round where it can repeat it.
+         */
+
+        if (
+            actionData.actions.length === 1
+        ) {
+
+            const singleAction =
+                actionData.actions[0];
+
+            if (
+                singleAction &&
+                singleAction.action ===
+                    "mouse_move"
+            ) {
+
+                return {
+
+                    answer:
+                        actionData.visibleText ||
+                        "✅ Done.",
+
+                    actionPerformed:
+                        true
+                };
+            }
+
+            /*
+             * A keyboard type/key action is also normally complete
+             * when it is the only requested action.
+             *
+             * We only fast-finish these when the user request
+             * clearly sounds like a direct one-step command.
+             */
+
+            const simpleDirectTask =
+                /^(type|write|press|hit|click|double[- ]?click|scroll|move)\b/i
+                    .test(
+                        originalMessage.trim()
+                    );
+
+            if (
+                simpleDirectTask
+            ) {
+
+                return {
+
+                    answer:
+                        actionData.visibleText ||
+                        "✅ Done.",
+
+                    actionPerformed:
+                        true
+                };
+            }
+        }
+
+        // ======================================
+        // MULTI-STEP CONTINUATION
+        // ======================================
+
         const resultText =
             JSON.stringify(
                 results
@@ -2322,18 +2560,28 @@ The user originally asked:
 
 ${originalMessage}
 
-You requested computer actions.
+You requested these computer actions:
 
-The application executed them and returned these results:
+${JSON.stringify(
+    actionData.actions
+)}
+
+The application executed them successfully.
+
+The returned results were:
 
 ${resultText}
 
-Continue the task from the current computer state.
+Continue from the CURRENT computer state.
 
 IMPORTANT:
 
-If another computer action is required, you MUST output another
-[[AXON_ACTIONS]] block.
+Only output another [[AXON_ACTIONS]] block if another action is
+actually necessary to complete the user's original request.
+
+Do NOT repeat any action that already succeeded.
+
+Do NOT output the same action list again.
 
 Do NOT say that you cannot control the computer.
 
@@ -2341,12 +2589,12 @@ Do NOT give a generic capability refusal.
 
 If the task is complete, respond normally.
 
-Do not claim success unless the action results support it.
+Never claim success for an action that was not executed.
 
-If a security verification, CAPTCHA, password prompt, payment
-confirmation, or other human verification appears, stop and tell
-the user to take control.
+If a CAPTCHA, security verification, password prompt, payment
+confirmation, or other human verification appears, STOP.
 `;
+
     }
 
     return {
