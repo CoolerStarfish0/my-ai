@@ -1,5 +1,5 @@
 /* =========================================================
-   AXON / 5158 — PREMIUM UI
+   AXON / 5158 — FUTURISTIC AI UI
    ========================================================= */
 
 * {
@@ -7,35 +7,36 @@
 }
 
 :root {
-    --bg: #08090d;
-    --bg-soft: #0d0f15;
-    --panel: rgba(18, 20, 28, 0.78);
-    --panel-solid: #12141c;
-    --panel-hover: rgba(27, 30, 40, 0.9);
+    --bg: #050507;
+    --bg-2: #08090d;
 
-    --border: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.13);
+    --surface: rgba(255, 255, 255, 0.035);
+    --surface-hover: rgba(255, 255, 255, 0.06);
+    --surface-strong: rgba(12, 13, 18, 0.86);
 
-    --text: #f5f7fb;
-    --text-soft: #a6aab7;
-    --text-muted: #707583;
+    --border: rgba(255, 255, 255, 0.075);
+    --border-hover: rgba(255, 255, 255, 0.14);
 
-    --accent: #8fa8ff;
-    --accent-soft: rgba(143, 168, 255, 0.14);
+    --text: #f7f7f8;
+    --text-soft: #a7a8b0;
+    --text-muted: #686a73;
 
-    --success: #6ee7a0;
-    --danger: #ff7070;
+    --accent: #a8b8ff;
+    --accent-2: #d5dcff;
+    --success: #72e5a4;
+    --danger: #ff7373;
 
-    --radius-sm: 10px;
-    --radius-md: 15px;
-    --radius-lg: 20px;
+    --radius-sm: 12px;
+    --radius-md: 17px;
+    --radius-lg: 24px;
 
-    --shadow:
-        0 20px 60px rgba(0, 0, 0, 0.35);
-
-    --transition:
-        0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+
+/* =========================================================
+   BASE
+   ========================================================= */
 
 html {
     min-height: 100%;
@@ -46,6 +47,8 @@ body {
     margin: 0;
     min-height: 100vh;
 
+    color: var(--text);
+
     font-family:
         Inter,
         ui-sans-serif,
@@ -55,22 +58,59 @@ body {
         "Segoe UI",
         sans-serif;
 
-    color: var(--text);
-
     background:
         radial-gradient(
-            circle at 50% -20%,
-            rgba(143, 168, 255, 0.11),
-            transparent 38%
+            ellipse 70% 45% at 50% -15%,
+            rgba(139, 157, 255, 0.16),
+            transparent 65%
         ),
         radial-gradient(
-            circle at 100% 100%,
-            rgba(143, 168, 255, 0.04),
-            transparent 30%
+            ellipse 45% 40% at 100% 100%,
+            rgba(102, 117, 255, 0.055),
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 40% 35% at 0% 65%,
+            rgba(255, 255, 255, 0.025),
+            transparent 70%
         ),
         var(--bg);
 
     overflow-x: hidden;
+}
+
+/* subtle futuristic grid */
+
+body::before {
+    content: "";
+
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+    z-index: -1;
+
+    opacity: 0.18;
+
+    background-image:
+        linear-gradient(
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px
+        );
+
+    background-size: 70px 70px;
+
+    mask-image:
+        radial-gradient(
+            ellipse at center,
+            black 0%,
+            transparent 78%
+        );
 }
 
 
@@ -79,22 +119,26 @@ body {
    ========================================================= */
 
 .app {
-    width: min(1080px, calc(100% - 40px));
+    width: min(1180px, calc(100% - 48px));
 
     margin: 0 auto;
 
     padding:
-        24px
+        28px
         0
-        30px;
+        40px;
 }
 
 
 /* =========================================================
-   HEADER
+   HEADER / NAVIGATION
    ========================================================= */
 
 header {
+    position: sticky;
+    top: 18px;
+    z-index: 100;
+
     display: flex;
 
     justify-content: space-between;
@@ -102,28 +146,67 @@ header {
 
     gap: 24px;
 
-    padding:
-        16px
-        0
-        22px;
+    min-height: 62px;
 
-    border-bottom:
+    padding:
+        10px 13px
+        10px 18px;
+
+    border:
         1px solid var(--border);
+
+    border-radius:
+        18px;
+
+    background:
+        rgba(7, 8, 11, 0.72);
+
+    backdrop-filter:
+        blur(24px);
+
+    -webkit-backdrop-filter:
+        blur(24px);
+
+    box-shadow:
+        0 18px 55px rgba(0, 0, 0, 0.28);
+}
+
+header::after {
+    content: "";
+
+    position: absolute;
+
+    left: 15%;
+    right: 15%;
+    bottom: -1px;
+
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(170, 185, 255, 0.32),
+            transparent
+        );
+
+    opacity: 0.5;
 }
 
 header h1 {
     margin: 0;
 
-    font-size: 30px;
-    font-weight: 800;
+    font-size: 24px;
+    font-weight: 850;
 
-    letter-spacing: -1.2px;
+    letter-spacing: -1px;
 
     background:
         linear-gradient(
             135deg,
-            #ffffff,
-            #b8c5ff
+            #ffffff 20%,
+            #b9c5ff 75%,
+            #8f9eff
         );
 
     -webkit-background-clip: text;
@@ -133,19 +216,19 @@ header h1 {
 }
 
 header p {
-    margin: 5px 0 0;
+    margin: 3px 0 0;
 
     color: var(--text-muted);
 
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
 
-    letter-spacing: 0.2px;
+    letter-spacing: 0.6px;
 }
 
 
 /* =========================================================
-   AUTH BUTTONS
+   AUTH
    ========================================================= */
 
 .auth-buttons {
@@ -153,11 +236,12 @@ header p {
 
     align-items: center;
 
-    gap: 9px;
+    gap: 7px;
 }
 
 button {
-    border: 1px solid transparent;
+    border:
+        1px solid var(--border);
 
     border-radius:
         var(--radius-sm);
@@ -167,61 +251,65 @@ button {
 
     cursor: pointer;
 
-    font-family: inherit;
-
-    font-size: 13px;
-    font-weight: 650;
-
     color: var(--text);
 
     background:
-        rgba(255, 255, 255, 0.06);
+        rgba(255, 255, 255, 0.045);
+
+    font-family: inherit;
+
+    font-size: 12px;
+    font-weight: 700;
 
     transition:
-        transform var(--transition),
-        background var(--transition),
-        border-color var(--transition),
-        box-shadow var(--transition),
-        opacity var(--transition);
+        transform 0.2s var(--ease),
+        background 0.2s var(--ease),
+        border-color 0.2s var(--ease),
+        box-shadow 0.2s var(--ease),
+        opacity 0.2s ease;
 }
 
 button:hover {
-    opacity: 1;
-
     background:
-        rgba(255, 255, 255, 0.1);
+        rgba(255, 255, 255, 0.075);
 
     border-color:
-        var(--border-strong);
+        var(--border-hover);
 
     transform:
-        translateY(-1px);
+        translateY(-2px);
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 button:active {
     transform:
         translateY(0)
-        scale(0.98);
+        scale(0.97);
 }
 
 button:focus-visible {
-    outline: 2px solid var(--accent);
+    outline:
+        2px solid var(--accent);
 
-    outline-offset: 2px;
+    outline-offset: 3px;
 }
 
 #loginButton {
-    color: #090a0e;
+    color: #07080b;
+
+    border-color: transparent;
 
     background:
         linear-gradient(
             135deg,
             #ffffff,
-            #dfe4ff
+            #d9e0ff
         );
 
     box-shadow:
-        0 8px 25px rgba(255, 255, 255, 0.08);
+        0 7px 28px rgba(160, 177, 255, 0.12);
 }
 
 #loginButton:hover {
@@ -229,22 +317,20 @@ button:focus-visible {
         linear-gradient(
             135deg,
             #ffffff,
-            #eef0ff
+            #edf0ff
         );
 
     box-shadow:
-        0 10px 30px rgba(255, 255, 255, 0.13);
+        0 10px 35px rgba(160, 177, 255, 0.2);
 }
 
 #guestButton,
 #logoutButton {
-    color: var(--text-soft);
+    color:
+        var(--text-soft);
 
     background:
-        rgba(255, 255, 255, 0.045);
-
-    border-color:
-        var(--border);
+        rgba(255, 255, 255, 0.035);
 }
 
 
@@ -258,34 +344,33 @@ button:focus-visible {
     justify-content: space-between;
     align-items: center;
 
-    gap: 15px;
+    gap: 16px;
 
     margin:
-        18px 0
-        10px;
+        24px auto
+        4px;
 
     padding:
-        12px 15px;
+        11px 15px;
 
-    min-height: 52px;
+    min-height: 48px;
+
+    max-width: 900px;
 
     background:
-        var(--panel);
+        rgba(255, 255, 255, 0.028);
 
     border:
         1px solid var(--border);
 
     border-radius:
-        var(--radius-md);
+        14px;
 
     backdrop-filter:
         blur(18px);
 
     -webkit-backdrop-filter:
         blur(18px);
-
-    box-shadow:
-        0 8px 30px rgba(0, 0, 0, 0.16);
 }
 
 
@@ -303,27 +388,35 @@ button:focus-visible {
    ========================================================= */
 
 .chat {
-    height: 62vh;
+    position: relative;
 
-    min-height: 440px;
+    height: 67vh;
 
-    overflow-y: auto;
+    min-height: 460px;
+
+    max-width: 950px;
+
+    margin:
+        8px auto
+        0;
 
     padding:
-        28px
-        8px;
+        36px 18px
+        28px;
+
+    overflow-y: auto;
 
     scroll-behavior: smooth;
 
     scrollbar-width: thin;
 
     scrollbar-color:
-        rgba(255, 255, 255, 0.14)
+        rgba(255, 255, 255, 0.12)
         transparent;
 }
 
 .chat::-webkit-scrollbar {
-    width: 7px;
+    width: 5px;
 }
 
 .chat::-webkit-scrollbar-track {
@@ -334,12 +427,8 @@ button:focus-visible {
     background:
         rgba(255, 255, 255, 0.12);
 
-    border-radius: 99px;
-}
-
-.chat::-webkit-scrollbar-thumb:hover {
-    background:
-        rgba(255, 255, 255, 0.2);
+    border-radius:
+        99px;
 }
 
 
@@ -353,12 +442,12 @@ button:focus-visible {
     width: 100%;
 
     margin:
-        18px 0;
+        20px 0;
 
     animation:
         messageAppear
-        0.25s
-        ease-out;
+        0.35s
+        var(--ease);
 }
 
 @keyframes messageAppear {
@@ -366,7 +455,7 @@ button:focus-visible {
         opacity: 0;
 
         transform:
-            translateY(7px);
+            translateY(10px);
     }
 
     to {
@@ -391,165 +480,208 @@ button:focus-visible {
    ========================================================= */
 
 .bubble {
-    max-width: min(78%, 760px);
+    max-width:
+        min(76%, 780px);
 
     padding:
-        13px 17px;
-
-    border-radius:
-        17px;
-
-    line-height: 1.65;
-
-    font-size: 15px;
-
-    white-space: pre-wrap;
-
-    overflow-wrap: anywhere;
+        14px 18px;
 
     border:
         1px solid transparent;
 
+    border-radius:
+        18px;
+
+    font-size:
+        14px;
+
+    line-height:
+        1.7;
+
+    white-space:
+        pre-wrap;
+
+    overflow-wrap:
+        anywhere;
+
     box-shadow:
-        0 5px 20px rgba(0, 0, 0, 0.12);
+        0 8px 35px rgba(0, 0, 0, 0.12);
 }
 
 .message.ai .bubble {
     background:
-        rgba(20, 22, 30, 0.82);
+        rgba(255, 255, 255, 0.035);
 
     border-color:
         var(--border);
 
     border-top-left-radius:
-        7px;
+        5px;
 }
 
 .message.user .bubble {
     background:
         linear-gradient(
             135deg,
-            #353b50,
-            #292e40
+            rgba(150, 164, 220, 0.18),
+            rgba(104, 114, 157, 0.12)
         );
 
     border-color:
-        rgba(255, 255, 255, 0.08);
+        rgba(180, 191, 245, 0.13);
 
     border-top-right-radius:
-        7px;
+        5px;
 }
 
 
 /* =========================================================
-   INPUT AREA
+   INPUT
    ========================================================= */
 
 .input-area {
+    position: relative;
+
     display: flex;
 
     align-items: flex-end;
 
-    gap: 10px;
+    gap: 9px;
 
-    margin-top: 4px;
+    width: min(950px, 100%);
+
+    margin:
+        0 auto;
 
     padding:
-        8px;
+        7px;
 
     background:
-        rgba(17, 19, 27, 0.9);
+        rgba(9, 10, 14, 0.84);
 
     border:
-        1px solid var(--border-strong);
+        1px solid rgba(255, 255, 255, 0.1);
 
     border-radius:
-        18px;
+        20px;
 
     box-shadow:
-        0 18px 50px rgba(0, 0, 0, 0.28);
+        0 25px 70px rgba(0, 0, 0, 0.38);
 
     backdrop-filter:
-        blur(20px);
+        blur(25px);
 
     -webkit-backdrop-filter:
-        blur(20px);
+        blur(25px);
+}
+
+.input-area::before {
+    content: "";
+
+    position: absolute;
+
+    inset: -1px;
+
+    z-index: -1;
+
+    border-radius:
+        inherit;
+
+    background:
+        linear-gradient(
+            120deg,
+            rgba(255,255,255,0.08),
+            transparent 30%,
+            transparent 70%,
+            rgba(150,165,255,0.1)
+        );
+
+    opacity:
+        0.8;
 }
 
 textarea {
     flex: 1;
 
     min-height: 48px;
-    max-height: 180px;
+    max-height: 190px;
 
     resize: vertical;
+
+    padding:
+        13px 14px;
 
     border:
         1px solid transparent;
 
-    background:
-        transparent;
+    outline: none;
 
     color:
         var(--text);
 
+    background:
+        transparent;
+
     border-radius:
-        12px;
+        14px;
 
-    padding:
-        13px 12px;
+    font-family:
+        inherit;
 
-    font-family: inherit;
+    font-size:
+        14px;
 
-    font-size: 15px;
-
-    line-height: 1.5;
-
-    outline: none;
+    line-height:
+        1.55;
 
     transition:
-        background var(--transition),
-        border-color var(--transition);
+        background 0.2s ease,
+        border-color 0.2s ease;
 }
 
 textarea::placeholder {
     color:
-        var(--text-muted);
+        #62646d;
 }
 
 textarea:focus {
     background:
-        rgba(255, 255, 255, 0.025);
+        rgba(255, 255, 255, 0.018);
 
     border-color:
-        rgba(143, 168, 255, 0.25);
+        rgba(160, 176, 255, 0.13);
 }
 
 #sendButton {
-    align-self: flex-end;
+    align-self:
+        flex-end;
 
-    min-width: 78px;
-    min-height: 46px;
+    min-width:
+        70px;
 
-    color: #08090d;
+    min-height:
+        46px;
+
+    color:
+        #07080b;
+
+    border:
+        none;
 
     background:
         linear-gradient(
             135deg,
             #ffffff,
-            #dce3ff
+            #cbd5ff
         );
 
-    border:
-        none;
-
     box-shadow:
-        0 8px 25px rgba(143, 168, 255, 0.12);
+        0 8px 30px rgba(155, 174, 255, 0.12);
 }
 
 #sendButton:hover {
     box-shadow:
-        0 10px 30px rgba(143, 168, 255, 0.2);
+        0 12px 38px rgba(155, 174, 255, 0.22);
 }
 
 
@@ -558,27 +690,25 @@ textarea:focus {
    ========================================================= */
 
 .hint {
-    text-align: center;
+    margin:
+        11px 0 0;
+
+    text-align:
+        center;
 
     color:
         var(--text-muted);
 
-    font-size: 11px;
-
-    margin:
-        10px 0 0;
+    font-size:
+        10px;
 
     letter-spacing:
-        0.15px;
+        0.25px;
 }
 
 
 /* =========================================================
-   AGENT / WORK MODE
-   ---------------------------------------------------------
-   These selectors are intentionally broad so the existing
-   Work Mode elements get a more polished appearance without
-   requiring JavaScript changes.
+   WORK / AGENT MODE
    ========================================================= */
 
 #workMode,
@@ -588,33 +718,64 @@ textarea:focus {
 .agent-panel {
     position: relative;
 
+    width: min(950px, 100%);
+
     margin:
-        14px 0;
+        18px auto;
 
     padding:
-        15px 17px;
+        16px 18px;
 
     background:
         linear-gradient(
-            145deg,
-            rgba(19, 22, 30, 0.92),
-            rgba(14, 16, 22, 0.86)
+            135deg,
+            rgba(16, 18, 25, 0.88),
+            rgba(9, 10, 14, 0.9)
         );
 
     border:
-        1px solid var(--border);
+        1px solid rgba(255, 255, 255, 0.08);
 
     border-radius:
-        var(--radius-md);
+        18px;
 
     box-shadow:
-        0 12px 35px rgba(0, 0, 0, 0.18);
+        0 15px 50px rgba(0, 0, 0, 0.25);
 
     backdrop-filter:
-        blur(18px);
+        blur(24px);
 
     -webkit-backdrop-filter:
-        blur(18px);
+        blur(24px);
+
+    overflow: hidden;
+}
+
+#workMode::before,
+.work-mode::before,
+.work-mode-panel::before,
+.agent-mode::before,
+.agent-panel::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(168, 184, 255, 0.55),
+            transparent
+        );
+
+    opacity:
+        0.7;
 }
 
 #workMode:hover,
@@ -623,7 +784,7 @@ textarea:focus {
 .agent-mode:hover,
 .agent-panel:hover {
     border-color:
-        rgba(255, 255, 255, 0.12);
+        rgba(255, 255, 255, 0.13);
 }
 
 #workMode button,
@@ -631,12 +792,16 @@ textarea:focus {
 .work-mode-panel button,
 .agent-mode button,
 .agent-panel button {
-    font-size: 12px;
+    padding:
+        8px 12px;
+
+    font-size:
+        11px;
 }
 
 
 /* =========================================================
-   STATUS TEXT
+   WORK STATUS
    ========================================================= */
 
 #workStatus,
@@ -645,7 +810,14 @@ textarea:focus {
     color:
         var(--text-soft);
 
-    font-size: 12px;
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.2px;
 }
 
 #workStatus.active,
@@ -653,34 +825,40 @@ textarea:focus {
 .agent-status.active {
     color:
         var(--success);
+
+    text-shadow:
+        0 0 15px rgba(114, 229, 164, 0.25);
 }
 
 
 /* =========================================================
-   STOP / DISABLE BUTTON
+   STOP BUTTON
    ========================================================= */
 
 #stopWorkButton,
 #workStopButton,
 .stop-work-button {
     color:
-        #ffdede;
+        #ffbaba;
 
     background:
-        rgba(255, 82, 82, 0.08);
+        rgba(255, 80, 80, 0.055);
 
     border-color:
-        rgba(255, 82, 82, 0.2);
+        rgba(255, 100, 100, 0.16);
 }
 
 #stopWorkButton:hover,
 #workStopButton:hover,
 .stop-work-button:hover {
     background:
-        rgba(255, 82, 82, 0.14);
+        rgba(255, 80, 80, 0.11);
 
     border-color:
-        rgba(255, 82, 82, 0.35);
+        rgba(255, 100, 100, 0.3);
+
+    box-shadow:
+        0 8px 25px rgba(255, 70, 70, 0.08);
 }
 
 
@@ -693,7 +871,7 @@ textarea:focus {
 .settings-panel,
 .account-panel {
     background:
-        var(--panel);
+        rgba(255, 255, 255, 0.035);
 
     border:
         1px solid var(--border);
@@ -702,13 +880,13 @@ textarea:focus {
         var(--radius-lg);
 
     box-shadow:
-        var(--shadow);
+        0 20px 60px rgba(0, 0, 0, 0.3);
 
     backdrop-filter:
-        blur(20px);
+        blur(22px);
 
     -webkit-backdrop-filter:
-        blur(20px);
+        blur(22px);
 }
 
 
@@ -722,11 +900,17 @@ a {
 
     text-decoration:
         none;
+
+    transition:
+        opacity 0.2s ease;
 }
 
 a:hover {
+    opacity:
+        0.8;
+
     text-decoration:
-        underline;
+        none;
 }
 
 
@@ -735,25 +919,29 @@ a:hover {
    ========================================================= */
 
 pre {
-    overflow-x: auto;
+    overflow-x:
+        auto;
 
     margin:
-        12px 0;
+        14px 0;
 
     padding:
-        14px 16px;
+        16px 17px;
 
     background:
-        #090b10;
+        rgba(0, 0, 0, 0.45);
 
     border:
         1px solid var(--border);
 
     border-radius:
-        12px;
+        14px;
 
     line-height:
-        1.55;
+        1.6;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 code {
@@ -764,7 +952,7 @@ code {
         monospace;
 
     font-size:
-        0.9em;
+        0.88em;
 }
 
 
@@ -774,7 +962,7 @@ code {
 
 ::selection {
     background:
-        rgba(143, 168, 255, 0.3);
+        rgba(153, 170, 255, 0.28);
 
     color:
         white;
@@ -782,7 +970,7 @@ code {
 
 
 /* =========================================================
-   AXON RANK ANIMATION
+   RANK ANIMATION
    ========================================================= */
 
 .rank-animation {
@@ -799,28 +987,49 @@ code {
 
     flex-direction: column;
 
-    background:
-        radial-gradient(
-            circle at center,
-            #20202e 0%,
-            #0d0d12 55%,
-            #07070a 100%
-        );
-
     overflow: hidden;
 
-    opacity: 1;
+    background:
+        radial-gradient(
+            ellipse at center,
+            #1a1d2b 0%,
+            #0b0c11 48%,
+            #040405 100%
+        );
+
+    opacity:
+        1;
 
     transition:
         opacity 0.5s ease;
 }
 
+.rank-animation::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(170, 185, 255, 0.1),
+            transparent 35%
+        );
+
+    pointer-events:
+        none;
+}
+
 .rank-animation.hidden {
-    display: none !important;
+    display:
+        none !important;
 }
 
 .rank-animation.closing {
-    opacity: 0;
+    opacity:
+        0;
 }
 
 
@@ -831,23 +1040,23 @@ code {
 .rank-glow {
     position: absolute;
 
-    width: 180px;
-    height: 180px;
+    width:
+        220px;
 
-    border-radius: 50%;
+    height:
+        220px;
+
+    border-radius:
+        50%;
 
     background:
-        rgba(
-            255,
-            255,
-            255,
-            0.08
-        );
+        rgba(180, 193, 255, 0.1);
 
     filter:
-        blur(40px);
+        blur(55px);
 
-    opacity: 0;
+    opacity:
+        0;
 
     transform:
         scale(0.5);
@@ -859,16 +1068,21 @@ code {
 
 
 /* =========================================================
-   AXON MASCOT
+   MASCOT
    ========================================================= */
 
 .axon-mascot {
-    position: relative;
+    position:
+        relative;
 
-    width: 230px;
-    height: 230px;
+    z-index:
+        2;
 
-    z-index: 2;
+    width:
+        230px;
+
+    height:
+        230px;
 
     transform:
         translateY(0)
@@ -876,30 +1090,28 @@ code {
         scale(1);
 
     transition:
-        transform 0.8s
-        cubic-bezier(
-            0.2,
-            0.8,
-            0.2,
-            1
-        );
+        transform 0.8s var(--ease);
 }
 
 .toucan {
-    width: 100%;
-    height: 100%;
+    width:
+        100%;
 
-    overflow: visible;
+    height:
+        100%;
+
+    overflow:
+        visible;
 }
 
 
 /* =========================================================
-   TOUCAN ARTWORK
+   TOUCAN
    ========================================================= */
 
 .toucan-body {
     fill:
-        #15151c;
+        #111218;
 
     stroke:
         #ffffff;
@@ -910,7 +1122,7 @@ code {
 
 .toucan-head {
     fill:
-        #181820;
+        #15161d;
 
     stroke:
         #ffffff;
@@ -921,7 +1133,7 @@ code {
 
 .toucan-wing {
     fill:
-        #30303d;
+        #292b37;
 
     stroke:
         #ffffff;
@@ -936,18 +1148,12 @@ code {
         right center;
 
     transition:
-        transform 0.8s
-        cubic-bezier(
-            0.2,
-            0.8,
-            0.2,
-            1
-        );
+        transform 0.8s var(--ease);
 }
 
 .toucan-beak {
     fill:
-        #8fa8ff;
+        #a8b8ff;
 
     stroke:
         white;
@@ -961,7 +1167,7 @@ code {
         none;
 
     stroke:
-        #181820;
+        #15161d;
 
     stroke-width:
         4;
@@ -972,7 +1178,7 @@ code {
 
 .toucan-tail {
     fill:
-        #30303d;
+        #292b37;
 
     stroke:
         white;
@@ -991,20 +1197,16 @@ code {
 }
 
 .ai-eyes {
-    opacity: 0;
+    opacity:
+        0;
 
     fill:
         white;
 
     filter:
         drop-shadow(
-            0 0 8px
-            rgba(
-                255,
-                255,
-                255,
-                0.9
-            )
+            0 0 10px
+            rgba(210, 220, 255, 0.95)
         );
 
     transition:
@@ -1027,22 +1229,25 @@ code {
 
 
 /* =========================================================
-   RANK ANIMATION STATES
+   RANK STATES
    ========================================================= */
 
 .rank-animation.ai-awakened
 .toucan-eye {
-    opacity: 0;
+    opacity:
+        0;
 }
 
 .rank-animation.ai-awakened
 .ai-eyes {
-    opacity: 1;
+    opacity:
+        1;
 }
 
 .rank-animation.ai-awakened
 .rank-glow {
-    opacity: 1;
+    opacity:
+        1;
 
     transform:
         scale(1.4);
@@ -1050,7 +1255,7 @@ code {
 
 
 /* =========================================================
-   WING
+   WINGS
    ========================================================= */
 
 .rank-animation.wings-open
@@ -1093,7 +1298,6 @@ code {
 }
 
 @keyframes axonBackwardFlight {
-
     0% {
         transform:
             translateY(-190px)
@@ -1149,7 +1353,6 @@ code {
 }
 
 @keyframes axonLanding {
-
     0% {
         transform:
             translateY(0)
@@ -1187,9 +1390,11 @@ code {
    ========================================================= */
 
 .rank-animation-text {
-    position: relative;
+    position:
+        relative;
 
-    z-index: 3;
+    z-index:
+        3;
 
     margin-top:
         15px;
@@ -1222,27 +1427,43 @@ code {
         28px;
 
     font-weight:
-        800;
+        850;
 
     letter-spacing:
-        5px;
+        6px;
+
+    background:
+        linear-gradient(
+            135deg,
+            white,
+            #aebcff
+        );
+
+    -webkit-background-clip:
+        text;
+
+    background-clip:
+        text;
+
+    color:
+        transparent;
 }
 
 #rankAnimationRank {
     margin-top:
-        6px;
+        7px;
 
     font-size:
-        13px;
+        11px;
 
     font-weight:
-        bold;
+        750;
 
     letter-spacing:
         4px;
 
     opacity:
-        0.65;
+        0.55;
 }
 
 
@@ -1254,31 +1475,34 @@ code {
 
     .app {
         width:
-            min(
-                100% - 20px,
-                1080px
-            );
+            calc(100% - 20px);
 
         padding-top:
-            10px;
+            12px;
     }
 
     header {
+        position:
+            relative;
+
+        top:
+            0;
+
         align-items:
             flex-start;
 
-        padding-bottom:
-            17px;
+        padding:
+            10px 12px;
     }
 
     header h1 {
         font-size:
-            25px;
+            22px;
     }
 
     header p {
         font-size:
-            12px;
+            10px;
     }
 
     .auth-buttons {
@@ -1287,11 +1511,20 @@ code {
 
         align-items:
             stretch;
+
+        gap:
+            5px;
     }
 
     .auth-buttons button {
         white-space:
             nowrap;
+
+        padding:
+            8px 10px;
+
+        font-size:
+            10px;
     }
 
     .user-info {
@@ -1300,59 +1533,70 @@ code {
 
         flex-direction:
             column;
+
+        margin-top:
+            15px;
     }
 
     .chat {
         height:
-            58vh;
+            61vh;
 
         min-height:
             350px;
 
         padding:
-            18px
-            3px;
+            20px 4px;
     }
 
     .bubble {
         max-width:
-            88%;
-
-        font-size:
-            14px;
+            89%;
 
         padding:
             11px 14px;
+
+        font-size:
+            13px;
     }
 
     .input-area {
-        gap:
-            6px;
+        border-radius:
+            17px;
 
         padding:
             6px;
-
-        border-radius:
-            15px;
     }
 
     textarea {
+        min-height:
+            45px;
+
         font-size:
-            14px;
+            13px;
 
         padding:
-            12px 9px;
+            11px 9px;
     }
 
     #sendButton {
         min-width:
-            64px;
+            58px;
 
         min-height:
-            44px;
+            43px;
 
         padding:
-            10px;
+            9px;
+    }
+
+    #workMode,
+    .work-mode,
+    .work-mode-panel,
+    .agent-mode,
+    .agent-panel {
+        padding:
+            13px;
     }
 
     .axon-mascot {
@@ -1372,7 +1616,10 @@ code {
 
     #rankAnimationTitle {
         font-size:
-            22px;
+            21px;
+
+        letter-spacing:
+            4px;
     }
 }
 
@@ -1385,35 +1632,35 @@ code {
 
     .app {
         width:
-            calc(100% - 14px);
+            calc(100% - 12px);
     }
 
     header {
         gap:
-            12px;
+            10px;
     }
 
     header h1 {
         font-size:
-            22px;
+            20px;
     }
 
     .auth-buttons button {
         padding:
-            8px 10px;
+            7px 8px;
 
         font-size:
-            11px;
+            9px;
     }
 
     .bubble {
         max-width:
-            92%;
+            93%;
     }
 
     .hint {
         font-size:
-            10px;
+            9px;
     }
 }
 
