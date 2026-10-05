@@ -12,7 +12,10 @@
 
 <body>
 
-    <!-- AXON RANK ANIMATION -->
+    <!-- ==========================================
+         AXON RANK ANIMATION
+         ========================================== -->
+
     <div id="rankAnimation" class="rank-animation hidden">
 
         <div class="rank-glow"></div>
@@ -25,40 +28,71 @@
                 xmlns="http://www.w3.org/2000/svg"
                 aria-label="Axon mascot"
             >
-                <path class="toucan-tail"
-                    d="M105 210 L55 270 L110 240 L135 275 L145 210" />
 
-                <ellipse class="toucan-body"
-                    cx="145" cy="170" rx="67" ry="82" />
+                <path
+                    class="toucan-tail"
+                    d="M105 210 L55 270 L110 240 L135 275 L145 210"
+                />
 
-                <path class="toucan-wing"
-                    d="M115 145 C70 160 65 215 105 235 C130 247 153 220 153 190 C153 170 140 152 115 145Z" />
+                <ellipse
+                    class="toucan-body"
+                    cx="145"
+                    cy="170"
+                    rx="67"
+                    ry="82"
+                />
 
-                <circle class="toucan-head"
-                    cx="145" cy="95" r="58" />
+                <path
+                    class="toucan-wing"
+                    d="M115 145 C70 160 65 215 105 235 C130 247 153 220 153 190 C153 170 140 152 115 145Z"
+                />
 
-                <path class="toucan-beak"
-                    d="M174 80 C230 55 278 72 270 102 C263 128 214 133 169 112 C160 106 160 88 174 80Z" />
+                <circle
+                    class="toucan-head"
+                    cx="145"
+                    cy="95"
+                    r="58"
+                />
 
-                <path class="beak-detail"
-                    d="M178 104 C215 112 250 106 270 91" />
+                <path
+                    class="toucan-beak"
+                    d="M174 80 C230 55 278 72 270 102 C263 128 214 133 169 112 C160 106 160 88 174 80Z"
+                />
 
-                <circle class="toucan-eye left-eye"
-                    cx="126" cy="83" r="8" />
+                <path
+                    class="beak-detail"
+                    d="M178 104 C215 112 250 106 270 91"
+                />
 
-                <circle class="toucan-eye right-eye"
-                    cx="165" cy="83" r="8" />
+                <circle
+                    class="toucan-eye left-eye"
+                    cx="126"
+                    cy="83"
+                    r="8"
+                />
+
+                <circle
+                    class="toucan-eye right-eye"
+                    cx="165"
+                    cy="83"
+                    r="8"
+                />
 
                 <g class="ai-eyes">
                     <path d="M116 83 L126 73 L136 83 L126 93 Z" />
                     <path d="M155 83 L165 73 L175 83 L165 93 Z" />
                 </g>
 
-                <path class="toucan-foot"
-                    d="M120 238 L110 252 M120 238 L128 253" />
+                <path
+                    class="toucan-foot"
+                    d="M120 238 L110 252 M120 238 L128 253"
+                />
 
-                <path class="toucan-foot"
-                    d="M166 238 L158 253 M166 238 L176 251" />
+                <path
+                    class="toucan-foot"
+                    d="M166 238 L158 253 M166 238 L176 251"
+                />
+
             </svg>
 
         </div>
@@ -78,15 +112,32 @@
     </div>
 
 
-    <!-- MAIN APP -->
+    <!-- ==========================================
+         MAIN APP
+         ========================================== -->
 
     <div class="app">
 
+        <!-- HEADER -->
+
         <header>
 
-            <div>
-                <h1>AXON</h1>
-                <p>My AI • My Knowledge</p>
+            <div class="brand">
+
+                <div class="brand-mark">
+                    A
+                </div>
+
+                <div>
+
+                    <h1>AXON</h1>
+
+                    <p>
+                        MY AI • MY KNOWLEDGE
+                    </p>
+
+                </div>
+
             </div>
 
             <div class="auth-buttons">
@@ -108,9 +159,18 @@
 
             <!-- USER INFO -->
 
-            <div id="userInfo" class="user-info hidden">
+            <div
+                id="userInfo"
+                class="user-info hidden"
+            >
 
-                <span id="userName"></span>
+                <div class="user-info-main">
+
+                    <div class="user-status-dot"></div>
+
+                    <span id="userName"></span>
+
+                </div>
 
                 <button id="logoutButton">
                     Log out
@@ -119,36 +179,54 @@
             </div>
 
 
-            <!-- WORK MODE -->
+            <!-- ======================================
+                 WORK MODE
+                 ====================================== -->
 
-            <div id="workModePanel" class="work-mode-panel">
+            <div
+                id="workModePanel"
+                class="work-mode-panel"
+            >
 
                 <div class="work-mode-header">
 
                     <div>
-                        <strong>🖥️ Axon Work Mode</strong>
 
-                        <div id="workModeStatus"
-                             class="work-mode-status">
+                        <strong>
+                            <span class="work-mode-icon">⌁</span>
+                            Axon Work Mode
+                        </strong>
+
+                        <div
+                            id="workModeStatus"
+                            class="work-mode-status"
+                        >
                             Work Mode is OFF
                         </div>
+
                     </div>
 
-                    <div class="work-mode-indicator"
-                         id="workModeIndicator">
+                    <div
+                        class="work-mode-indicator"
+                        id="workModeIndicator"
+                    >
                         OFF
                     </div>
 
                 </div>
 
                 <div class="work-mode-description">
-                    When enabled, Axon can interact with your computer
-                    through the local Axon bridge.
+
+                    When enabled, Axon can interact with your
+                    computer through the local Axon bridge.
+
                 </div>
 
                 <div class="work-mode-warning">
-                    ⚠️ Axon will only be able to perform computer-control
-                    actions while Work Mode is explicitly enabled.
+
+                    ⚠️ Computer-control actions only run while
+                    Work Mode is explicitly enabled.
+
                 </div>
 
                 <div class="work-mode-buttons">
@@ -173,30 +251,44 @@
             </div>
 
 
-            <!-- CHAT -->
+            <!-- ======================================
+                 CHAT
+                 ====================================== -->
 
             <div id="chat" class="chat">
 
-                <div class="message ai">
+                <div class="welcome-state">
 
-                    <div class="bubble">
+                    <div class="welcome-lightning">
 
-                        Welcome to Axon! 🧠
+                        <svg
+                            viewBox="0 0 100 140"
+                            aria-hidden="true"
+                        >
+                            <path
+                                class="lightning-back"
+                                d="M58 4 L22 67 H47 L36 136 L79 55 H53 Z"
+                            />
 
-                        <br><br>
+                            <path
+                                class="lightning-front"
+                                d="M58 4 L22 67 H47 L36 136 L79 55 H53 Z"
+                            />
+                        </svg>
 
-                        I'm Axon, your personal AI assistant.
+                    </div>
 
-                        <br><br>
+                    <div class="welcome-title">
+                        AXON
+                    </div>
 
-                        Sign in with Google for long-term
-                        personal memory, or continue as a guest
-                        to start chatting immediately.
+                    <div class="welcome-subtitle">
+                        Intelligence that remembers.
+                    </div>
 
-                        <br><br>
-
-                        Hello :D
-
+                    <div class="welcome-description">
+                        Your personal AI assistant with
+                        conversational context and long-term memory.
                     </div>
 
                 </div>
@@ -204,18 +296,65 @@
             </div>
 
 
-            <!-- INPUT -->
+            <!-- ======================================
+                 GENERATION INDICATOR
+                 ====================================== -->
+
+            <div
+                id="axonGenerating"
+                class="axon-generating hidden"
+                aria-live="polite"
+            >
+
+                <div class="generation-lightning">
+
+                    <svg
+                        viewBox="0 0 100 140"
+                        aria-hidden="true"
+                    >
+
+                        <path
+                            class="generation-bolt-glow"
+                            d="M58 4 L22 67 H47 L36 136 L79 55 H53 Z"
+                        />
+
+                        <path
+                            class="generation-bolt"
+                            d="M58 4 L22 67 H47 L36 136 L79 55 H53 Z"
+                        />
+
+                    </svg>
+
+                </div>
+
+                <span>
+                    Axon is generating
+                </span>
+
+            </div>
+
+
+            <!-- ======================================
+                 INPUT
+                 ====================================== -->
 
             <div class="input-area">
 
                 <textarea
                     id="messageInput"
                     placeholder="Talk to Axon..."
-                    rows="2"
+                    rows="1"
                 ></textarea>
 
-                <button id="sendButton">
-                    Send
+                <button
+                    id="sendButton"
+                    type="button"
+                >
+                    <span>Send</span>
+
+                    <span class="send-arrow">
+                        ↗
+                    </span>
                 </button>
 
             </div>
