@@ -3269,6 +3269,20 @@ function playRankAnimation(
         rankName === "USER" ? "WELCOME" : "AXON";
     rankAnimationRank.textContent = rankName;
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        rankAnimation.classList.add(
+            "ai-awakened",
+            "wings-open",
+            "show-text"
+        );
+
+        setTimeout(() => {
+            closeRankAnimation();
+        }, 1500);
+
+        return;
+    }
+
     const sequence = [
         ["powering-up", 120],
         ["ai-awakened", 520],
