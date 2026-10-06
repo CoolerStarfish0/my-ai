@@ -885,15 +885,28 @@ async function startWorkMode() {
                 }
             );
 
-        const data =
-            await response.json();
+        const responseText =
+            await response.text();
 
-        if (!response.ok) {
+        let data;
 
-            throw new Error(
-                data.error ||
-                "Unable to start Work Mode."
-            );
+        try {
+            data = JSON.parse(responseText);
+        } catch {
+            data = {
+                error:
+                    responseText ||
+                    "The backend returned an unreadable response."
+            };
+        }
+
+        if (!response.ok || data.success !== true) {
+            const reason = [
+                data.error || "Unable to start Work Mode.",
+                data.details
+            ].filter(Boolean).join(" — ");
+
+            throw new Error(reason);
         }
 
         workModeEnabled =
@@ -918,9 +931,14 @@ async function startWorkMode() {
 
         updateWorkModeUI();
 
+        const reason =
+            error instanceof Error
+                ? error.message
+                : String(error);
+
         addMessage(
             "AI",
-            "I couldn't enable Work Mode. The Work Mode backend may not be connected yet."
+            `⚠️ Couldn't enable Work Mode: ${reason}`
         );
 
     } finally {
