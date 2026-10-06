@@ -3242,7 +3242,9 @@ function playRankAnimation(
 
     if (
         !rankAnimation ||
-        !axonMascot
+        !axonMascot ||
+        !rankAnimationTitle ||
+        !rankAnimationRank
     ) {
         return;
     }
@@ -3250,6 +3252,7 @@ function playRankAnimation(
     rankAnimation.classList.remove(
         "hidden",
         "closing",
+        "powering-up",
         "ai-awakened",
         "wings-open",
         "flying-up",
@@ -3258,171 +3261,35 @@ function playRankAnimation(
         "show-text"
     );
 
-    axonMascot.style.animation =
-        "none";
-
+    axonMascot.style.animation = "none";
     void axonMascot.offsetWidth;
-
-    axonMascot.style.animation =
-        "";
+    axonMascot.style.animation = "";
 
     rankAnimationTitle.textContent =
-        "AXON";
+        rankName === "USER" ? "WELCOME" : "AXON";
+    rankAnimationRank.textContent = rankName;
 
-    rankAnimationRank.textContent =
-        rankName;
+    const sequence = [
+        ["powering-up", 120],
+        ["ai-awakened", 520],
+        ["wings-open", 900],
+        ["flying-up", 1350],
+        ["show-text", 1900],
+        ["spinning", 2250],
+        ["landed", 4050]
+    ];
 
-    if (
-        rankName === "USER"
-    ) {
+    sequence.forEach(([className, delay]) => {
+        setTimeout(() => {
+            if (!rankAnimation.classList.contains("hidden")) {
+                rankAnimation.classList.add(className);
+            }
+        }, delay);
+    });
 
-        rankAnimationTitle.textContent =
-            "WELCOME";
-
-        rankAnimationRank.textContent =
-            "USER";
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "show-text"
-                );
-
-            },
-            250
-        );
-
-        setTimeout(
-            () => {
-
-                closeRankAnimation();
-
-            },
-            1500
-        );
-
-        return;
-    }
-
-    if (
-        rankName === "ADMIN"
-    ) {
-
-        rankAnimationRank.textContent =
-            "ADMIN";
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "ai-awakened"
-                );
-
-            },
-            350
-        );
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "show-text"
-                );
-
-            },
-            600
-        );
-
-        setTimeout(
-            () => {
-
-                closeRankAnimation();
-
-            },
-            2200
-        );
-
-        return;
-    }
-
-    rankAnimationRank.textContent =
-        "OWNER";
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "ai-awakened"
-            );
-
-        },
-        700
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "wings-open"
-            );
-
-        },
-        1300
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "flying-up"
-            );
-
-        },
-        1900
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "show-text"
-            );
-
-        },
-        2700
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "spinning"
-            );
-
-        },
-        3300
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "landed"
-            );
-
-        },
-        5100
-    );
-
-    setTimeout(
-        () => {
-
-            closeRankAnimation();
-
-        },
-        6500
-    );
+    setTimeout(() => {
+        closeRankAnimation();
+    }, 4850);
 }
 
 function closeRankAnimation() {
@@ -3444,6 +3311,7 @@ function closeRankAnimation() {
 
             rankAnimation.classList.remove(
                 "closing",
+                "powering-up",
                 "ai-awakened",
                 "wings-open",
                 "flying-up",
