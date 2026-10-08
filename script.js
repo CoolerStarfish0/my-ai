@@ -26,7 +26,7 @@ import {
 // ==========================================
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
+    apiKey: "KEEP YOUR EXISTING FIREBASE API KEY HERE",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
@@ -1388,6 +1388,42 @@ function extractAxonActions(
             return null;
         }
 
+        // ======================================
+        // VALIDATE ACTION TYPES
+        // ======================================
+
+        const validActions = new Set([
+            "mouse_move",
+            "mouse_click",
+            "mouse_double_click",
+            "mouse_scroll",
+            "keyboard_type",
+            "keyboard_key",
+            "screen_size",
+            "vision"
+        ]);
+
+        const validActionList =
+            parsed.every(
+                action =>
+                    action &&
+                    typeof action === "object" &&
+                    typeof action.action === "string" &&
+                    validActions.has(
+                        action.action
+                    )
+            );
+
+        if (!validActionList) {
+
+            console.warn(
+                "Rejected invalid Axon action block:",
+                parsed
+            );
+
+            return null;
+        }
+
         return {
 
             actions:
@@ -2224,13 +2260,9 @@ async function runAxonWorkLoop(
 
     const MAX_ACTION_ROUNDS = 8;
 
-    // Keeps track of action lists that have already been executed.
-    // This prevents Qwen from repeatedly doing the exact same thing.
     const executedActionSignatures =
         new Set();
 
-    // Used to prevent an individual action from being repeated
-    // immediately after successful execution.
     let lastSuccessfulActions = null;
 
     for (
@@ -2245,6 +2277,10 @@ async function runAxonWorkLoop(
                 originalMessage;
         }
 
+        // ======================================
+        // WORK MODE INTENT SEPARATION
+        // ======================================
+
         if (workModeEnabled) {
 
             currentPrompt = `
@@ -2256,32 +2292,62 @@ The user's original request is:
 
 ${originalMessage}
 
-CRITICAL INSTRUCTION:
+FIRST DETERMINE THE USER'S INTENT.
 
-If this request requires interacting with the computer,
-browser, mouse, keyboard, screen, or an application, you MUST
-output a [[AXON_ACTIONS]] block.
+There are TWO possible types of requests:
 
-DO NOT say that you cannot control the computer.
+1. NORMAL CONVERSATION
+2. COMPUTER ACTION
 
-DO NOT give a capability refusal.
+NORMAL CONVERSATION includes things such as:
+- greetings
+- questions
+- riddles
+- answers to riddles
+- jokes
+- explanations
+- opinions
+- casual conversation
+- clarifications
+- follow-up messages such as "yes", "no", "air", "that's it",
+  "I meant...", or "give me another hint"
 
-DO NOT merely explain how the user can do it manually.
+For NORMAL CONVERSATION:
+- Respond normally.
+- DO NOT output [[AXON_ACTIONS]].
+- DO NOT talk about computer-control capabilities.
+- DO NOT explain that the request is not a computer action.
+- DO NOT say you cannot control the computer.
+- Simply answer the user naturally.
 
-DO NOT claim the task is complete without performing the action.
+COMPUTER ACTION requests are requests that explicitly require
+interacting with the computer, browser, mouse, keyboard, screen,
+or an application.
 
-Use the action types defined in the system prompt.
+Examples:
+- "Open Google Docs."
+- "Click the search bar."
+- "Type hello into Notepad."
+- "Open a new browser tab."
+- "Press Ctrl+L."
+- "Move my mouse to the top left."
+
+ONLY for genuine COMPUTER ACTION requests:
+- Output a valid [[AXON_ACTIONS]] block.
+- Perform only the actions actually required.
+- Do not merely explain how to do the task.
+- Do not claim completion before the action is executed.
 
 IMPORTANT:
 
-Only output actions that are actually necessary.
+The mere fact that Work Mode is enabled does NOT mean every
+message requires computer interaction.
 
-If an action was already successfully executed, DO NOT repeat
-the exact same action unless the returned result clearly shows
-that the action failed.
+Never convert ordinary conversation into a computer action.
 
-If the user's request is a simple one-action task, perform that
-action once and then consider the task complete.
+A short answer such as "air", "yes", "no", "hmm", or "that's
+the answer" is normally conversation unless the surrounding
+context clearly shows that the user is giving a computer command.
 
 ${
     round > 0
@@ -2290,7 +2356,7 @@ This is continuation round ${round + 1}.
 
 Previous computer actions were already executed.
 
-Continue ONLY if another action is genuinely necessary.
+Continue ONLY if another computer action is genuinely necessary.
 
 DO NOT repeat a successful action.
 `
@@ -2470,7 +2536,6 @@ DO NOT repeat a successful action.
             results
         );
 
-        // Mark this exact action list as executed.
         executedActionSignatures.add(
             actionSignature
         );
@@ -2481,17 +2546,6 @@ DO NOT repeat a successful action.
         // ======================================
         // SIMPLE ONE-ACTION TASKS
         // ======================================
-
-        /*
-         * This is the important fix for the cursor problem.
-         *
-         * If Axon performs one simple action such as:
-         *
-         * mouse_move
-         *
-         * and the action succeeds, we do NOT send the model back
-         * into another reasoning round where it can repeat it.
-         */
 
         if (
             actionData.actions.length === 1
@@ -2516,14 +2570,6 @@ DO NOT repeat a successful action.
                         true
                 };
             }
-
-            /*
-             * A keyboard type/key action is also normally complete
-             * when it is the only requested action.
-             *
-             * We only fast-finish these when the user request
-             * clearly sounds like a direct one-step command.
-             */
 
             const simpleDirectTask =
                 /^(type|write|press|hit|click|double[- ]?click|scroll|move)\b/i
@@ -2596,7 +2642,6 @@ Never claim success for an action that was not executed.
 If a CAPTCHA, security verification, password prompt, payment
 confirmation, or other human verification appears, STOP.
 `;
-
     }
 
     return {
