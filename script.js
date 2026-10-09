@@ -26,7 +26,7 @@ import {
 // ==========================================
 
 const firebaseConfig = {
-    apiKey: "KEEP YOUR EXISTING FIREBASE API KEY HERE",
+    apiKey: "AIzaSyBVnqD6sw9KTthjB8ZaSHFFC8cn5Hyxn_U",
     authDomain: "ai-ef2a5.firebaseapp.com",
     projectId: "ai-ef2a5",
     storageBucket: "ai-ef2a5.firebasestorage.app",
