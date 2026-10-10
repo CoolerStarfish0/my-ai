@@ -393,7 +393,7 @@ async function loadOwnerRankUsers() {
     ownerRankList.replaceChildren();
     try {
         const token = await owner.getIdToken();
-        const response = await fetch(`${BACKEND_URL}/api/ranks?mode=users`, {
+        const response = await fetch(`${BACKEND_URL}/api/visitors?mode=ranks&action=users`, {
             headers: { Authorization: `Bearer ${token}` }, cache: "no-store"
         });
         const data = await response.json().catch(() => ({}));
@@ -463,7 +463,7 @@ function renderOwnerRankUsers() {
                 const currentUser = auth.currentUser;
                 if (!currentUser || currentUser.uid !== OWNER_UID || currentUser.isAnonymous) throw new Error("Owner access required.");
                 const token = await currentUser.getIdToken();
-                const response = await fetch(`${BACKEND_URL}/api/ranks`, {
+                const response = await fetch(`${BACKEND_URL}/api/visitors?mode=ranks`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                     body: JSON.stringify({ uid: account.uid, rank: select.value })
@@ -768,7 +768,7 @@ async function refreshCurrentRank(user = auth.currentUser) {
     }
     try {
         const token = await user.getIdToken();
-        const response = await fetch(`${BACKEND_URL}/api/ranks?mode=mine`, {
+        const response = await fetch(`${BACKEND_URL}/api/visitors?mode=ranks&action=mine`, {
             headers: { Authorization: `Bearer ${token}` }, cache: "no-store"
         });
         if (!response.ok) throw new Error("Could not load rank");
