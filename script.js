@@ -68,21 +68,13 @@ const BACKEND_URL =
 // ==========================================
 
 const RANKS = {
-    OWNER: {
-        name: "OWNER",
-        description: "Owner of Axon"
-    },
-
-    ADMIN: {
-        name: "ADMIN",
-        description: "Administrator"
-    },
-
-    USER: {
-        name: "USER",
-        description: "Regular user"
-    }
+    OWNER: { name: "OWNER", description: "Owner of Axon" },
+    WARDEN: { name: "WARDEN", description: "Trusted moderator" },
+    PIONEER: { name: "PIONEER", description: "Early Axon member" },
+    RESIDENT: { name: "RESIDENT", description: "Registered Axon member" },
+    VISITOR: { name: "VISITOR", description: "New or guest visitor" }
 };
+let currentRankName = "VISITOR";
 
 // ==========================================
 // FIREBASE INIT
@@ -368,6 +360,10 @@ const ownerAnalyticsPanel = document.getElementById("ownerAnalyticsPanel");
 const ownerAnalyticsClose = document.getElementById("ownerAnalyticsClose");
 const ownerAnalyticsRefresh = document.getElementById("ownerAnalyticsRefresh");
 const ownerAnalyticsBackdrop = document.getElementById("ownerAnalyticsBackdrop");
+const ownerRankSearch = document.getElementById("ownerRankSearch");
+const ownerRankStatus = document.getElementById("ownerRankStatus");
+const ownerRankList = document.getElementById("ownerRankList");
+let ownerRankUsers = [];
 
 function closeOwnerAnalyticsPanel() {
     ownerAnalyticsPanel?.classList.add("hidden");
@@ -381,11 +377,116 @@ ownerAnalyticsButton?.addEventListener("click", async () => {
     ownerAnalyticsPanel?.classList.remove("hidden");
     ownerAnalyticsBackdrop?.classList.remove("hidden");
     ownerAnalyticsPanel?.setAttribute("aria-hidden", "false");
-    await loadOwnerVisitorLogs();
+    await Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers()]);
 });
 ownerAnalyticsClose?.addEventListener("click", closeOwnerAnalyticsPanel);
 ownerAnalyticsBackdrop?.addEventListener("click", closeOwnerAnalyticsPanel);
-ownerAnalyticsRefresh?.addEventListener("click", () => void loadOwnerVisitorLogs());
+ownerAnalyticsRefresh?.addEventListener("click", () => {
+    void Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers()]);
+});
+
+async function loadOwnerRankUsers() {
+    if (!ownerRankList || !ownerRankStatus) return;
+    const owner = auth.currentUser;
+    if (!owner || owner.isAnonymous || owner.uid !== OWNER_UID) return;
+    ownerRankStatus.textContent = "Loading registered accounts…";
+    ownerRankList.replaceChildren();
+    try {
+        const token = await owner.getIdToken();
+        const response = await fetch(`${BACKEND_URL}/api/ranks?mode=users`, {
+            headers: { Authorization: `Bearer ${token}` }, cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not load registered accounts.");
+        ownerRankUsers = Array.isArray(data.users) ? data.users : [];
+        renderOwnerRankUsers();
+        ownerRankStatus.textContent = `${ownerRankUsers.length} registered account(s)${data.truncated ? " shown (first 5,000)" : ""}. Choose a rank and press Save.`;
+    } catch (error) {
+        ownerRankStatus.textContent = error.message || "Could not load registered accounts.";
+    }
+}
+
+function renderOwnerRankUsers() {
+    if (!ownerRankList) return;
+    ownerRankList.replaceChildren();
+    const query = (ownerRankSearch?.value || "").trim().toLowerCase();
+    const filtered = ownerRankUsers.filter(account =>
+        [account.displayName, account.email, account.uid].some(value =>
+            String(value || "").toLowerCase().includes(query)
+        )
+    );
+    if (!filtered.length) {
+        const empty = document.createElement("p");
+        empty.className = "owner-analytics-note";
+        empty.textContent = query ? "No accounts match that search." : "No registered accounts found.";
+        ownerRankList.append(empty);
+        return;
+    }
+
+    for (const account of filtered) {
+        const card = document.createElement("article");
+        card.className = "owner-rank-record";
+        const identity = document.createElement("div");
+        identity.className = "owner-rank-identity";
+        const name = document.createElement("strong");
+        name.textContent = account.displayName || account.email || "Unnamed account";
+        const email = document.createElement("span");
+        email.textContent = account.email || `UID: ${account.uid}`;
+        identity.append(name, email);
+        if (account.disabled) {
+            const disabled = document.createElement("span");
+            disabled.className = "owner-rank-disabled";
+            disabled.textContent = "Disabled account";
+            identity.append(disabled);
+        }
+
+        const controls = document.createElement("div");
+        controls.className = "owner-rank-controls";
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", `Rank for ${account.email || account.uid}`);
+        for (const rank of ["VISITOR", "RESIDENT", "PIONEER", "WARDEN"]) {
+            const option = document.createElement("option");
+            option.value = rank;
+            option.textContent = rank.charAt(0) + rank.slice(1).toLowerCase();
+            option.selected = account.rank === rank;
+            select.append(option);
+        }
+        const save = document.createElement("button");
+        save.type = "button";
+        save.textContent = account.rank === "OWNER" ? "Owner" : "Save";
+        save.disabled = account.rank === "OWNER";
+        save.addEventListener("click", async () => {
+            const originalText = save.textContent;
+            save.disabled = true;
+            save.textContent = "Saving…";
+            try {
+                const currentUser = auth.currentUser;
+                if (!currentUser || currentUser.uid !== OWNER_UID || currentUser.isAnonymous) throw new Error("Owner access required.");
+                const token = await currentUser.getIdToken();
+                const response = await fetch(`${BACKEND_URL}/api/ranks`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ uid: account.uid, rank: select.value })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || "Rank update failed.");
+                account.rank = data.user.rank;
+                ownerRankStatus.textContent = `Updated ${account.email || account.displayName || account.uid} to ${account.rank}.`;
+                renderOwnerRankUsers();
+            } catch (error) {
+                ownerRankStatus.textContent = error.message || "Rank update failed.";
+                save.disabled = false;
+                save.textContent = originalText;
+            }
+        });
+        controls.append(select, save);
+        card.append(identity, controls);
+        ownerRankList.append(card);
+    }
+}
+
+ownerRankSearch?.addEventListener("input", renderOwnerRankUsers);
+document.getElementById("ownerRankRefresh")?.addEventListener("click", () => void loadOwnerRankUsers());
 
 // ==========================================
 // GUEST MEMORY
@@ -537,7 +638,9 @@ onAuthStateChanged(
     auth,
     async user => {
 
+        currentRankName = "VISITOR";
         await trackVisitor(user);
+        await refreshCurrentRank(user);
 
         const ownerAnalyticsButton = document.getElementById("ownerAnalyticsButton");
         if (ownerAnalyticsButton) {
@@ -567,7 +670,7 @@ onAuthStateChanged(
             if (user.isAnonymous) {
 
                 userName.textContent =
-                    "Guest Mode 👤";
+                    `Guest Mode 👤 · ${getCurrentRank(user).name}`;
 
                 logoutButton.textContent =
                     "Exit Guest Mode";
@@ -620,6 +723,7 @@ onAuthStateChanged(
 
         } else {
 
+            currentRankName = "VISITOR";
             loginButton.classList.remove(
                 "hidden"
             );
@@ -654,17 +758,30 @@ onAuthStateChanged(
 // ==========================================
 
 function getCurrentRank(user) {
+    if (user && !user.isAnonymous && user.uid === OWNER_UID) return RANKS.OWNER;
+    return RANKS[currentRankName] || RANKS.VISITOR;
+}
 
-    if (
-        user &&
-        !user.isAnonymous &&
-        user.uid === OWNER_UID
-    ) {
-
-        return RANKS.OWNER;
+async function refreshCurrentRank(user = auth.currentUser) {
+    currentRankName = "VISITOR";
+    if (!user) return currentRankName;
+    if (!user.isAnonymous && user.uid === OWNER_UID) {
+        currentRankName = "OWNER";
+        return currentRankName;
     }
-
-    return RANKS.USER;
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(`${BACKEND_URL}/api/ranks?mode=mine`, {
+            headers: { Authorization: `Bearer ${token}` }, cache: "no-store"
+        });
+        if (!response.ok) throw new Error("Could not load rank");
+        const data = await response.json();
+        const rank = String(data.rank || "VISITOR").toUpperCase();
+        currentRankName = RANKS[rank] ? rank : "VISITOR";
+    } catch (error) {
+        console.warn("Axon rank lookup unavailable:", error);
+    }
+    return currentRankName;
 }
 
 // ==========================================
@@ -3291,6 +3408,22 @@ function playRankAnimation(
             1500
         );
 
+        return;
+    }
+
+    if (rankName === "WARDEN") {
+        rankAnimationRank.textContent = "WARDEN";
+        setTimeout(() => rankAnimation.classList.add("ai-awakened"), 350);
+        setTimeout(() => rankAnimation.classList.add("show-text"), 600);
+        setTimeout(() => closeRankAnimation(), 2200);
+        return;
+    }
+
+    if (rankName !== "OWNER") {
+        rankAnimationTitle.textContent = "WELCOME";
+        rankAnimationRank.textContent = rankName;
+        setTimeout(() => rankAnimation.classList.add("show-text"), 250);
+        setTimeout(() => closeRankAnimation(), 1500);
         return;
     }
 
