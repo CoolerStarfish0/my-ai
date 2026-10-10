@@ -154,6 +154,22 @@
 
         </header>
 
+        <div id="ownerAnalyticsBackdrop" class="owner-analytics-backdrop hidden"></div>
+        <aside id="ownerAnalyticsPanel" class="owner-analytics-panel hidden" aria-hidden="true" aria-label="Owner visitor analytics">
+            <div class="owner-analytics-heading">
+                <div>
+                    <span class="owner-analytics-kicker">PRIVATE OWNER AREA</span>
+                    <h2>Visitor analytics</h2>
+                </div>
+                <button id="ownerAnalyticsClose" type="button" aria-label="Close owner panel">✕</button>
+            </div>
+            <p class="owner-analytics-note">IP addresses and account details are private. Keep this information secure and use it only for service security and analytics.</p>
+            <div class="owner-analytics-actions">
+                <span id="ownerVisitorStatus" role="status">Open the panel to load records.</span>
+                <button id="ownerAnalyticsRefresh" type="button">Refresh</button>
+            </div>
+            <div id="ownerVisitorList" class="owner-visitor-list"></div>
+        </aside>
 
         <main>
 
@@ -171,6 +187,8 @@
                     <span id="userName"></span>
 
                 </div>
+
+                <button id="ownerAnalyticsButton" class="hidden" type="button">Owner Panel</button>
 
                 <button id="logoutButton">
                     Log out
@@ -362,6 +380,10 @@
 
             <p class="hint">
                 Talk naturally — Axon can learn things you tell it.
+            </p>
+
+            <p class="privacy-notice">
+                Privacy notice: when you sign in or start Guest Mode, Axon records your IP address and basic visit information for service security and usage analytics. Your Google name and email are recorded when available. These records are accessible only to the site owner.
             </p>
 
         </main>
