@@ -3571,239 +3571,100 @@ const rankAnimationRank =
         "rankAnimationRank"
     );
 
-function playRankAnimation(
-    rankName
-) {
+let rankAnimationTimers = [];
+let rankAnimationCloseTimer = null;
 
-    if (
-        !rankAnimation ||
-        !axonMascot
-    ) {
-        return;
+function clearRankAnimationTimers() {
+    rankAnimationTimers.forEach(timer => window.clearTimeout(timer));
+    rankAnimationTimers = [];
+    if (rankAnimationCloseTimer !== null) {
+        window.clearTimeout(rankAnimationCloseTimer);
+        rankAnimationCloseTimer = null;
     }
+}
 
+function scheduleRankAnimation(callback, delay) {
+    const timer = window.setTimeout(callback, delay);
+    rankAnimationTimers.push(timer);
+    return timer;
+}
+
+function playRankAnimation(rankName) {
+    if (!rankAnimation || !axonMascot || !rankAnimationTitle || !rankAnimationRank) return;
+
+    clearRankAnimationTimers();
+
+    const rank = String(rankName || "VISITOR").toUpperCase();
+    const supportedRanks = ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "OWNER"];
+    const safeRank = supportedRanks.includes(rank) ? rank : "VISITOR";
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    rankAnimation.classList.add("hidden");
     rankAnimation.classList.remove(
-        "hidden",
-        "closing",
-        "ai-awakened",
-        "wings-open",
-        "flying-up",
-        "spinning",
-        "landed",
-        "show-text"
+        "closing", "ai-awakened", "wings-open", "flying-up",
+        "spinning", "landed", "show-text",
+        "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-owner"
     );
 
-    axonMascot.style.animation =
-        "none";
-
+    // Reset any in-flight CSS animation before showing the new rank.
+    axonMascot.style.animation = "none";
     void axonMascot.offsetWidth;
+    axonMascot.style.animation = "";
 
-    axonMascot.style.animation =
-        "";
+    rankAnimation.classList.add("rank-" + safeRank.toLowerCase());
+    rankAnimationTitle.textContent = ({
+        VISITOR: "WELCOME",
+        RESIDENT: "WELCOME TO AXON",
+        PIONEER: "EARLY ACCESS",
+        WARDEN: "AXON SENTINEL",
+        OWNER: "SYSTEM OWNER"
+    })[safeRank];
+    rankAnimationRank.textContent = safeRank;
 
-    rankAnimationTitle.textContent =
-        "AXON";
-
-    rankAnimationRank.textContent =
-        rankName;
-
-    if (
-        rankName === "USER"
-    ) {
-
-        rankAnimationTitle.textContent =
-            "WELCOME";
-
-        rankAnimationRank.textContent =
-            "USER";
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "show-text"
-                );
-
-            },
-            250
-        );
-
-        setTimeout(
-            () => {
-
-                closeRankAnimation();
-
-            },
-            1500
-        );
-
+    // Reduced-motion users still get a brief, readable rank card.
+    if (reducedMotion) {
+        rankAnimation.classList.remove("hidden");
+        rankAnimation.classList.add("show-text");
+        rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, 1400);
         return;
     }
 
-    if (rankName === "WARDEN") {
-        rankAnimationRank.textContent = "WARDEN";
-        setTimeout(() => rankAnimation.classList.add("ai-awakened"), 350);
-        setTimeout(() => rankAnimation.classList.add("show-text"), 600);
-        setTimeout(() => closeRankAnimation(), 2200);
-        return;
+    rankAnimation.classList.remove("hidden");
+
+    // Each rank has a distinct entrance and glow, rather than sharing the same
+    // generic welcome animation.
+    const timing = {
+        VISITOR: { reveal: 350, close: 2700 },
+        RESIDENT: { reveal: 450, close: 3000 },
+        PIONEER: { reveal: 650, close: 3400 },
+        WARDEN: { awaken: 300, reveal: 650, close: 3600 },
+        OWNER: { awaken: 500, wings: 950, fly: 1400, reveal: 1900, spin: 2350, land: 4200, close: 5200 }
+    }[safeRank];
+
+    if (safeRank === "WARDEN" || safeRank === "OWNER") {
+        scheduleRankAnimation(() => rankAnimation.classList.add("ai-awakened"), timing.awaken);
+    }
+    if (safeRank === "OWNER") {
+        scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timing.wings);
+        scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timing.fly);
+        scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timing.spin);
+        scheduleRankAnimation(() => rankAnimation.classList.add("landed"), timing.land);
     }
 
-    if (rankName !== "OWNER") {
-        rankAnimationTitle.textContent = "WELCOME";
-        rankAnimationRank.textContent = rankName;
-        setTimeout(() => rankAnimation.classList.add("show-text"), 250);
-        setTimeout(() => closeRankAnimation(), 1500);
-        return;
-    }
-
-    if (
-        rankName === "ADMIN"
-    ) {
-
-        rankAnimationRank.textContent =
-            "ADMIN";
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "ai-awakened"
-                );
-
-            },
-            350
-        );
-
-        setTimeout(
-            () => {
-
-                rankAnimation.classList.add(
-                    "show-text"
-                );
-
-            },
-            600
-        );
-
-        setTimeout(
-            () => {
-
-                closeRankAnimation();
-
-            },
-            2200
-        );
-
-        return;
-    }
-
-    rankAnimationRank.textContent =
-        "OWNER";
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "ai-awakened"
-            );
-
-        },
-        700
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "wings-open"
-            );
-
-        },
-        1300
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "flying-up"
-            );
-
-        },
-        1900
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "show-text"
-            );
-
-        },
-        2700
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "spinning"
-            );
-
-        },
-        3300
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "landed"
-            );
-
-        },
-        5100
-    );
-
-    setTimeout(
-        () => {
-
-            closeRankAnimation();
-
-        },
-        6500
-    );
+    scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timing.reveal);
+    rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, timing.close);
 }
 
 function closeRankAnimation() {
-
-    if (!rankAnimation) {
-        return;
-    }
-
-    rankAnimation.classList.add(
-        "closing"
-    );
-
-    setTimeout(
-        () => {
-
-            rankAnimation.classList.add(
-                "hidden"
-            );
-
-            rankAnimation.classList.remove(
-                "closing",
-                "ai-awakened",
-                "wings-open",
-                "flying-up",
-                "spinning",
-                "landed",
-                "show-text"
-            );
-
-        },
-        500
-    );
+    if (!rankAnimation) return;
+    clearRankAnimationTimers();
+    rankAnimation.classList.add("closing");
+    window.setTimeout(() => {
+        rankAnimation.classList.add("hidden");
+        rankAnimation.classList.remove(
+            "closing", "ai-awakened", "wings-open", "flying-up",
+            "spinning", "landed", "show-text",
+            "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-owner"
+        );
+    }, 450);
 }
