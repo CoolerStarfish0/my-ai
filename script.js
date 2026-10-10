@@ -452,6 +452,16 @@ function renderOwnerRankUsers() {
         controls.className = "owner-rank-controls";
         const select = document.createElement("select");
         select.setAttribute("aria-label", `Rank for ${account.email || account.uid}`);
+        // OWNER is intentionally protected from reassignment, but it must still
+        // appear as the selected rank instead of making the dropdown look like VISITOR.
+        if (account.rank === "OWNER") {
+            const ownerOption = document.createElement("option");
+            ownerOption.value = "OWNER";
+            ownerOption.textContent = "Owner (protected)";
+            ownerOption.selected = true;
+            ownerOption.disabled = true;
+            select.append(ownerOption);
+        }
         for (const rank of ["VISITOR", "RESIDENT", "PIONEER", "WARDEN"]) {
             const option = document.createElement("option");
             option.value = rank;
