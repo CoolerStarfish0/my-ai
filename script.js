@@ -265,10 +265,19 @@ async function loadOwnerVisitorLogs() {
             const card = document.createElement("article");
             card.className = "owner-visitor-record";
             const title = document.createElement("strong");
-            title.textContent = record.displayName || (record.accountType === "guest" ? "Guest visitor" : "Name unavailable");
+            // Show real Google identity whenever the visitor has signed in.
+            // A guest's Gmail/name cannot be inferred from their IP address.
+            title.textContent =
+                record.displayName ||
+                record.email ||
+                (record.accountType === "guest"
+                    ? "Guest visitor (not signed in)"
+                    : "Signed-in visitor — name unavailable");
             const email = document.createElement("div");
             email.className = "owner-visitor-detail";
-            email.textContent = record.email || "No Gmail available (Guest Mode)";
+            email.textContent = record.email
+                ? `Gmail: ${record.email}`
+                : "Gmail unavailable — this visitor has not signed in with Google";
             const ip = document.createElement("div");
             ip.className = "owner-visitor-ip";
             ip.textContent = `IP: ${record.ip || "Unavailable"}`;
