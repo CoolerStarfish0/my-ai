@@ -433,6 +433,14 @@ function renderOwnerRankUsers() {
         const email = document.createElement("span");
         email.textContent = account.email || `UID: ${account.uid}`;
         identity.append(name, email);
+        const usage = document.createElement("span");
+        const creditsUsed = Number(account.creditsUsed || 0).toLocaleString();
+        if (account.effectiveCreditLimit === null || account.effectiveCreditLimit === undefined) {
+            usage.textContent = `Credits used: ${creditsUsed} · Limit: Unlimited`;
+        } else {
+            usage.textContent = `Credits used: ${creditsUsed} · Remaining: ${Number(account.creditsRemaining || 0).toLocaleString()} / ${Number(account.effectiveCreditLimit).toLocaleString()}`;
+        }
+        identity.append(usage);
         if (account.disabled) {
             const disabled = document.createElement("span");
             disabled.className = "owner-rank-disabled";
