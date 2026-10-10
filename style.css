@@ -2138,3 +2138,8 @@ code {
         animation: none !important;
     }
 }
+
+/* Ensure the Owner animation has a visible landing after its flight ends. */
+.rank-animation.rank-owner.landed .axon-mascot {
+    animation: axonLanding .55s ease-out both;
+}
