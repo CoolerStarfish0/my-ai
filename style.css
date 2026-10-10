@@ -1388,6 +1388,89 @@ code {
     opacity: 0;
 }
 
+.rank-stars {
+    position: absolute;
+    inset: -15%;
+    z-index: 0;
+    opacity: 0;
+    background:
+        radial-gradient(2px 2px at 18% 23%, rgba(255,255,255,.9) 45%, transparent 60%),
+        radial-gradient(1px 1px at 72% 19%, rgba(216,180,254,.95) 45%, transparent 60%),
+        radial-gradient(2px 2px at 83% 68%, rgba(255,255,255,.75) 45%, transparent 60%),
+        radial-gradient(1px 1px at 29% 76%, rgba(192,132,252,.95) 45%, transparent 60%),
+        radial-gradient(1px 1px at 54% 41%, rgba(255,255,255,.8) 45%, transparent 60%);
+    background-size: 310px 270px, 370px 320px, 290px 350px, 340px 290px, 260px 310px;
+    transition: opacity .8s ease;
+    pointer-events: none;
+}
+
+.rank-orbit {
+    position: absolute;
+    z-index: 1;
+    width: min(78vw, 620px);
+    height: min(38vw, 290px);
+    border: 1px solid rgba(192,132,252,.26);
+    border-radius: 50%;
+    box-shadow: 0 0 32px rgba(168,85,247,.13), inset 0 0 28px rgba(168,85,247,.08);
+    opacity: 0;
+    transform: rotateX(68deg) scale(.72);
+    pointer-events: none;
+}
+
+.rank-energy-ring {
+    position: absolute;
+    z-index: 1;
+    width: 210px;
+    height: 210px;
+    border: 1px solid rgba(216,180,254,.8);
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 24px rgba(168,85,247,.45), inset 0 0 24px rgba(168,85,247,.24);
+    pointer-events: none;
+}
+
+.rank-animation.powering-up .rank-stars {
+    opacity: .85;
+    animation: starDrift 8s linear infinite;
+}
+
+.rank-animation.powering-up .rank-orbit {
+    opacity: .7;
+    animation: orbitSpin 12s linear infinite;
+}
+
+.rank-animation.powering-up .rank-energy-ring {
+    animation: energyPulse 1.15s ease-out both;
+}
+
+.rank-animation.powering-up .rank-glow {
+    opacity: .8;
+    transform: scale(1.1);
+}
+
+.rank-animation.powering-up .axon-mascot {
+    animation: mascotRise .85s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes starDrift {
+    to { background-position: 310px 270px, -370px 320px, 290px -350px, -340px -290px, 260px 310px; }
+}
+
+@keyframes orbitSpin {
+    to { transform: rotateX(68deg) rotateZ(360deg) scale(.95); }
+}
+
+@keyframes energyPulse {
+    0% { opacity: 0; transform: scale(.35); }
+    25% { opacity: .9; }
+    100% { opacity: 0; transform: scale(2.25); }
+}
+
+@keyframes mascotRise {
+    from { opacity: .35; transform: translateY(24px) scale(.72); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .rank-glow {
     position: absolute;
 
