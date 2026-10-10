@@ -471,6 +471,10 @@ function renderOwnerRankUsers() {
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(data.error || "Rank update failed.");
                 account.rank = data.user.rank;
+                account.creditLimitMode = data.user.creditLimitMode;
+                account.creditLimit = data.user.creditLimit;
+                account.effectiveCreditLimit = data.user.effectiveCreditLimit;
+                account.creditsUsed = data.user.creditsUsed;
                 ownerRankStatus.textContent = `Updated ${account.email || account.displayName || account.uid} to ${account.rank}.`;
                 renderOwnerRankUsers();
             } catch (error) {
