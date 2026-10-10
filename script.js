@@ -208,19 +208,21 @@ function getSessionId() {
 const visitorId = getVisitorId();
 const sessionId = getSessionId();
 
-// Send a visitor event to the server. The server derives the IP address
-// from the incoming request and verifies the Firebase token before logging.
+// Log page visits whether or not the visitor signs in.
+// The server derives the IP address; account details are sent only when Firebase
+// has an authenticated user. A visible site notice explains this analytics.
 async function syncVisitorLog(user = auth.currentUser) {
-    if (!user) return;
     try {
-        const idToken = await user.getIdToken();
-        const response = await fetch(`${BACKEND_URL}/api/visitors`, {
+        const headers = { "Content-Type": "application/json" };
+        if (user) {
+            const idToken = await user.getIdToken();
+            headers.Authorization = "Bearer " + idToken;
+        }
+        const response = await fetch(BACKEND_URL + "/api/visitors", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}`
-            },
-            body: JSON.stringify({ visitorId, sessionId, page: window.location.pathname })
+            headers,
+            body: JSON.stringify({ visitorId, sessionId, page: window.location.pathname }),
+            keepalive: true
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -230,6 +232,9 @@ async function syncVisitorLog(user = auth.currentUser) {
         console.warn("Axon visitor logging unavailable:", error);
     }
 }
+
+// Start logging immediately, without requiring Guest Mode or Google sign-in.
+void syncVisitorLog();
 
 async function loadOwnerVisitorLogs() {
     const list = document.getElementById("ownerVisitorList");
@@ -251,7 +256,7 @@ async function loadOwnerVisitorLogs() {
 
         const records = Array.isArray(data.visitors) ? data.visitors : [];
         if (!records.length) {
-            status.textContent = "No visitor records yet. Records appear after someone signs in or starts Guest Mode.";
+            status.textContent = "No visitor records yet. Records appear when someone opens Axon.";
             return;
         }
         status.textContent = `Showing ${records.length} recent visitor record(s).`;
@@ -294,15 +299,13 @@ let visitorTrackingBusy = false;
 // Do not write to the legacy /visitors Firestore collection from the browser;
 // the Firestore rules intentionally do not grant public visitor-log access.
 async function trackVisitor(user = auth.currentUser) {
-    if (!user) return;
     await syncVisitorLog(user);
 }
 
 // Activity updates also go through the server endpoint, avoiding client-side
 // writes to the protected Firestore visitor collections.
 async function updateVisitorActivity() {
-    const user = auth.currentUser;
-    if (!user || document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") return;
 
     const now = Date.now();
     if (now - lastActivityUpdate < 60000) return;
@@ -346,7 +349,7 @@ setInterval(
 );
 
 setInterval(() => {
-    if (document.visibilityState === "visible" && auth.currentUser) {
+    if (document.visibilityState === "visible") {
         void syncVisitorLog(auth.currentUser);
     }
 }, 5 * 60 * 1000);
