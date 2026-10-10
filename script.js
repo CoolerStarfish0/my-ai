@@ -3387,6 +3387,92 @@ function buildConversationContext() {
 // CHAT UI
 // ==========================================
 
+// Render fenced code blocks safely, with a one-click copy button.
+// All generated content is inserted with textContent (never interpreted as HTML).
+function renderMessageContent(container, messageText) {
+    const codeFence = /```([^\n`]*)\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+    let foundCode = false;
+
+    while ((match = codeFence.exec(messageText)) !== null) {
+        foundCode = true;
+        const before = messageText.slice(lastIndex, match.index);
+        if (before) {
+            const paragraph = document.createElement("div");
+            paragraph.className = "message-text";
+            paragraph.textContent = before;
+            container.appendChild(paragraph);
+        }
+
+        const language = (match[1] || "").trim();
+        const codeText = match[2].replace(/\n$/, "");
+        const block = document.createElement("div");
+        block.className = "code-block";
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "code-block-toolbar";
+
+        const languageLabel = document.createElement("span");
+        languageLabel.className = "code-block-language";
+        languageLabel.textContent = language || "CODE";
+
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.className = "code-copy-button";
+        copyButton.textContent = "Copy code";
+        copyButton.setAttribute("aria-label", "Copy code block to clipboard");
+
+        copyButton.addEventListener("click", async () => {
+            const originalLabel = "Copy code";
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(codeText);
+                } else {
+                    const temporary = document.createElement("textarea");
+                    temporary.value = codeText;
+                    temporary.setAttribute("readonly", "");
+                    temporary.style.position = "fixed";
+                    temporary.style.opacity = "0";
+                    document.body.appendChild(temporary);
+                    temporary.select();
+                    const copied = document.execCommand("copy");
+                    temporary.remove();
+                    if (!copied) throw new Error("Clipboard copy was blocked");
+                }
+                copyButton.textContent = "Copied ✓";
+            } catch (error) {
+                console.warn("Axon could not copy code:", error);
+                copyButton.textContent = "Copy failed";
+            }
+            window.setTimeout(() => {
+                if (copyButton.isConnected) copyButton.textContent = originalLabel;
+            }, 1600);
+        });
+
+        toolbar.append(languageLabel, copyButton);
+
+        const pre = document.createElement("pre");
+        pre.className = "code-block-pre";
+        const code = document.createElement("code");
+        if (language) code.className = `language-${language.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+        code.textContent = codeText;
+        pre.appendChild(code);
+
+        block.append(toolbar, pre);
+        container.appendChild(block);
+        lastIndex = codeFence.lastIndex;
+    }
+
+    const remaining = messageText.slice(lastIndex);
+    if (remaining || !foundCode) {
+        const paragraph = document.createElement("div");
+        paragraph.className = "message-text";
+        paragraph.textContent = remaining;
+        container.appendChild(paragraph);
+    }
+}
+
 function addMessage(
     sender,
     text,
@@ -3411,8 +3497,7 @@ function addMessage(
     bubble.className =
         "bubble";
 
-    bubble.textContent =
-        text;
+    renderMessageContent(bubble, String(text ?? ""));
 
     wrapper.appendChild(bubble);
 
