@@ -830,9 +830,13 @@ function getCurrentRank(user) {
 
 async function refreshCurrentRank(user = auth.currentUser) {
     currentRankName = "VISITOR";
-    if (!user) return currentRankName;
+    if (!user) {
+        updateWorkModeUI();
+        return currentRankName;
+    }
     if (!user.isAnonymous && user.uid === OWNER_UID) {
         currentRankName = "OWNER";
+        updateWorkModeUI();
         return currentRankName;
     }
     try {
@@ -847,6 +851,7 @@ async function refreshCurrentRank(user = auth.currentUser) {
     } catch (error) {
         console.warn("Axon rank lookup unavailable:", error);
     }
+    updateWorkModeUI();
     return currentRankName;
 }
 
@@ -857,6 +862,19 @@ async function refreshCurrentRank(user = auth.currentUser) {
 function updateWorkModeUI() {
 
     if (!workModeStatus) {
+        return;
+    }
+
+    const rankAllowsWorkMode = ["OWNER", "WARDEN", "PIONEER", "RESIDENT"]
+        .includes(getCurrentRank(auth.currentUser).name);
+
+    if (!rankAllowsWorkMode) {
+        workModeEnabled = false;
+        workModeStatus.textContent = "Resident rank or above required";
+        if (workModeIndicator) workModeIndicator.textContent = "LOCKED";
+        if (workModeStartButton) workModeStartButton.disabled = true;
+        if (workModeStopButton) workModeStopButton.disabled = true;
+        workModePanel?.classList.remove("work-mode-active");
         return;
     }
 
@@ -975,6 +993,12 @@ async function startWorkMode() {
             "You need to sign in before enabling Work Mode."
         );
 
+        return;
+    }
+
+    if (!["OWNER", "WARDEN", "PIONEER", "RESIDENT"].includes(getCurrentRank(user).name)) {
+        addMessage("AI", "Work Mode requires Resident rank or above.");
+        updateWorkModeUI();
         return;
     }
 
