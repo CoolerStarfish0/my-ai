@@ -678,10 +678,7 @@ onAuthStateChanged(
             } else {
 
                 userName.textContent =
-                    `Logged in as ${
-                        user.displayName ||
-                        user.email
-                    }`;
+                    `Logged in as ${user.displayName || user.email} · ${getCurrentRank(user).name}`;
 
                 logoutButton.textContent =
                     "Log out";
