@@ -1892,3 +1892,38 @@ code {
 .owner-rank-controls select { max-width: 120px; padding: 8px; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: #171323; }
 .owner-rank-controls button { padding: 8px 10px; white-space: nowrap; }
 @media (max-width: 520px) { .owner-rank-record { grid-template-columns: 1fr; } .owner-rank-controls { justify-content: flex-end; } }
+
+
+/* CREDIT BALANCE + OWNER CREDIT LIMIT EDITOR */
+.credit-status {
+    margin: 7px 4px 0;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
+    opacity: .82;
+}
+.owner-credit-controls {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+.owner-credit-controls input[type="number"] {
+    width: min(180px, 100%);
+    min-width: 120px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    background: #171323;
+}
+.owner-credit-unlimited {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
