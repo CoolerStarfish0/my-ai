@@ -69,6 +69,7 @@ const BACKEND_URL =
 
 const RANKS = {
     OWNER: { name: "OWNER", description: "Owner of Axon" },
+    ADMIN: { name: "ADMIN", description: "Axon administrator" },
     WARDEN: { name: "WARDEN", description: "Trusted moderator" },
     PIONEER: { name: "PIONEER", description: "Early Axon member" },
     RESIDENT: { name: "RESIDENT", description: "Registered Axon member" },
@@ -462,7 +463,7 @@ function renderOwnerRankUsers() {
             ownerOption.disabled = true;
             select.append(ownerOption);
         }
-        for (const rank of ["VISITOR", "RESIDENT", "PIONEER", "WARDEN"]) {
+        for (const rank of ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "ADMIN"]) {
             const option = document.createElement("option");
             option.value = rank;
             option.textContent = rank.charAt(0) + rank.slice(1).toLowerCase();
@@ -889,7 +890,7 @@ function updateWorkModeUI() {
         return;
     }
 
-    const rankAllowsWorkMode = ["OWNER", "WARDEN", "PIONEER", "RESIDENT"]
+    const rankAllowsWorkMode = ["OWNER", "ADMIN", "WARDEN", "PIONEER", "RESIDENT"]
         .includes(getCurrentRank(auth.currentUser).name);
 
     if (!rankAllowsWorkMode) {
@@ -1020,7 +1021,7 @@ async function startWorkMode() {
         return;
     }
 
-    if (!["OWNER", "WARDEN", "PIONEER", "RESIDENT"].includes(getCurrentRank(user).name)) {
+    if (!["OWNER", "ADMIN", "WARDEN", "PIONEER", "RESIDENT"].includes(getCurrentRank(user).name)) {
         addMessage("AI", "Work Mode requires Resident rank or above.");
         updateWorkModeUI();
         return;
@@ -3600,67 +3601,81 @@ function playRankAnimation(rankName) {
     clearRankAnimationTimers();
 
     const rank = String(rankName || "VISITOR").toUpperCase();
-    const supportedRanks = ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "OWNER"];
+    const supportedRanks = ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "ADMIN", "OWNER"];
     const safeRank = supportedRanks.includes(rank) ? rank : "VISITOR";
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rankClasses = ["rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner"];
+    const sceneClasses = ["scene-door", "scene-command", "scene-shield", "scene-streak"];
 
     rankAnimation.classList.add("hidden");
     rankAnimation.classList.remove(
-        "closing", "ai-awakened", "wings-open", "flying-up",
-        "spinning", "landed", "show-text",
-        "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-owner"
+        "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
+        "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
+        "streak-burst", "streak-celebration", "show-text", ...rankClasses, ...sceneClasses
     );
 
-    // Reset any in-flight CSS animation before showing the new rank.
+    // Restart the mascot animation cleanly on every rank-up.
     axonMascot.style.animation = "none";
     void axonMascot.offsetWidth;
     axonMascot.style.animation = "";
 
     rankAnimation.classList.add("rank-" + safeRank.toLowerCase());
-    rankAnimationTitle.textContent = ({
+    const titles = {
         VISITOR: "WELCOME",
         RESIDENT: "WELCOME TO AXON",
         PIONEER: "EARLY ACCESS",
         WARDEN: "AXON SENTINEL",
+        ADMIN: "COMMAND AUTHORITY",
         OWNER: "SYSTEM OWNER"
-    })[safeRank];
+    };
+    rankAnimationTitle.textContent = titles[safeRank];
     rankAnimationRank.textContent = safeRank;
 
-    // Reduced-motion users still get a brief, readable rank card.
     if (reducedMotion) {
         rankAnimation.classList.remove("hidden");
         rankAnimation.classList.add("show-text");
-        rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, 1400);
+        rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, 1600);
         return;
     }
 
     rankAnimation.classList.remove("hidden");
 
-    // Each rank has a distinct entrance and glow, rather than sharing the same
-    // generic welcome animation.
-    const timing = {
-        VISITOR: { reveal: 350, close: 2700 },
-        RESIDENT: { reveal: 450, close: 3000 },
+    const timings = {
+        VISITOR: { reveal: 350, close: 2600 },
+        RESIDENT: { door: 250, hello: 1150, reveal: 1550, close: 3900 },
         PIONEER: { reveal: 650, close: 3400 },
-        WARDEN: { awaken: 300, reveal: 650, close: 3600 },
-        OWNER: { awaken: 500, wings: 950, fly: 1400, reveal: 1900, spin: 2350, land: 4200, close: 5200 }
+        WARDEN: { shield: 300, impact: 1150, reveal: 1500, close: 3900 },
+        ADMIN: { activate: 450, reveal: 1300, close: 3900 },
+        OWNER: { awaken: 450, wings: 900, fly: 1350, burst: 1850, reveal: 2200, spin: 2550, land: 4100, celebrate: 4350, close: 6800 }
     }[safeRank];
 
-    if (safeRank === "WARDEN" || safeRank === "OWNER") {
-        scheduleRankAnimation(() => rankAnimation.classList.add("ai-awakened"), timing.awaken);
-    }
-    if (safeRank === "OWNER") {
-        scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timing.wings);
-        scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timing.fly);
-        scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timing.spin);
+    if (safeRank === "RESIDENT") {
+        rankAnimation.classList.add("scene-door");
+        scheduleRankAnimation(() => rankAnimation.classList.add("door-open"), timings.door);
+        scheduleRankAnimation(() => rankAnimation.classList.add("toucan-wave"), timings.hello);
+    } else if (safeRank === "WARDEN") {
+        rankAnimation.classList.add("scene-shield");
+        scheduleRankAnimation(() => rankAnimation.classList.add("shield-drop"), timings.shield);
+        scheduleRankAnimation(() => rankAnimation.classList.add("shield-impact"), timings.impact);
+    } else if (safeRank === "ADMIN") {
+        rankAnimation.classList.add("scene-command");
+        scheduleRankAnimation(() => rankAnimation.classList.add("command-active"), timings.activate);
+    } else if (safeRank === "OWNER") {
+        rankAnimation.classList.add("scene-streak");
+        scheduleRankAnimation(() => rankAnimation.classList.add("ai-awakened"), timings.awaken);
+        scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timings.wings);
+        scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timings.fly);
+        scheduleRankAnimation(() => rankAnimation.classList.add("streak-burst"), timings.burst);
+        scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timings.spin);
         scheduleRankAnimation(() => {
             rankAnimation.classList.remove("spinning", "flying-up");
             rankAnimation.classList.add("landed");
-        }, timing.land);
+        }, timings.land);
+        scheduleRankAnimation(() => rankAnimation.classList.add("streak-celebration"), timings.celebrate);
     }
 
-    scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timing.reveal);
-    rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, timing.close);
+    scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timings.reveal);
+    rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, timings.close);
 }
 
 function closeRankAnimation() {
@@ -3671,9 +3686,11 @@ function closeRankAnimation() {
         rankAnimationHideTimer = null;
         rankAnimation.classList.add("hidden");
         rankAnimation.classList.remove(
-            "closing", "ai-awakened", "wings-open", "flying-up",
-            "spinning", "landed", "show-text",
-            "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-owner"
+            "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
+            "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
+            "streak-burst", "streak-celebration", "show-text",
+            "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner",
+            "scene-door", "scene-command", "scene-shield", "scene-streak"
         );
-    }, 450);
+    }, 500);
 }
