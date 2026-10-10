@@ -2183,7 +2183,8 @@ code {
 .axon-mascot { z-index: 5; filter: drop-shadow(0 9px 3px rgba(62,54,44,.12)); }
 .toucan-body, .toucan-head { fill: #171c21; stroke: #f8f2df; stroke-width: 4; }
 .toucan-wing, .toucan-tail { fill: #262c31; stroke: #f8f2df; stroke-width: 4; }
-.toucan-beak { fill: #f2a51a; stroke: #e36b37; stroke-width: 3.5; }
+.toucan-beak { fill: url(#toucanBeakPaint); stroke: #d8753d; stroke-width: 3.5; }
+.beak-tip { fill: #25272b; stroke: #f4bc55; stroke-width: 1.5; }
 .beak-detail { stroke: #6b3d2d; stroke-width: 4; }
 .toucan-foot { stroke: #db7d37; stroke-width: 4.5; }
 .toucan-eye { fill: #fffaf0; }
@@ -2350,4 +2351,15 @@ code {
     .rank-animation.command-active .command-block,
     .rank-animation.shield-drop .guardian-shield,
     .rank-animation.streak-burst .streak-medallion { opacity: 1; transform: none; }
+}
+
+/* Resident scene: keep the toucan tucked behind the door, then let it step out. */
+.rank-animation.rank-resident.scene-door .axon-mascot {
+    animation: axonResidentExit 1.05s cubic-bezier(.18,.78,.2,1) both;
+}
+@keyframes axonResidentExit {
+    0%, 22% { opacity: 0; transform: translateX(-105px) translateY(14px) scale(.68); }
+    62% { opacity: 1; transform: translateX(15px) translateY(-7px) scale(1.04); }
+    82% { transform: translateX(-4px) translateY(2px) scale(.99); }
+    100% { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
 }
