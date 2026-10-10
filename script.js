@@ -483,6 +483,7 @@ function renderOwnerRankUsers() {
                 account.creditLimit = data.user.creditLimit;
                 account.effectiveCreditLimit = data.user.effectiveCreditLimit;
                 account.creditsUsed = data.user.creditsUsed;
+                account.creditsRemaining = data.user.creditsRemaining;
                 ownerRankStatus.textContent = `Updated ${account.email || account.displayName || account.uid} to ${account.rank}.`;
                 renderOwnerRankUsers();
             } catch (error) {
@@ -551,6 +552,7 @@ function renderOwnerRankUsers() {
                 account.creditLimit = data.user.creditLimit;
                 account.effectiveCreditLimit = data.user.effectiveCreditLimit;
                 account.creditsUsed = data.user.creditsUsed;
+                account.creditsRemaining = data.user.creditsRemaining;
                 ownerRankStatus.textContent = `Updated credit limit for ${account.email || account.displayName || account.uid}. ${account.effectiveCreditLimit === null ? "Unlimited usage." : `Limit: ${account.effectiveCreditLimit.toLocaleString()} credits.`}`;
                 renderOwnerRankUsers();
             } catch (error) {
