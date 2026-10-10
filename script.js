@@ -156,30 +156,29 @@ const conversationHistory = [];
 const MAX_CONTEXT_MESSAGES = 16;
 
 // ==========================================
-// VISITOR TRACKING
+// VISITOR TRACKING — AXON 5158
 // ==========================================
 
-const VISITOR_ID_KEY =
-    "axon_visitor_id_v1";
+const VISITOR_ID_KEY = "axon_visitor_id_v1";
+const SESSION_ID_KEY = "axon_session_id_v1";
 
-const SESSION_ID_KEY =
-    "axon_session_id_v1";
-
+// Generate unique IDs for browsers and sessions.
 function generateId(prefix) {
-    return prefix + "_" + crypto.randomUUID();
+    if (crypto.randomUUID) {
+        return `${prefix}_${crypto.randomUUID()}`;
+    }
+
+    return `${prefix}_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2)}`;
 }
 
+// A visitor ID persists across browser sessions.
 function getVisitorId() {
-
-    let visitorId =
-        localStorage.getItem(
-            VISITOR_ID_KEY
-        );
+    let visitorId = localStorage.getItem(VISITOR_ID_KEY);
 
     if (!visitorId) {
-
-        visitorId =
-            generateId("visitor");
+        visitorId = generateId("visitor");
 
         localStorage.setItem(
             VISITOR_ID_KEY,
@@ -190,17 +189,12 @@ function getVisitorId() {
     return visitorId;
 }
 
+// A session ID persists for the current browser tab.
 function getSessionId() {
-
-    let sessionId =
-        sessionStorage.getItem(
-            SESSION_ID_KEY
-        );
+    let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
 
     if (!sessionId) {
-
-        sessionId =
-            generateId("session");
+        sessionId = generateId("session");
 
         sessionStorage.setItem(
             SESSION_ID_KEY,
@@ -214,148 +208,149 @@ function getSessionId() {
 const visitorId = getVisitorId();
 const sessionId = getSessionId();
 
+let visitorTrackingInitialized = false;
+let trackedAuthUid = null;
+let lastActivityUpdate = 0;
+let visitorTrackingBusy = false;
+
 // ==========================================
 // TRACK VISITOR
 // ==========================================
 
 async function trackVisitor(user = null) {
+    // Do not track unidentified signed-out sessions in Firestore.
+    // They can be associated with a visitor after authentication.
+    if (!user) {
+        return;
+    }
+
+    if (visitorTrackingBusy) {
+        return;
+    }
+
+    visitorTrackingBusy = true;
 
     try {
+        const isGuest = user.isAnonymous === true;
 
-        const visitorRef =
-            doc(
-                db,
-                "visitors",
-                visitorId
-            );
+        const accountType = isGuest
+            ? "guest"
+            : "google";
 
-        const isGuest =
-            !user ||
-            user.isAnonymous;
-
-        const visitorData = {
-
-            visitorId,
-            sessionId,
-
-            firstVisit:
-                serverTimestamp(),
-
-            lastSeen:
-                serverTimestamp(),
-
-            visitCount:
-                increment(1),
-
-            sessionStart:
-                serverTimestamp(),
-
-            lastActivity:
-                serverTimestamp(),
-
-            page:
-                window.location.pathname,
-
-            pageTitle:
-                document.title,
-
-            referrer:
-                document.referrer || "",
-
-            userAgent:
-                navigator.userAgent,
-
-            screenWidth:
-                window.screen.width,
-
-            screenHeight:
-                window.screen.height,
-
-            accountType:
-                isGuest
-                    ? "guest"
-                    : "google",
-
-            uid:
-                user
-                    ? user.uid
-                    : null,
-
-            email:
-                !isGuest
-                    ? user.email || null
-                    : null,
-
-            displayName:
-                !isGuest
-                    ? user.displayName || null
-                    : null
-        };
-
-        await setDoc(
-            visitorRef,
-            visitorData,
-            {
-                merge: true
-            }
-        );
-
-        const sessionRef =
-            doc(
-                db,
-                "visitors",
-                visitorId,
-                "sessions",
-                sessionId
-            );
-
-        await setDoc(
-            sessionRef,
-            {
-
-                visitorId,
-                sessionId,
-
-                startedAt:
-                    serverTimestamp(),
-
-                lastActivity:
-                    serverTimestamp(),
-
-                page:
-                    window.location.pathname,
-
-                accountType:
-                    isGuest
-                        ? "guest"
-                        : "google",
-
-                uid:
-                    user
-                        ? user.uid
-                        : null,
-
-                email:
-                    !isGuest
-                        ? user.email || null
-                        : null
-            },
-            {
-                merge: true
-            }
-        );
-
-        console.log(
-            "Visitor tracked:",
+        const visitorRef = doc(
+            db,
+            "visitors",
             visitorId
         );
 
-    } catch (error) {
+        const sessionRef = doc(
+            db,
+            "visitors",
+            visitorId,
+            "sessions",
+            sessionId
+        );
 
+        const now = serverTimestamp();
+
+        // Only initialize the visitor record once.
+        // Later updates must not overwrite firstVisit.
+        if (!visitorTrackingInitialized) {
+            const visitorSnapshot = await getDocs(
+                collection(
+                    db,
+                    "visitors"
+                )
+            );
+
+            const visitorExists = visitorSnapshot.docs.some(
+                snapshot => snapshot.id === visitorId
+            );
+
+            if (!visitorExists) {
+                await setDoc(visitorRef, {
+                    visitorId,
+                    firstVisit: now,
+                    lastSeen: now,
+                    visitCount: 1,
+                    accountType,
+                    uid: user.uid,
+                    email: isGuest ? null : (user.email || null),
+                    displayName: isGuest
+                        ? null
+                        : (user.displayName || null),
+                    createdAt: now,
+                    page: window.location.pathname,
+                    pageTitle: document.title,
+                    referrer: document.referrer || "",
+                    userAgent: navigator.userAgent,
+                    screenWidth: window.screen.width,
+                    screenHeight: window.screen.height
+                });
+            } else {
+                await setDoc(
+                    visitorRef,
+                    {
+                        lastSeen: now,
+                        accountType,
+                        uid: user.uid,
+                        email: isGuest ? null : (user.email || null),
+                        displayName: isGuest
+                            ? null
+                            : (user.displayName || null),
+                        page: window.location.pathname,
+                        pageTitle: document.title
+                    },
+                    { merge: true }
+                );
+            }
+
+            visitorTrackingInitialized = true;
+            trackedAuthUid = user.uid;
+        } else if (trackedAuthUid !== user.uid) {
+            // Authentication changed within the same page.
+            // Update identity without counting another visit.
+            await setDoc(
+                visitorRef,
+                {
+                    lastSeen: now,
+                    accountType,
+                    uid: user.uid,
+                    email: isGuest ? null : (user.email || null),
+                    displayName: isGuest
+                        ? null
+                        : (user.displayName || null)
+                },
+                { merge: true }
+            );
+
+            trackedAuthUid = user.uid;
+        }
+
+        // Record this browser tab's session.
+        await setDoc(
+            sessionRef,
+            {
+                visitorId,
+                sessionId,
+                lastActivity: now,
+                page: window.location.pathname,
+                pageTitle: document.title,
+                accountType,
+                uid: user.uid,
+                startedAt: now
+            },
+            { merge: true }
+        );
+
+        console.log("Axon visitor tracking initialized.");
+    } catch (error) {
         console.error(
-            "Visitor tracking error:",
+            "Axon visitor tracking error:",
             error
         );
+    } finally {
+        visitorTrackingBusy = false;
     }
 }
 
@@ -363,92 +358,98 @@ async function trackVisitor(user = null) {
 // UPDATE VISITOR ACTIVITY
 // ==========================================
 
-let lastActivityUpdate = 0;
-
 async function updateVisitorActivity() {
+    const user = auth.currentUser;
 
-    const now =
-        Date.now();
-
-    if (
-        now -
-        lastActivityUpdate <
-        60000
-    ) {
+    if (!user) {
         return;
     }
 
-    lastActivityUpdate =
-        now;
+    const now = Date.now();
+
+    // Avoid excessive Firestore writes.
+    if (now - lastActivityUpdate < 60000) {
+        return;
+    }
+
+    lastActivityUpdate = now;
 
     try {
+        const visitorRef = doc(
+            db,
+            "visitors",
+            visitorId
+        );
 
-        const visitorRef =
-            doc(
-                db,
-                "visitors",
-                visitorId
-            );
+        const sessionRef = doc(
+            db,
+            "visitors",
+            visitorId,
+            "sessions",
+            sessionId
+        );
 
-        await updateDoc(
+        const timestamp = serverTimestamp();
+
+        await setDoc(
             visitorRef,
             {
-
-                lastSeen:
-                    serverTimestamp(),
-
-                lastActivity:
-                    serverTimestamp()
-            }
+                lastSeen: timestamp,
+                page: window.location.pathname,
+                pageTitle: document.title
+            },
+            { merge: true }
         );
 
-        const sessionRef =
-            doc(
-                db,
-                "visitors",
-                visitorId,
-                "sessions",
-                sessionId
-            );
-
-        await updateDoc(
+        await setDoc(
             sessionRef,
             {
-
-                lastActivity:
-                    serverTimestamp()
-            }
+                lastActivity: timestamp,
+                page: window.location.pathname,
+                pageTitle: document.title
+            },
+            { merge: true }
         );
-
     } catch (error) {
-
         console.error(
-            "Visitor activity error:",
+            "Axon visitor activity error:",
             error
         );
     }
 }
 
+// ==========================================
+// ACTIVITY EVENTS
+// ==========================================
+
 document.addEventListener(
     "visibilitychange",
     () => {
-
         if (
-            document.visibilityState ===
-            "visible"
+            document.visibilityState === "visible"
         ) {
-
             updateVisitorActivity();
         }
     }
 );
 
 window.addEventListener(
-    "beforeunload",
+    "focus",
     () => {
-
         updateVisitorActivity();
     }
+);
+
+// Track activity periodically while the page is open.
+setInterval(
+    () => {
+        if (
+            document.visibilityState === "visible"
+        ) {
+            updateVisitorActivity();
+        }
+    },
+    60000
 );
 
 // ==========================================
