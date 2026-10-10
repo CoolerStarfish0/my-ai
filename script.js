@@ -208,6 +208,79 @@ function getSessionId() {
 const visitorId = getVisitorId();
 const sessionId = getSessionId();
 
+// Send a visitor event to the server. The server derives the IP address
+// from the incoming request and verifies the Firebase token before logging.
+async function syncVisitorLog(user = auth.currentUser) {
+    if (!user) return;
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${BACKEND_URL}/api/visitors`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ visitorId, sessionId, page: window.location.pathname })
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn("Axon visitor logging unavailable:", errorData.error || response.status);
+        }
+    } catch (error) {
+        console.warn("Axon visitor logging unavailable:", error);
+    }
+}
+
+async function loadOwnerVisitorLogs() {
+    const list = document.getElementById("ownerVisitorList");
+    const status = document.getElementById("ownerVisitorStatus");
+    const user = auth.currentUser;
+    if (!list || !status || !user || user.isAnonymous || user.uid !== OWNER_UID) return;
+
+    status.textContent = "Loading visitor records…";
+    list.replaceChildren();
+    try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${BACKEND_URL}/api/visitors`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${idToken}` },
+            cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not load visitor records.");
+
+        const records = Array.isArray(data.visitors) ? data.visitors : [];
+        if (!records.length) {
+            status.textContent = "No visitor records yet. Records appear after someone signs in or starts Guest Mode.";
+            return;
+        }
+        status.textContent = `Showing ${records.length} recent visitor record(s).`;
+
+        for (const record of records) {
+            const card = document.createElement("article");
+            card.className = "owner-visitor-record";
+            const title = document.createElement("strong");
+            title.textContent = record.displayName || (record.accountType === "guest" ? "Guest visitor" : "Name unavailable");
+            const email = document.createElement("div");
+            email.className = "owner-visitor-detail";
+            email.textContent = record.email || "No Gmail available (Guest Mode)";
+            const ip = document.createElement("div");
+            ip.className = "owner-visitor-ip";
+            ip.textContent = `IP: ${record.ip || "Unavailable"}`;
+            const meta = document.createElement("div");
+            meta.className = "owner-visitor-detail";
+            meta.textContent = `${record.accountType === "guest" ? "Guest" : "Google/account"} · ${Number(record.visitCount) || 1} visit(s) · ${record.page || "/"}`;
+            const seen = document.createElement("div");
+            seen.className = "owner-visitor-detail";
+            seen.textContent = `Last seen: ${record.lastSeen ? new Date(record.lastSeen).toLocaleString() : "Unknown"}`;
+            card.append(title, email, ip, meta, seen);
+            list.append(card);
+        }
+    } catch (error) {
+        status.textContent = error.message || "Could not load visitor records.";
+    }
+}
+
 let visitorTrackingInitialized = false;
 let trackedAuthUid = null;
 let lastActivityUpdate = 0;
@@ -452,6 +525,36 @@ setInterval(
     60000
 );
 
+setInterval(() => {
+    if (document.visibilityState === "visible" && auth.currentUser) {
+        void syncVisitorLog(auth.currentUser);
+    }
+}, 5 * 60 * 1000);
+
+const ownerAnalyticsButton = document.getElementById("ownerAnalyticsButton");
+const ownerAnalyticsPanel = document.getElementById("ownerAnalyticsPanel");
+const ownerAnalyticsClose = document.getElementById("ownerAnalyticsClose");
+const ownerAnalyticsRefresh = document.getElementById("ownerAnalyticsRefresh");
+const ownerAnalyticsBackdrop = document.getElementById("ownerAnalyticsBackdrop");
+
+function closeOwnerAnalyticsPanel() {
+    ownerAnalyticsPanel?.classList.add("hidden");
+    ownerAnalyticsBackdrop?.classList.add("hidden");
+    ownerAnalyticsPanel?.setAttribute("aria-hidden", "true");
+}
+
+ownerAnalyticsButton?.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || user.uid !== OWNER_UID) return;
+    ownerAnalyticsPanel?.classList.remove("hidden");
+    ownerAnalyticsBackdrop?.classList.remove("hidden");
+    ownerAnalyticsPanel?.setAttribute("aria-hidden", "false");
+    await loadOwnerVisitorLogs();
+});
+ownerAnalyticsClose?.addEventListener("click", closeOwnerAnalyticsPanel);
+ownerAnalyticsBackdrop?.addEventListener("click", closeOwnerAnalyticsPanel);
+ownerAnalyticsRefresh?.addEventListener("click", () => void loadOwnerVisitorLogs());
+
 // ==========================================
 // GUEST MEMORY
 // ==========================================
@@ -603,6 +706,16 @@ onAuthStateChanged(
     async user => {
 
         await trackVisitor(user);
+
+        if (user) void syncVisitorLog(user);
+
+        const ownerAnalyticsButton = document.getElementById("ownerAnalyticsButton");
+        if (ownerAnalyticsButton) {
+            ownerAnalyticsButton.classList.toggle(
+                "hidden",
+                !(user && !user.isAnonymous && user.uid === OWNER_UID)
+            );
+        }
 
         workModeEnabled = false;
         updateWorkModeUI();
