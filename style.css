@@ -2363,3 +2363,7 @@ code {
     82% { transform: translateX(-4px) translateY(2px) scale(.99); }
     100% { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
 }
+
+/* The celebration is inspired by streak milestone energy, but uses Axon's own branding. */
+.streak-medallion span { font-size: 43px; line-height: 1; }
+.streak-medallion small { font-size: 8px; letter-spacing: 2px; }
