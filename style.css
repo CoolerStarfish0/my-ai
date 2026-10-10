@@ -1836,3 +1836,41 @@ code {
             0.01ms !important;
     }
 }
+
+
+/* =========================================================
+   OWNER-ONLY VISITOR ANALYTICS PANEL
+   ========================================================= */
+.owner-analytics-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(4px);
+}
+.owner-analytics-panel {
+    position: fixed; z-index: 501; top: 0; right: 0;
+    width: min(470px, 100vw); height: 100dvh;
+    padding: 22px; overflow-y: auto; color: var(--text);
+    background: rgba(8, 4, 15, 0.98);
+    border-left: 1px solid rgba(192, 132, 252, 0.28);
+    box-shadow: -24px 0 80px rgba(0, 0, 0, 0.55);
+}
+.owner-analytics-heading {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.owner-analytics-heading h2 { margin: 5px 0 0; font-size: 23px; letter-spacing: -0.5px; }
+.owner-analytics-kicker { color: var(--purple-soft); font-size: 9px; font-weight: 900; letter-spacing: 1.6px; }
+.owner-analytics-note, .privacy-notice { color: var(--muted); font-size: 11px; line-height: 1.65; }
+.owner-analytics-note { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: rgba(168, 85, 247, 0.05); }
+.owner-analytics-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0; }
+#ownerVisitorStatus { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.owner-visitor-list { display: grid; gap: 10px; }
+.owner-visitor-record { padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, 0.025); overflow-wrap: anywhere; }
+.owner-visitor-record strong { display: block; margin-bottom: 7px; font-size: 13px; }
+.owner-visitor-detail { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.owner-visitor-ip { margin-top: 8px; color: #d8b4fe; font-size: 12px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.privacy-notice { max-width: 950px; margin: 16px auto 0; text-align: center; }
+@media (max-width: 560px) {
+    .owner-analytics-panel { padding: 16px; }
+    #ownerAnalyticsButton { padding: 8px 10px; }
+}
