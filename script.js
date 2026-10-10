@@ -400,7 +400,7 @@ async function loadOwnerRankUsers() {
         if (!response.ok) throw new Error(data.error || "Could not load registered accounts.");
         ownerRankUsers = Array.isArray(data.users) ? data.users : [];
         renderOwnerRankUsers();
-        ownerRankStatus.textContent = `${ownerRankUsers.length} registered account(s)${data.truncated ? " shown (first 5,000)" : ""}. Choose a rank and press Save.`;
+        ownerRankStatus.textContent = `${ownerRankUsers.length} registered account(s)${data.truncated ? " shown (first 5,000)" : ""}. Set rank and credit limit independently; blank limit restores the rank default.`;
     } catch (error) {
         ownerRankStatus.textContent = error.message || "Could not load registered accounts.";
     }
@@ -480,7 +480,76 @@ function renderOwnerRankUsers() {
             }
         });
         controls.append(select, save);
-        card.append(identity, controls);
+
+        const creditControls = document.createElement("div");
+        creditControls.className = "owner-credit-controls";
+
+        const limitInput = document.createElement("input");
+        limitInput.type = "number";
+        limitInput.min = "0";
+        limitInput.max = "1000000000";
+        limitInput.step = "1";
+        limitInput.setAttribute("aria-label", `Credit limit for ${account.email || account.uid}`);
+        limitInput.placeholder = account.effectiveCreditLimit === null
+            ? "Default: unlimited"
+            : `Default: ${Number(account.effectiveCreditLimit || 0).toLocaleString()}`;
+        if (account.creditLimitMode === "custom" && account.creditLimit !== null && account.creditLimit !== undefined) {
+            limitInput.value = String(account.creditLimit);
+        }
+
+        const unlimitedLabel = document.createElement("label");
+        unlimitedLabel.className = "owner-credit-unlimited";
+        const unlimitedInput = document.createElement("input");
+        unlimitedInput.type = "checkbox";
+        unlimitedInput.checked = account.creditLimitMode === "custom" && (account.creditLimit === null || account.creditLimit === undefined);
+        unlimitedLabel.append(unlimitedInput, document.createTextNode(" Unlimited"));
+
+        const saveCredits = document.createElement("button");
+        saveCredits.type = "button";
+        saveCredits.textContent = "Save limit";
+        saveCredits.addEventListener("click", async () => {
+            const originalText = saveCredits.textContent;
+            saveCredits.disabled = true;
+            saveCredits.textContent = "Saving…";
+            try {
+                const currentUser = auth.currentUser;
+                if (!currentUser || currentUser.uid !== OWNER_UID || currentUser.isAnonymous) throw new Error("Owner access required.");
+                let creditLimitMode = "default";
+                let creditLimit;
+                if (unlimitedInput.checked) {
+                    creditLimitMode = "custom";
+                    creditLimit = null;
+                } else if (limitInput.value.trim() !== "") {
+                    const parsed = Number(limitInput.value);
+                    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 1000000000) {
+                        throw new Error("Enter a whole-number limit from 0 to 1,000,000,000, or choose Unlimited.");
+                    }
+                    creditLimitMode = "custom";
+                    creditLimit = parsed;
+                }
+                const token = await currentUser.getIdToken();
+                const response = await fetch(`${BACKEND_URL}/api/visitors?mode=ranks`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ action: "credit-limit", uid: account.uid, creditLimitMode, creditLimit })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || "Credit limit update failed.");
+                account.creditLimitMode = data.user.creditLimitMode;
+                account.creditLimit = data.user.creditLimit;
+                account.effectiveCreditLimit = data.user.effectiveCreditLimit;
+                account.creditsUsed = data.user.creditsUsed;
+                ownerRankStatus.textContent = `Updated credit limit for ${account.email || account.displayName || account.uid}. ${account.effectiveCreditLimit === null ? "Unlimited usage." : `Limit: ${account.effectiveCreditLimit.toLocaleString()} credits.`}`;
+                renderOwnerRankUsers();
+            } catch (error) {
+                ownerRankStatus.textContent = error.message || "Credit limit update failed.";
+                saveCredits.disabled = false;
+                saveCredits.textContent = originalText;
+            }
+        });
+
+        creditControls.append(limitInput, unlimitedLabel, saveCredits);
+        card.append(identity, controls, creditControls);
         ownerRankList.append(card);
     }
 }
@@ -2273,6 +2342,8 @@ async function callAxonBackend(
 
                     system: systemPrompt,
 
+                    workMode: Boolean(workModeEnabled),
+
                     adminAction:
                         detectAdminMemoryRequest(
                             originalMessage,
@@ -2292,11 +2363,9 @@ async function callAxonBackend(
         await response.json();
 
     if (!response.ok) {
-
-        throw new Error(
-            data.error ||
-            "Backend request failed."
-        );
+        const error = new Error(data.error || "Backend request failed.");
+        error.credits = data.credits || null;
+        throw error;
     }
 
     return data;
@@ -2322,6 +2391,7 @@ async function runAxonWorkLoop(
         new Set();
 
     let lastSuccessfulActions = null;
+    let latestCredits = null;
 
     for (
         let round = 0;
@@ -2431,6 +2501,8 @@ DO NOT repeat a successful action.
                 isOwner
             );
 
+        latestCredits = data.credits || latestCredits;
+
         const rawAnswer =
             typeof data.answer === "string" &&
             data.answer.trim()
@@ -2463,6 +2535,8 @@ DO NOT repeat a successful action.
                         ? actionData.visibleText
                         : rawAnswer,
 
+                credits: latestCredits,
+
                 actionPerformed:
                     false
             };
@@ -2484,6 +2558,8 @@ DO NOT repeat a successful action.
                 answer:
                     actionData.visibleText ||
                     "I didn't find any computer action that needed to be performed.",
+
+                credits: latestCredits,
 
                 actionPerformed:
                     false
@@ -2516,6 +2592,8 @@ DO NOT repeat a successful action.
                     actionData.visibleText ||
                     "✅ Done. I stopped because the requested computer action had already been completed.",
 
+                credits: latestCredits,
+
                 actionPerformed:
                     true
             };
@@ -2539,6 +2617,8 @@ DO NOT repeat a successful action.
 
                 answer:
                     "✅ Done. I stopped to prevent repeating the same computer action.",
+
+                credits: latestCredits,
 
                 actionPerformed:
                     true
@@ -2584,6 +2664,8 @@ DO NOT repeat a successful action.
                 answer:
                     `⚠️ I stopped the computer action: ${error.message}`,
 
+                credits: latestCredits,
+
                 actionPerformed:
                     true
             };
@@ -2624,6 +2706,8 @@ DO NOT repeat a successful action.
                         actionData.visibleText ||
                         "✅ Done.",
 
+                    credits: latestCredits,
+
                     actionPerformed:
                         true
                 };
@@ -2644,6 +2728,8 @@ DO NOT repeat a successful action.
                     answer:
                         actionData.visibleText ||
                         "✅ Done.",
+
+                    credits: latestCredits,
 
                     actionPerformed:
                         true
@@ -2706,6 +2792,8 @@ confirmation, or other human verification appears, STOP.
 
         answer:
             "I stopped because the computer task reached the maximum number of action steps.",
+
+        credits: latestCredits,
 
         actionPerformed:
             true
@@ -2876,7 +2964,8 @@ async function sendMessage() {
 
             addMessage(
                 "AI",
-                result.answer
+                result.answer,
+                result.credits
             );
         }
 
@@ -2901,7 +2990,8 @@ async function sendMessage() {
 
         addMessage(
             "AI",
-            "I couldn't reach the AI server. Check the backend connection. 😭"
+            error.message || "I couldn't reach the AI server. Check the backend connection. 😭",
+            error.credits || null
         );
 
     } finally {
@@ -3251,7 +3341,8 @@ function buildConversationContext() {
 
 function addMessage(
     sender,
-    text
+    text,
+    credits = null
 ) {
 
     const wrapper =
@@ -3275,13 +3366,21 @@ function addMessage(
     bubble.textContent =
         text;
 
-    wrapper.appendChild(
-        bubble
-    );
+    wrapper.appendChild(bubble);
 
-    chat.appendChild(
-        wrapper
-    );
+    if (sender !== "USER" && credits && typeof credits === "object") {
+        const creditStatus = document.createElement("div");
+        creditStatus.className = "credit-status";
+        const used = Number(credits.used || 0).toLocaleString();
+        if (credits.limit === null || credits.limit === undefined) {
+            creditStatus.textContent = `Credits used: ${used} · Limit: Unlimited ♾️`;
+        } else {
+            creditStatus.textContent = `Credits remaining: ${Number(credits.remaining || 0).toLocaleString()} / ${Number(credits.limit).toLocaleString()}`;
+        }
+        wrapper.appendChild(creditStatus);
+    }
+
+    chat.appendChild(wrapper);
 
     chat.scrollTop =
         chat.scrollHeight;
