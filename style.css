@@ -1874,3 +1874,21 @@ code {
     .owner-analytics-panel { padding: 16px; }
     #ownerAnalyticsButton { padding: 8px 10px; }
 }
+
+
+/* OWNER RANK MANAGEMENT */
+.owner-rank-manager { margin: 22px 0; padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.025); }
+.owner-rank-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.owner-rank-heading h3 { margin: 5px 0 0; font-size: 18px; }
+.owner-rank-search-label { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 11px; }
+#ownerRankSearch { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text); background: rgba(0,0,0,.2); }
+.owner-rank-status { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.owner-rank-list { display: grid; gap: 9px; }
+.owner-rank-record { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0,0,0,.12); }
+.owner-rank-identity { min-width: 0; display: grid; gap: 5px; overflow-wrap: anywhere; }
+.owner-rank-identity strong { font-size: 12px; }
+.owner-rank-identity span, .owner-rank-disabled { color: var(--muted); font-size: 10px; }
+.owner-rank-controls { display: flex; align-items: center; gap: 7px; }
+.owner-rank-controls select { max-width: 120px; padding: 8px; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: #171323; }
+.owner-rank-controls button { padding: 8px 10px; white-space: nowrap; }
+@media (max-width: 520px) { .owner-rank-record { grid-template-columns: 1fr; } .owner-rank-controls { justify-content: flex-end; } }
