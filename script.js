@@ -3573,6 +3573,7 @@ const rankAnimationRank =
 
 let rankAnimationTimers = [];
 let rankAnimationCloseTimer = null;
+let rankAnimationHideTimer = null;
 
 function clearRankAnimationTimers() {
     rankAnimationTimers.forEach(timer => window.clearTimeout(timer));
@@ -3580,6 +3581,10 @@ function clearRankAnimationTimers() {
     if (rankAnimationCloseTimer !== null) {
         window.clearTimeout(rankAnimationCloseTimer);
         rankAnimationCloseTimer = null;
+    }
+    if (rankAnimationHideTimer !== null) {
+        window.clearTimeout(rankAnimationHideTimer);
+        rankAnimationHideTimer = null;
     }
 }
 
@@ -3648,7 +3653,10 @@ function playRankAnimation(rankName) {
         scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timing.wings);
         scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timing.fly);
         scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timing.spin);
-        scheduleRankAnimation(() => rankAnimation.classList.add("landed"), timing.land);
+        scheduleRankAnimation(() => {
+            rankAnimation.classList.remove("spinning", "flying-up");
+            rankAnimation.classList.add("landed");
+        }, timing.land);
     }
 
     scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timing.reveal);
@@ -3659,7 +3667,8 @@ function closeRankAnimation() {
     if (!rankAnimation) return;
     clearRankAnimationTimers();
     rankAnimation.classList.add("closing");
-    window.setTimeout(() => {
+    rankAnimationHideTimer = window.setTimeout(() => {
+        rankAnimationHideTimer = null;
         rankAnimation.classList.add("hidden");
         rankAnimation.classList.remove(
             "closing", "ai-awakened", "wings-open", "flying-up",
