@@ -2373,3 +2373,22 @@ code {
 .owner-device-heading { display: block; margin: 13px 0 3px; padding-top: 10px; border-top: 1px solid var(--border); color: #d8b4fe; font-size: 11px !important; letter-spacing: .4px; }
 .owner-device-history { margin-top: 9px; padding: 9px; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
 .privacy-notice { padding: 0 12px; }
+
+/* AXON PERSONAL CHAT HISTORY SIDEBAR */
+.chat-sidebar-toggle{position:fixed;top:86px;left:12px;z-index:1021;border:1px solid var(--border-hover);background:#180d2b;color:var(--white);border-radius:12px;padding:10px 13px;cursor:pointer;font-weight:700;box-shadow:0 5px 25px #0006}
+.chat-sidebar{position:fixed;top:0;bottom:0;left:0;width:270px;z-index:1023;padding:20px 13px;overflow-y:auto;background:#0b0614;border-right:1px solid var(--border-hover);box-shadow:8px 0 36px #0008;transform:translateX(-105%);transition:transform .22s ease}
+body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
+.chat-sidebar-heading{display:flex;align-items:center;justify-content:space-between;margin:5px 0 20px;color:var(--white)}
+.chat-sidebar-heading button{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+.chat-new-button{width:100%;padding:12px;border:1px solid var(--border-hover);border-radius:12px;background:#251139;color:var(--white);cursor:pointer;text-align:left;font-weight:700}
+.chat-history-list{display:flex;flex-direction:column;gap:5px;margin-top:16px}
+.chat-history-item{display:flex;gap:5px;align-items:center;border-radius:10px}
+.chat-history-item.active{background:#28133f}
+.chat-history-open{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:12px 9px;border:0;background:transparent;color:var(--text);cursor:pointer}
+.chat-history-delete{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:9px;font-size:15px}
+.chat-history-delete:hover{color:#ff8c9b}
+.chat-storage-note{color:var(--muted);font-size:11px;line-height:1.5;margin:20px 6px}
+.chat-sidebar-backdrop{position:fixed;inset:0;z-index:1022;background:#0008}
+.chat-sidebar-backdrop.hidden{display:none}
+@media(min-width:1050px){body.chat-sidebar-open .app{padding-left:270px}body.chat-sidebar-open .chat-sidebar-toggle{left:282px}}
+@media(max-width:1049px){.chat-sidebar{width:min(290px,85vw)}.chat-sidebar-toggle{top:74px}}
