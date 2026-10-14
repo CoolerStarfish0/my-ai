@@ -115,6 +115,12 @@ const messageInput =
 
 const sendButton =
     document.getElementById("sendButton");
+const imageUploadInput = document.getElementById("imageUploadInput");
+const attachImageButton = document.getElementById("attachImageButton");
+const imageAttachmentTray = document.getElementById("imageAttachmentTray");
+let pendingImageAttachments = [];
+const MAX_IMAGE_ATTACHMENTS = 3;
+const MAX_IMAGE_BYTES = 400 * 1024;
 
 // ==========================================
 // WORK MODE UI
@@ -233,8 +239,8 @@ function openSavedChat(id) {
     clearChat();
     for (const msg of item.messages) {
         if (!msg || !["USER", "AXON"].includes(msg.role) || typeof msg.content !== "string") continue;
-        addMessage(msg.role === "USER" ? "USER" : "AI", msg.content);
-        conversationHistory.push({ role: msg.role, content: msg.content });
+        addMessage(msg.role === "USER" ? "USER" : "AI", msg.content, null, msg.attachments || []);
+        conversationHistory.push({ role: msg.role, content: msg.content, ...(msg.attachments?.length ? { images: msg.attachments.map(image => ({ mimeType: image.mimeType, data: image.data })) } : {}) });
     }
     if (conversationHistory.length > MAX_CONTEXT_MESSAGES) conversationHistory.splice(0, conversationHistory.length - MAX_CONTEXT_MESSAGES);
     renderSavedChats(); closeChatSidebar();
@@ -251,7 +257,7 @@ function startNewSavedChat() {
     renderSavedChats(); closeChatSidebar();
     messageInput?.focus();
 }
-function saveChatMessage(role, content) {
+function saveChatMessage(role, content, attachments = []) {
     if (!auth.currentUser || !["USER", "AXON"].includes(role)) return;
     if (activeSharedChatId) {
         void shareChatMessageToOwner({ role, content: String(content).slice(0, 30000), messageId: generateId("msg"), chatId: activeSharedChatId, title: activeSharedChat?.title || "Shared chat" });
@@ -263,7 +269,7 @@ function saveChatMessage(role, content) {
     }
     const item = savedChats.find(c => c.id === activeChatId);
     if (!item) return;
-    item.messages.push({ role, content: String(content).slice(0, 30000) });
+    item.messages.push({ role, content: String(content).slice(0, 30000), ...(attachments.length ? { attachments: attachments.map(image => ({ name: image.name, mimeType: image.mimeType, data: image.data, dataUrl: image.dataUrl, size: image.size })) } : {}) });
     const messageId = generateId("msg");
     if (role === "USER" && item.title === "New chat") item.title = String(content).replace(/\\s+/g, " ").slice(0, 55) || "New chat";
     item.updatedAt = Date.now();
@@ -519,7 +525,7 @@ function renderSharedMessages(messages) {
         if (!message || !["USER", "AXON"].includes(message.role) || typeof message.content !== "string") continue;
         const senderName = message.role === "AXON" ? "Axon" : (message.senderName || "Member");
         const shownContent = message.role === "USER" ? senderName + ":\n" + message.content : message.content;
-        addMessage(message.role === "USER" ? "USER" : "AI", shownContent);
+        addMessage(message.role === "USER" ? "USER" : "AI", shownContent, null, (message.images || []).map(image => ({ ...image, dataUrl: image.dataUrl || (image.data ? "data:" + (image.mimeType || "image/jpeg") + ";base64," + image.data : "") })));
         conversationHistory.push({
             role: message.role,
             content: message.role === "USER" ? senderName + ": " + message.content : message.content
@@ -582,12 +588,12 @@ function buildSharedSystemPrompt(messages) {
     ].join("\n\n");
 }
 
-async function sendSharedChatMessage(originalMessage) {
+async function sendSharedChatMessage(originalMessage, attachments = []) {
     const user = auth.currentUser;
     if (!user || !activeSharedChatId) return;
     workActionBusy = true;
     try {
-        await sharedChatRequest("sendMessage", "POST", { chatId: activeSharedChatId, role: "USER", content: originalMessage });
+        await sharedChatRequest("sendMessage", "POST", { chatId: activeSharedChatId, role: "USER", content: originalMessage || "Please look at the attached image(s).", images: attachments.map(image => ({ name: image.name, mimeType: image.mimeType, data: image.data })) });
         const latestRoom = await sharedChatRequest("messages", "GET", { chatId: activeSharedChatId });
         activeSharedChat = latestRoom.chat;
         renderSharedMessages(latestRoom.messages);
@@ -597,7 +603,8 @@ async function sendSharedChatMessage(originalMessage) {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: "Bearer " + idToken },
             body: JSON.stringify({
-                prompt: originalMessage,
+                prompt: originalMessage || "Please inspect the attached image(s) and describe what you see.",
+                images: attachments.map(image => ({ mimeType: image.mimeType, data: image.data })),
                 system: buildSharedSystemPrompt(sharedChatMessages),
                 workMode: false,
                 adminAction: null,
@@ -3534,28 +3541,18 @@ async function sendMessage() {
         return;
     }
 
-    const originalMessage =
-        messageInput.value.trim();
+    const originalMessage = messageInput.value.trim();
+    const attachments = pendingImageAttachments.slice();
+    if (!originalMessage && !attachments.length) return;
 
-    if (!originalMessage) {
-        return;
-    }
-
-    messageInput.value =
-        "";
-
-    addMessage(
-        "USER",
-        originalMessage
-    );
-
-    addConversationMessage(
-        "USER",
-        originalMessage
-    );
-
+    messageInput.value = "";
+    pendingImageAttachments = [];
+    renderPendingImageAttachments();
+    const userMessage = originalMessage || "Please look at the attached image(s).";
+    addMessage("USER", originalMessage, null, attachments);
+    addConversationMessage("USER", userMessage, attachments);
     if (activeSharedChatId) {
-        await sendSharedChatMessage(originalMessage);
+        await sendSharedChatMessage(userMessage, attachments);
         return;
     }
 
@@ -3658,13 +3655,31 @@ async function sendMessage() {
 
     try {
 
-        const result =
-            await runAxonWorkLoop(
-                user,
-                systemPrompt,
-                originalMessage,
-                isOwner
-            );
+        let result;
+        if (attachments.length) {
+            const token = await user.getIdToken();
+            const response = await fetch(BACKEND_URL + "/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({
+                    prompt: originalMessage || "Please inspect the attached image(s) and describe what you see.",
+                    images: attachments.map(image => ({ mimeType: image.mimeType, data: image.data })),
+                    system: systemPrompt,
+                    workMode: false,
+                    adminAction: null,
+                    targetUser: null
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const error = new Error(data.error || "Axon couldn't process the image.");
+                error.credits = data.credits || null;
+                throw error;
+            }
+            result = { answer: data.answer || "", credits: data.credits || null };
+        } else {
+            result = await runAxonWorkLoop(user, systemPrompt, originalMessage, isOwner);
+        }
 
         removeThinkingBubble();
 
@@ -4014,20 +4029,84 @@ function detectMemoryTarget(
 }
 
 // ==========================================
+// ==========================================
+// IMAGE ATTACHMENTS
+// ==========================================
+function readImageFile(file) {
+    return new Promise((resolve, reject) => {
+        if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) return reject(new Error("Choose a PNG, JPG, WEBP, or GIF image."));
+        if (file.size > 12 * 1024 * 1024) return reject(new Error("Each image must be smaller than 12 MB."));
+        const reader = new FileReader();
+        reader.onload = () => {
+            const image = new Image();
+            image.onload = () => {
+                const scale = Math.min(1, 1280 / Math.max(image.naturalWidth, image.naturalHeight));
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                const ctx = canvas.getContext("2d");
+                if (!ctx) return reject(new Error("Your browser couldn't process that image."));
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                let quality = 0.82;
+                let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                while (dataUrl.length * 0.75 > MAX_IMAGE_BYTES && quality > 0.42) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL("image/jpeg", quality);
+                }
+                if (dataUrl.length * 0.75 > MAX_IMAGE_BYTES) return reject(new Error(file.name + " couldn't be compressed small enough."));
+                resolve({ name: String(file.name || "image").slice(0, 120), mimeType: "image/jpeg", data: dataUrl.split(",")[1], dataUrl, size: Math.floor(dataUrl.length * 0.75) });
+            };
+            image.onerror = () => reject(new Error("That image could not be opened."));
+            image.src = String(reader.result || "");
+        };
+        reader.onerror = () => reject(new Error("Could not read that image."));
+        reader.readAsDataURL(file);
+    });
+}
+function renderPendingImageAttachments() {
+    if (!imageAttachmentTray) return;
+    imageAttachmentTray.replaceChildren();
+    imageAttachmentTray.classList.toggle("hidden", !pendingImageAttachments.length);
+    pendingImageAttachments.forEach((attachment, index) => {
+        const item = document.createElement("div");
+        item.className = "image-attachment-item";
+        const image = document.createElement("img");
+        image.src = attachment.dataUrl;
+        image.alt = attachment.name;
+        const label = document.createElement("span");
+        label.textContent = attachment.name + " · " + Math.round(attachment.size / 1024) + " KB";
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", "Remove " + attachment.name);
+        remove.addEventListener("click", () => { pendingImageAttachments.splice(index, 1); renderPendingImageAttachments(); });
+        item.append(image, label, remove);
+        imageAttachmentTray.append(item);
+    });
+    if (attachImageButton) attachImageButton.disabled = pendingImageAttachments.length >= MAX_IMAGE_ATTACHMENTS;
+}
+attachImageButton?.addEventListener("click", () => imageUploadInput?.click());
+imageUploadInput?.addEventListener("change", async () => {
+    const files = Array.from(imageUploadInput.files || []);
+    imageUploadInput.value = "";
+    const room = MAX_IMAGE_ATTACHMENTS - pendingImageAttachments.length;
+    if (files.length > room) addMessage("AI", "You can attach up to " + MAX_IMAGE_ATTACHMENTS + " images per message.");
+    for (const file of files.slice(0, room)) {
+        try { pendingImageAttachments.push(await readImageFile(file)); }
+        catch (error) { addMessage("AI", error.message || "Could not attach that image."); }
+    }
+    renderPendingImageAttachments();
+});
+
+// ==========================================
 // CHAT CONTEXT
 // ==========================================
 
-function addConversationMessage(
-    role,
-    content
-) {
-
-    conversationHistory.push({
-
-        role,
-        content
-    });
-    saveChatMessage(role, content);
+function addConversationMessage(role, content, attachments = []) {
+    conversationHistory.push({ role, content, ...(attachments.length ? { images: attachments.map(image => ({ mimeType: image.mimeType, data: image.data })) } : {}) });
+    saveChatMessage(role, content, attachments);
 
     if (
         conversationHistory.length >
@@ -4145,7 +4224,8 @@ function renderMessageContent(container, messageText) {
 function addMessage(
     sender,
     text,
-    credits = null
+    credits = null,
+    attachments = []
 ) {
 
     const wrapper =
@@ -4167,7 +4247,18 @@ function addMessage(
         "bubble";
 
     renderMessageContent(bubble, String(text ?? ""));
-
+    if (Array.isArray(attachments) && attachments.length) {
+        const gallery = document.createElement("div");
+        gallery.className = "message-image-gallery";
+        for (const attachment of attachments.slice(0, MAX_IMAGE_ATTACHMENTS)) {
+            const image = document.createElement("img");
+            image.alt = attachment.name || "Attached image";
+            image.loading = "lazy";
+            image.src = attachment.dataUrl || (attachment.data ? "data:" + (attachment.mimeType || "image/jpeg") + ";base64," + attachment.data : "");
+            if (image.src) gallery.append(image);
+        }
+        if (gallery.childElementCount) bubble.append(gallery);
+    }
     wrapper.appendChild(bubble);
 
     if (sender !== "USER" && credits && typeof credits === "object") {
