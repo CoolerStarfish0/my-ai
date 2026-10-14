@@ -1033,7 +1033,6 @@ onAuthStateChanged(
         workModeEnabled = false;
         updateWorkModeUI();
         loadSavedChats();
-        refreshChatConsent();
 
         if (user) {
 
