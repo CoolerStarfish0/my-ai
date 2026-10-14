@@ -207,16 +207,16 @@ function collectDeviceProfile() {
     const ua = navigator.userAgent || "";
     const platform = navigator.userAgentData?.platform || navigator.platform || "Unknown";
     const browser = /Edg\//.test(ua) ? "Microsoft Edge"
+        : /OPR\//.test(ua) ? "Opera"
         : /Firefox\//.test(ua) ? "Firefox"
         : /CriOS\//.test(ua) ? "Chrome (iOS)"
         : /Chrome\//.test(ua) ? "Chrome"
         : /Safari\//.test(ua) ? "Safari"
-        : /OPR\//.test(ua) ? "Opera"
         : "Unknown";
-    const os = /Windows/i.test(platform + " " + ua) ? "Windows"
-        : /Mac/i.test(platform + " " + ua) ? "macOS"
-        : /iPhone|iPad|iPod/i.test(ua) ? "iOS/iPadOS"
+    const os = /iPhone|iPad|iPod/i.test(ua) ? "iOS/iPadOS"
         : /Android/i.test(ua) ? "Android"
+        : /Windows/i.test(platform + " " + ua) ? "Windows"
+        : /Mac/i.test(platform + " " + ua) ? "macOS"
         : /Linux/i.test(platform + " " + ua) ? "Linux"
         : "Unknown";
     const deviceType = /iPad|Tablet/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))
