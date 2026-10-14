@@ -1391,6 +1391,9 @@ onAuthStateChanged(
         activeSharedChat = null;
         sharedChatMessages = [];
         sharedChatFingerprint = "";
+        const soloLabelOnAuth = document.getElementById("activeSharedChatLabel");
+        if (soloLabelOnAuth) soloLabelOnAuth.textContent = "💬 Solo chat";
+        closeSharedChatModal();
         void refreshSharedBadge();
 
         const ownerAnalyticsButton = document.getElementById("ownerAnalyticsButton");
