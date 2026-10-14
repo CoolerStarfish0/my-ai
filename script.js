@@ -269,7 +269,7 @@ function saveChatMessage(role, content, attachments = []) {
     }
     const item = savedChats.find(c => c.id === activeChatId);
     if (!item) return;
-    item.messages.push({ role, content: String(content).slice(0, 30000), ...(attachments.length ? { attachments: attachments.map(image => ({ name: image.name, mimeType: image.mimeType, data: image.data, dataUrl: image.dataUrl, size: image.size })) } : {}) });
+    item.messages.push({ role, content: String(content).slice(0, 30000), ...(attachments.length ? { attachments: attachments.map(image => ({ name: image.name, mimeType: image.mimeType, data: image.data, size: image.size })) } : {}) });
     const messageId = generateId("msg");
     if (role === "USER" && item.title === "New chat") item.title = String(content).replace(/\\s+/g, " ").slice(0, 55) || "New chat";
     item.updatedAt = Date.now();
