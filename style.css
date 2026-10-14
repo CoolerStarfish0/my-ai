@@ -2464,3 +2464,19 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .shared-chat-action.primary{border-color:transparent;background:#7048c8;color:#fff}
 .shared-chat-action:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:650px){.shared-chat-toolbar{align-items:flex-start;flex-direction:column}.shared-chat-toolbar-actions{width:100%}.shared-chat-toolbar-actions button{flex:1}.shared-chat-modal{padding:9px}.shared-chat-dialog{padding:16px;border-radius:17px;max-height:92vh}.shared-chat-dialog-header h2{font-size:21px}}
+
+/* Image attachments */
+.image-attachment-tray{display:flex;gap:10px;flex-wrap:wrap;padding:10px 14px 0;max-width:100%;overflow-x:auto}
+.image-attachment-tray.hidden{display:none}
+.image-attachment-item{display:grid;grid-template-columns:54px minmax(60px,1fr) 25px;align-items:center;gap:8px;max-width:260px;padding:6px 8px;border:1px solid rgba(167,139,250,.35);border-radius:12px;background:rgba(25,25,45,.82)}
+.image-attachment-item img{width:54px;height:48px;object-fit:cover;border-radius:7px}
+.image-attachment-item span{font-size:11px;line-height:1.35;overflow-wrap:anywhere;opacity:.8}
+.image-attachment-item button{width:25px;height:25px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:inherit;font-size:20px;cursor:pointer}
+.attach-image-button{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(167,139,250,.4);border-radius:12px;background:rgba(109,70,190,.16);color:inherit;font-size:25px;line-height:1;cursor:pointer}
+.attach-image-button:hover{background:rgba(109,70,190,.32)}
+.attach-image-button:disabled{opacity:.4;cursor:not-allowed}
+.input-area{display:flex;align-items:flex-end;gap:8px}
+.input-area #messageInput{flex:1;min-width:0}
+.message-image-gallery{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.message-image-gallery img{display:block;max-width:min(100%,320px);max-height:320px;object-fit:contain;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.15)}
+@media(max-width:520px){.image-attachment-item{max-width:100%}.message-image-gallery img{max-width:100%;max-height:260px}.attach-image-button{flex-basis:38px;width:38px;height:40px}}
