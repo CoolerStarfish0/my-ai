@@ -262,23 +262,18 @@ document.getElementById("chatSidebarBackdrop")?.addEventListener("click", closeC
 document.getElementById("chatNewButton")?.addEventListener("click", startNewSavedChat);
 
 
-// Chat sharing choices are optional and account-specific.
+// Informational privacy notice only; it does not enable chat sharing.
 const chatConsentBanner = document.getElementById("chatConsentBanner");
-function consentKey() { return "axon_chat_share_v1_" + (auth.currentUser?.uid || "none"); }
 function refreshChatConsent() {
-    const choice = auth.currentUser ? localStorage.getItem(consentKey()) : null;
-    chatConsentBanner?.classList.toggle("hidden", !auth.currentUser || choice === "yes" || choice === "no");
-    const settings = document.getElementById("chatConsentSettings");
-    if (settings) settings.textContent = choice === "yes" ? "Chat privacy · Sharing on" : "Chat privacy · Sharing off";
+    const key = "axon_chat_notice_dismissed_v1_" + (auth.currentUser?.uid || "none");
+    const dismissed = localStorage.getItem(key) === "yes";
+    chatConsentBanner?.classList.toggle("hidden", !auth.currentUser || dismissed);
 }
-function chooseChatSharing(allow) {
-    if (!auth.currentUser) return;
-    localStorage.setItem(consentKey(), allow ? "yes" : "no");
+document.getElementById("chatConsentDismiss")?.addEventListener("click", () => {
+    const key = "axon_chat_notice_dismissed_v1_" + (auth.currentUser?.uid || "none");
+    localStorage.setItem(key, "yes");
     refreshChatConsent();
-}
-document.getElementById("chatConsentAllow")?.addEventListener("click", () => chooseChatSharing(true));
-document.getElementById("chatConsentDecline")?.addEventListener("click", () => chooseChatSharing(false));
-document.getElementById("chatConsentSettings")?.addEventListener("click", () => chatConsentBanner?.classList.toggle("hidden"));
+});
 async function shareConsentedMessage(message) {
     const user = auth.currentUser;
     if (!user || localStorage.getItem(consentKey()) !== "yes") return;
