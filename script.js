@@ -4,6 +4,8 @@ import {
     getAuth,
     GoogleAuthProvider,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signInAnonymously,
     signOut,
     onAuthStateChanged
@@ -919,31 +921,39 @@ function saveGuestMemory(text) {
 // GOOGLE LOGIN
 // ==========================================
 
-loginButton.addEventListener(
-    "click",
-    async () => {
-
-        try {
-
-            await signInWithPopup(
-                auth,
-                provider
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Google login error:",
-                error
-            );
-
-            addMessage(
-                "AI",
-                "I couldn't sign you in. Check your Firebase settings."
-            );
-        }
+// Use redirect sign-in instead of a popup, which can be closed or blocked by browsers.
+loginButton.addEventListener("click", async () => {
+    try {
+        loginButton.disabled = true;
+        loginButton.setAttribute("aria-busy", "true");
+        provider.setCustomParameters({ prompt: "select_account" });
+        await signInWithRedirect(auth, provider);
+    } catch (error) {
+        console.error("Google login error:", error);
+        loginButton.disabled = false;
+        loginButton.removeAttribute("aria-busy");
+        const message = error?.code === "auth/unauthorized-domain"
+            ? "Google login is not enabled for this website domain in Firebase Authentication."
+            : error?.code === "auth/operation-not-allowed"
+                ? "Google sign-in is disabled in Firebase Authentication."
+                : "Google sign-in couldn't start. Please try again.";
+        addMessage("AI", message);
     }
-);
+});
+
+// Complete redirect sign-in when the user returns from Google.
+getRedirectResult(auth).then((result) => {
+    if (result?.user) console.info("Google sign-in successful.");
+}).catch((error) => {
+    console.error("Google redirect sign-in error:", error);
+    const message = error?.code === "auth/unauthorized-domain"
+        ? "Google login is blocked because this website domain isn't authorized in Firebase."
+        : "Google sign-in didn't finish. Please click Google Login to try again.";
+    addMessage("AI", message);
+}).finally(() => {
+    loginButton.disabled = false;
+    loginButton.removeAttribute("aria-busy");
+});
 
 // ==========================================
 // GUEST LOGIN
