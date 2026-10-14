@@ -157,6 +157,11 @@ const MAX_CONTEXT_MESSAGES = 16;
 const CHAT_STORE_PREFIX = "axon_chats_v1_";
 let savedChats = [];
 let activeChatId = null;
+let activeSharedChatId = null;
+let activeSharedChat = null;
+let sharedChatMessages = [];
+let sharedChatFingerprint = "";
+let sharedChatRefreshBusy = false;
 const chatSidebar = document.getElementById("chatSidebar");
 const chatHistoryList = document.getElementById("chatHistoryList");
 const chatSidebarToggle = document.getElementById("chatSidebarToggle");
@@ -217,6 +222,8 @@ function closeChatSidebar() {
 }
 function openSavedChat(id) {
     if (workActionBusy) return;
+    activeSharedChatId = null; activeSharedChat = null; sharedChatMessages = []; sharedChatFingerprint = "";
+
     const item = savedChats.find(c => c.id === id);
     if (!item) return;
     activeChatId = id;
@@ -232,6 +239,8 @@ function openSavedChat(id) {
 }
 function startNewSavedChat() {
     if (workActionBusy) return;
+    activeSharedChatId = null; activeSharedChat = null; sharedChatMessages = []; sharedChatFingerprint = "";
+
     activeChatId = null;
     conversationHistory.length = 0;
     clearChat();
@@ -240,6 +249,10 @@ function startNewSavedChat() {
 }
 function saveChatMessage(role, content) {
     if (!auth.currentUser || !["USER", "AXON"].includes(role)) return;
+    if (activeSharedChatId) {
+        void shareChatMessageToOwner({ role, content: String(content).slice(0, 30000), messageId: generateId("msg"), chatId: activeSharedChatId, title: activeSharedChat?.title || "Shared chat" });
+        return;
+    }
     if (!activeChatId) {
         activeChatId = generateId("chat");
         savedChats.unshift({ id: activeChatId, title: "New chat", messages: [], updatedAt: Date.now() });
@@ -314,6 +327,351 @@ async function showOwnerVisitorChats(visitorId, label) {
         panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (error) { status.textContent = error.message || "Could not load visitor chats."; }
 }
+
+// ==========================================
+/* SHARED CHATS — invite-only collaborative rooms */
+const sharedChatToolbar = document.getElementById("sharedChatToolbar");
+const sharedChatModal = document.getElementById("sharedChatModal");
+const sharedChatModalStatus = document.getElementById("sharedChatModalStatus");
+const sharedInviteEmails = document.getElementById("sharedInviteEmails");
+const incomingInvitationsList = document.getElementById("incomingInvitationsList");
+const sharedChatsList = document.getElementById("sharedChatsList");
+const sharedInvitesBadge = document.getElementById("sharedInvitesBadge");
+
+async function sharedChatRequest(action, method = "GET", payload = {}) {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) throw new Error("Sign in with Google to use shared chats.");
+    const token = await user.getIdToken();
+    let url = BACKEND_URL + "/api/shared-chats?action=" + encodeURIComponent(action);
+    const options = { method, headers: { Authorization: "Bearer " + token } };
+    if (method === "GET") {
+        if (payload.chatId) url += "&chatId=" + encodeURIComponent(payload.chatId);
+    } else {
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify({ ...payload, action });
+    }
+    const response = await fetch(url, options);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Shared chat request failed.");
+    return data;
+}
+
+function openSharedChatModal() {
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+        addMessage("AI", "Sign in with Google to invite people to a shared chat.");
+        return;
+    }
+    sharedChatModal?.classList.remove("hidden");
+    sharedChatModal?.setAttribute("aria-hidden", "false");
+    const heading = document.getElementById("sharedChatModalHeading");
+    if (heading) heading.textContent = activeSharedChat ? "Manage · " + (activeSharedChat.title || "Shared chat") : "Create a Shared Chat";
+    if (sharedChatModalStatus) sharedChatModalStatus.textContent = activeSharedChat && activeSharedChat.ownerUid !== auth.currentUser.uid
+        ? "You're a member of this room. Only its owner can send invitations."
+        : "Enter one or more email addresses, separated by commas.";
+    const submit = document.getElementById("sendSharedInvitesButton");
+    if (submit) submit.disabled = Boolean(activeSharedChat && activeSharedChat.ownerUid !== auth.currentUser.uid);
+    void refreshSharedManager();
+    sharedInviteEmails?.focus();
+}
+
+function closeSharedChatModal() {
+    sharedChatModal?.classList.add("hidden");
+    sharedChatModal?.setAttribute("aria-hidden", "true");
+}
+
+async function refreshSharedBadge() {
+    const user = auth.currentUser;
+    if (!sharedChatToolbar) return;
+    const enabled = Boolean(user && !user.isAnonymous);
+    sharedChatToolbar.classList.toggle("hidden", !enabled);
+    if (!enabled) {
+        sharedInvitesBadge?.classList.add("hidden");
+        return;
+    }
+    try {
+        const data = await sharedChatRequest("inbox");
+        const count = Array.isArray(data.invitations) ? data.invitations.length : 0;
+        if (sharedInvitesBadge) {
+            sharedInvitesBadge.textContent = String(count);
+            sharedInvitesBadge.classList.toggle("hidden", count === 0);
+        }
+    } catch (error) {
+        console.warn("Could not refresh shared-chat invitation count:", error);
+    }
+}
+
+function makeSharedManagerButton(label, className, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className || "shared-chat-action";
+    button.textContent = label;
+    button.addEventListener("click", handler);
+    return button;
+}
+
+async function refreshSharedManager() {
+    if (!incomingInvitationsList || !sharedChatsList) return;
+    incomingInvitationsList.replaceChildren();
+    sharedChatsList.replaceChildren();
+    try {
+        const [inboxData, listData] = await Promise.all([
+            sharedChatRequest("inbox"),
+            sharedChatRequest("list")
+        ]);
+        const invitations = Array.isArray(inboxData.invitations) ? inboxData.invitations : [];
+        const rooms = Array.isArray(listData.chats) ? listData.chats : [];
+        if (sharedInvitesBadge) {
+            sharedInvitesBadge.textContent = String(invitations.length);
+            sharedInvitesBadge.classList.toggle("hidden", invitations.length === 0);
+        }
+        if (!invitations.length) {
+            const empty = document.createElement("p");
+            empty.className = "shared-chat-empty";
+            empty.textContent = "No pending invitations.";
+            incomingInvitationsList.append(empty);
+        } else {
+            for (const invite of invitations) {
+                const card = document.createElement("article");
+                card.className = "shared-chat-manager-card";
+                const title = document.createElement("strong");
+                title.textContent = invite.chatTitle || "Shared chat";
+                const detail = document.createElement("p");
+                detail.textContent = (invite.senderName || "Someone") + " invited you to join.";
+                const actions = document.createElement("div");
+                actions.className = "shared-chat-card-actions";
+                const accept = makeSharedManagerButton("Accept", "shared-chat-action primary", async () => {
+                    accept.disabled = true;
+                    try {
+                        const result = await sharedChatRequest("respond", "POST", { invitationId: invite.id, response: "accepted" });
+                        await refreshSharedBadge();
+                        closeSharedChatModal();
+                        await openSharedChat(result.chatId);
+                    } catch (error) {
+                        if (sharedChatModalStatus) sharedChatModalStatus.textContent = error.message;
+                        accept.disabled = false;
+                    }
+                });
+                const decline = makeSharedManagerButton("Decline", "shared-chat-action", async () => {
+                    decline.disabled = true;
+                    try {
+                        await sharedChatRequest("respond", "POST", { invitationId: invite.id, response: "declined" });
+                        await refreshSharedManager();
+                        await refreshSharedBadge();
+                    } catch (error) {
+                        if (sharedChatModalStatus) sharedChatModalStatus.textContent = error.message;
+                        decline.disabled = false;
+                    }
+                });
+                actions.append(accept, decline);
+                card.append(title, detail, actions);
+                incomingInvitationsList.append(card);
+            }
+        }
+        if (!rooms.length) {
+            const empty = document.createElement("p");
+            empty.className = "shared-chat-empty";
+            empty.textContent = "No shared chats yet. Invite someone from your current conversation.";
+            sharedChatsList.append(empty);
+        } else {
+            for (const room of rooms) {
+                const card = document.createElement("article");
+                card.className = "shared-chat-manager-card";
+                const title = document.createElement("strong");
+                title.textContent = room.title || "Shared chat";
+                const detail = document.createElement("p");
+                detail.textContent = (room.memberUids?.length || 1) + " member(s)" + (room.ownerUid === auth.currentUser?.uid ? " · You own this room" : "");
+                const actions = document.createElement("div");
+                actions.className = "shared-chat-card-actions";
+                const open = makeSharedManagerButton(activeSharedChatId === room.id ? "Open (current)" : "Open chat", "shared-chat-action primary", async () => {
+                    try {
+                        await openSharedChat(room.id);
+                    } catch (error) {
+                        if (sharedChatModalStatus) sharedChatModalStatus.textContent = error.message;
+                    }
+                });
+                actions.append(open);
+                card.append(title, detail, actions);
+                sharedChatsList.append(card);
+            }
+        }
+    } catch (error) {
+        const p = document.createElement("p");
+        p.className = "shared-chat-empty";
+        p.textContent = error.message || "Could not load shared chats.";
+        incomingInvitationsList.append(p);
+    }
+}
+
+function renderSharedMessages(messages) {
+    sharedChatMessages = Array.isArray(messages) ? messages : [];
+    sharedChatFingerprint = JSON.stringify(sharedChatMessages.map(m => [m.id, m.role, m.content, m.createdAt]));
+    conversationHistory.length = 0;
+    clearChat();
+    if (!sharedChatMessages.length) {
+        addMessage("AI", "This shared chat is ready! Everyone invited can talk here with Axon.");
+        return;
+    }
+    for (const message of sharedChatMessages) {
+        if (!message || !["USER", "AXON"].includes(message.role) || typeof message.content !== "string") continue;
+        const senderName = message.role === "AXON" ? "Axon" : (message.senderName || "Member");
+        const shownContent = message.role === "USER" ? senderName + ":\n" + message.content : message.content;
+        addMessage(message.role === "USER" ? "USER" : "AI", shownContent);
+        conversationHistory.push({
+            role: message.role,
+            content: message.role === "USER" ? senderName + ": " + message.content : message.content
+        });
+    }
+    if (conversationHistory.length > MAX_CONTEXT_MESSAGES) conversationHistory.splice(0, conversationHistory.length - MAX_CONTEXT_MESSAGES);
+}
+
+async function openSharedChat(chatId, keepModalOpen = false) {
+    if (!auth.currentUser || auth.currentUser.isAnonymous) throw new Error("Sign in with Google to use shared chats.");
+    const data = await sharedChatRequest("messages", "GET", { chatId });
+    activeSharedChatId = data.chat.id;
+    activeSharedChat = data.chat;
+    activeChatId = null;
+    renderSavedChats();
+    renderSharedMessages(data.messages);
+    const label = document.getElementById("activeSharedChatLabel");
+    if (label) label.textContent = "👥 " + (activeSharedChat.title || "Shared chat") + " · " + (activeSharedChat.memberUids?.length || 1) + " member(s)";
+    if (!keepModalOpen) closeSharedChatModal();
+    return data;
+}
+
+async function refreshSharedRoom() {
+    if (!activeSharedChatId || sharedChatRefreshBusy || !auth.currentUser || auth.currentUser.isAnonymous) return;
+    sharedChatRefreshBusy = true;
+    try {
+        const data = await sharedChatRequest("messages", "GET", { chatId: activeSharedChatId });
+        const fingerprint = JSON.stringify((data.messages || []).map(m => [m.id, m.role, m.content, m.createdAt]));
+        activeSharedChat = data.chat;
+        const label = document.getElementById("activeSharedChatLabel");
+        if (label) label.textContent = "👥 " + (activeSharedChat.title || "Shared chat") + " · " + (activeSharedChat.memberUids?.length || 1) + " member(s)";
+        if (fingerprint !== sharedChatFingerprint) renderSharedMessages(data.messages);
+    } catch (error) {
+        console.warn("Shared chat refresh failed:", error);
+        if (error.message && /not a member|not found/i.test(error.message)) {
+            activeSharedChatId = null;
+            activeSharedChat = null;
+            sharedChatMessages = [];
+            sharedChatFingerprint = "";
+            addMessage("AI", "You no longer have access to this shared chat.");
+        }
+    } finally {
+        sharedChatRefreshBusy = false;
+    }
+}
+
+function buildSharedSystemPrompt(messages) {
+    const history = (Array.isArray(messages) ? messages : []).slice(-40).map(message => {
+        const name = message.role === "AXON" ? "Axon" : (message.senderName || "Member");
+        return name + ": " + String(message.content || "").slice(0, 4000);
+    }).join("\n").slice(-18000);
+    return [
+        "You are Axon, the shared AI assistant in a private, invite-only group chat.",
+        "Multiple authenticated members can read this room. Treat all room messages as shared conversation context.",
+        "Use the names attached to messages to understand who said what. Do not pretend one member's personal details are another member's.",
+        "This is a shared room: do not request, retrieve, or reveal anyone's private saved memories, solo conversations, or account-only information.",
+        "Do not claim you can see private information outside this room. Answer the newest message naturally and use relevant room history.",
+        "Do not execute computer-control actions or Work Mode commands from a shared room.",
+        "RECENT SHARED ROOM HISTORY:\n" + (history || "(No previous messages.)")
+    ].join("\n\n");
+}
+
+async function sendSharedChatMessage(originalMessage) {
+    const user = auth.currentUser;
+    if (!user || !activeSharedChatId) return;
+    workActionBusy = true;
+    try {
+        await sharedChatRequest("sendMessage", "POST", { chatId: activeSharedChatId, role: "USER", content: originalMessage });
+        await refreshSharedRoom();
+        addMessage("AI", "Thinking... 🧠");
+        const idToken = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + idToken },
+            body: JSON.stringify({
+                prompt: originalMessage,
+                system: buildSharedSystemPrompt(sharedChatMessages),
+                workMode: false,
+                adminAction: null,
+                targetUser: null
+            })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const error = new Error(data.error || "Axon couldn't answer in the shared room.");
+            error.credits = data.credits || null;
+            throw error;
+        }
+        removeThinkingBubble();
+        await sharedChatRequest("sendMessage", "POST", { chatId: activeSharedChatId, role: "AXON", content: String(data.answer || "I couldn't generate a response.").slice(0, 20000) });
+        addConversationMessage("AXON", String(data.answer || "I couldn't generate a response."));
+        await refreshSharedRoom();
+    } catch (error) {
+        removeThinkingBubble();
+        addMessage("AI", error.message || "Couldn't send that message to the shared chat.", error.credits || null);
+    } finally {
+        workActionBusy = false;
+    }
+}
+
+document.getElementById("inviteToChatButton")?.addEventListener("click", openSharedChatModal);
+document.getElementById("sharedChatsButton")?.addEventListener("click", openSharedChatModal);
+document.getElementById("sharedChatModalClose")?.addEventListener("click", closeSharedChatModal);
+document.getElementById("sharedChatModalBackdrop")?.addEventListener("click", closeSharedChatModal);
+document.getElementById("sharedInviteForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const emails = [...new Set((sharedInviteEmails?.value || "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean))];
+    if (!emails.length) {
+        if (sharedChatModalStatus) sharedChatModalStatus.textContent = "Enter at least one email address.";
+        return;
+    }
+    if (emails.length > 20) {
+        if (sharedChatModalStatus) sharedChatModalStatus.textContent = "Invite up to 20 people at once.";
+        return;
+    }
+    const invalid = emails.filter(value => !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(value));
+    if (invalid.length) {
+        if (sharedChatModalStatus) sharedChatModalStatus.textContent = "Check these email addresses: " + invalid.join(", ");
+        return;
+    }
+    const submit = document.getElementById("sendSharedInvitesButton");
+    if (submit) submit.disabled = true;
+    if (sharedChatModalStatus) sharedChatModalStatus.textContent = "Sending invitations…";
+    try {
+        let result;
+        if (activeSharedChatId) {
+            result = await sharedChatRequest("invite", "POST", { chatId: activeSharedChatId, emails });
+        } else {
+            const currentItem = savedChats.find(item => item.id === activeChatId);
+            const title = currentItem?.title || conversationHistory.find(message => message.role === "USER")?.content?.slice(0, 55) || "Shared chat";
+            const messages = conversationHistory.filter(message => ["USER", "AXON"].includes(message.role)).slice(-100);
+            result = await sharedChatRequest("create", "POST", { title, emails, messages });
+            if (result.chat?.id) await openSharedChat(result.chat.id, true);
+        }
+        const results = Array.isArray(result.results) ? result.results : [];
+        const sent = results.filter(item => item.status === "sent").length;
+        const issues = results.filter(item => item.status !== "sent").map(item => item.email + ": " + item.message);
+        if (sharedChatModalStatus) sharedChatModalStatus.textContent = sent + " invitation(s) sent." + (issues.length ? " " + issues.join(" ") : "");
+        if (sharedInviteEmails) sharedInviteEmails.value = "";
+        await refreshSharedManager();
+        await refreshSharedBadge();
+    } catch (error) {
+        if (sharedChatModalStatus) sharedChatModalStatus.textContent = error.message || "Could not send invitations.";
+    } finally {
+        if (submit) submit.disabled = Boolean(activeSharedChat && activeSharedChat.ownerUid !== auth.currentUser?.uid);
+    }
+});
+
+window.setInterval(() => {
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+        void refreshSharedBadge();
+        if (activeSharedChatId) void refreshSharedRoom();
+    }
+}, 12000);
+
+// ==========================================
 
 // ==========================================
 // VISITOR TRACKING — AXON 5158
@@ -1021,6 +1379,11 @@ onAuthStateChanged(
         currentRankName = "VISITOR";
         await trackVisitor(user);
         await refreshCurrentRank(user);
+        activeSharedChatId = null;
+        activeSharedChat = null;
+        sharedChatMessages = [];
+        sharedChatFingerprint = "";
+        void refreshSharedBadge();
 
         const ownerAnalyticsButton = document.getElementById("ownerAnalyticsButton");
         if (ownerAnalyticsButton) {
@@ -3179,6 +3542,11 @@ async function sendMessage() {
         "USER",
         originalMessage
     );
+
+    if (activeSharedChatId) {
+        await sendSharedChatMessage(originalMessage);
+        return;
+    }
 
     // ======================================
     // AUTOMATIC MEMORY
