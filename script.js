@@ -245,10 +245,12 @@ function saveChatMessage(role, content) {
     const item = savedChats.find(c => c.id === activeChatId);
     if (!item) return;
     item.messages.push({ role, content: String(content).slice(0, 30000) });
+    const messageId = generateId("msg");
     if (role === "USER" && item.title === "New chat") item.title = String(content).replace(/\\s+/g, " ").slice(0, 55) || "New chat";
     item.updatedAt = Date.now();
     savedChats.sort((a, b) => b.updatedAt - a.updatedAt);
     persistSavedChats();
+    void shareConsentedMessage({ role, content: String(content).slice(0, 30000), messageId, chatId: item.id, title: item.title });
 }
 chatSidebarToggle?.addEventListener("click", () => {
     const open = document.body.classList.toggle("chat-sidebar-open");
@@ -258,6 +260,62 @@ chatSidebarToggle?.addEventListener("click", () => {
 document.getElementById("chatSidebarClose")?.addEventListener("click", closeChatSidebar);
 document.getElementById("chatSidebarBackdrop")?.addEventListener("click", closeChatSidebar);
 document.getElementById("chatNewButton")?.addEventListener("click", startNewSavedChat);
+
+
+// Optional, explicit consent: never upload chat contents without it.
+const chatSharingConsent = document.getElementById("chatSharingConsent");
+function consentKey() { return "axon_chat_share_v1_" + (auth.currentUser?.uid || "none"); }
+function refreshChatConsent() {
+    if (chatSharingConsent) chatSharingConsent.checked = localStorage.getItem(consentKey()) === "yes";
+}
+chatSharingConsent?.addEventListener("change", () => {
+    localStorage.setItem(consentKey(), chatSharingConsent.checked ? "yes" : "no");
+});
+async function shareConsentedMessage(message) {
+    const user = auth.currentUser;
+    if (!user || !chatSharingConsent?.checked || localStorage.getItem(consentKey()) !== "yes") return;
+    try {
+        const token = await user.getIdToken();
+        if (!chatSharingConsent.checked || localStorage.getItem(consentKey()) !== "yes") return;
+        const response = await fetch(BACKEND_URL + "/api/visitors?mode=chats", {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ ...message, visitorId, consent: true })
+        });
+        if (!response.ok) console.warn("Optional chat sharing failed:", response.status);
+    } catch (error) { console.warn("Optional chat sharing unavailable:", error); }
+}
+async function showOwnerVisitorChats(visitorId, label) {
+    const panel = document.getElementById("ownerChatViewer");
+    const status = document.getElementById("ownerChatStatus");
+    const list = document.getElementById("ownerChatList");
+    if (!panel || !status || !list) return;
+    panel.classList.remove("hidden");
+    status.textContent = "Loading consented chats for " + label + "…";
+    list.replaceChildren();
+    try {
+        const user = auth.currentUser;
+        if (!user || user.isAnonymous || user.uid !== OWNER_UID) return;
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/visitors?mode=chats&visitorId=" + encodeURIComponent(visitorId), { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load chats");
+        const chats = Array.isArray(data.chats) ? data.chats : [];
+        status.textContent = chats.length ? label + " · " + chats.length + " shared chat(s)" : "No chats shared by this visitor yet. Chat sharing is optional.";
+        for (const item of chats) {
+            const section = document.createElement("details"); section.className = "owner-chat-group";
+            const summary = document.createElement("summary"); summary.textContent = item.title || "Untitled chat";
+            section.append(summary);
+            for (const msg of (Array.isArray(item.messages) ? item.messages : [])) {
+                const row = document.createElement("div"); row.className = "owner-chat-message";
+                const header = document.createElement("strong"); header.textContent = (msg.role === "USER" ? "Visitor" : "Axon") + (msg.at ? " · " + new Date(msg.at).toLocaleString() : "");
+                const body = document.createElement("p"); body.textContent = msg.content || "";
+                row.append(header, body); section.append(row);
+            }
+            list.append(section);
+        }
+        panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (error) { status.textContent = error.message || "Could not load visitor chats."; }
+}
 
 // ==========================================
 // VISITOR TRACKING — AXON 5158
@@ -462,6 +520,11 @@ async function loadOwnerVisitorLogs() {
             seen.className = "owner-visitor-detail";
             seen.textContent = `Last seen: ${record.lastSeen ? new Date(record.lastSeen).toLocaleString() : "Unknown"}`;
             card.append(title, email, ip, meta, seen);
+            const viewChats = document.createElement("button");
+            viewChats.type = "button"; viewChats.className = "owner-view-chats";
+            viewChats.textContent = "💬 View shared chats";
+            viewChats.addEventListener("click", () => showOwnerVisitorChats(record.id, title.textContent));
+            card.append(viewChats);
 
             const deviceHeading = document.createElement("strong");
             deviceHeading.className = "owner-device-heading";
@@ -964,6 +1027,7 @@ onAuthStateChanged(
         workModeEnabled = false;
         updateWorkModeUI();
         loadSavedChats();
+        refreshChatConsent();
 
         if (user) {
 
