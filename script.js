@@ -223,6 +223,8 @@ function closeChatSidebar() {
 function openSavedChat(id) {
     if (workActionBusy) return;
     activeSharedChatId = null; activeSharedChat = null; sharedChatMessages = []; sharedChatFingerprint = "";
+    const soloLabel = document.getElementById("activeSharedChatLabel");
+    if (soloLabel) soloLabel.textContent = "💬 Solo chat";
 
     const item = savedChats.find(c => c.id === id);
     if (!item) return;
@@ -240,6 +242,8 @@ function openSavedChat(id) {
 function startNewSavedChat() {
     if (workActionBusy) return;
     activeSharedChatId = null; activeSharedChat = null; sharedChatMessages = []; sharedChatFingerprint = "";
+    const soloLabel = document.getElementById("activeSharedChatLabel");
+    if (soloLabel) soloLabel.textContent = "💬 Solo chat";
 
     activeChatId = null;
     conversationHistory.length = 0;
@@ -584,7 +588,9 @@ async function sendSharedChatMessage(originalMessage) {
     workActionBusy = true;
     try {
         await sharedChatRequest("sendMessage", "POST", { chatId: activeSharedChatId, role: "USER", content: originalMessage });
-        await refreshSharedRoom();
+        const latestRoom = await sharedChatRequest("messages", "GET", { chatId: activeSharedChatId });
+        activeSharedChat = latestRoom.chat;
+        renderSharedMessages(latestRoom.messages);
         addMessage("AI", "Thinking... 🧠");
         const idToken = await user.getIdToken();
         const response = await fetch(BACKEND_URL + "/api/chat", {
@@ -664,12 +670,14 @@ document.getElementById("sharedInviteForm")?.addEventListener("submit", async ev
     }
 });
 
+let sharedPollTick = 0;
 window.setInterval(() => {
     if (auth.currentUser && !auth.currentUser.isAnonymous) {
-        void refreshSharedBadge();
+        sharedPollTick++;
+        if (sharedPollTick % 5 === 1) void refreshSharedBadge();
         if (activeSharedChatId) void refreshSharedRoom();
     }
-}, 12000);
+}, 4000);
 
 // ==========================================
 
