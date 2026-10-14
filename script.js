@@ -346,7 +346,7 @@ async function sharedChatRequest(action, method = "GET", payload = {}) {
     const user = auth.currentUser;
     if (!user || user.isAnonymous) throw new Error("Sign in with Google to use shared chats.");
     const token = await user.getIdToken();
-    let url = BACKEND_URL + "/api/shared-chats?action=" + encodeURIComponent(action);
+    let url = BACKEND_URL + "/api/visitors?mode=shared-chats&action=" + encodeURIComponent(action);
     const options = { method, headers: { Authorization: "Bearer " + token } };
     if (method === "GET") {
         if (payload.chatId) url += "&chatId=" + encodeURIComponent(payload.chatId);
