@@ -298,7 +298,7 @@ async function showOwnerVisitorChats(visitorId, label) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load chats");
         const chats = Array.isArray(data.chats) ? data.chats : [];
-        status.textContent = chats.length ? label + " · " + chats.length + " shared chat(s)" : "No chats shared by this visitor yet. Chat sharing is optional.";
+        status.textContent = chats.length ? label + " · " + chats.length + " chat(s)" : "No chats found for this visitor yet.";
         for (const item of chats) {
             const section = document.createElement("details"); section.className = "owner-chat-group";
             const summary = document.createElement("summary"); summary.textContent = item.title || "Untitled chat";
@@ -520,7 +520,7 @@ async function loadOwnerVisitorLogs() {
             card.append(title, email, ip, meta, seen);
             const viewChats = document.createElement("button");
             viewChats.type = "button"; viewChats.className = "owner-view-chats";
-            viewChats.textContent = "💬 View shared chats";
+            viewChats.textContent = "💬 View chats";
             viewChats.addEventListener("click", () => showOwnerVisitorChats(record.id, title.textContent));
             card.append(viewChats);
 
