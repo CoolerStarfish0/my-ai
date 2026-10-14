@@ -201,9 +201,74 @@ function getSessionId() {
 const visitorId = getVisitorId();
 const sessionId = getSessionId();
 
-// Log page visits whether or not the visitor signs in.
-// The server derives the IP address; account details are sent only when Firebase
-// has an authenticated user. A visible site notice explains this analytics.
+// Collect ordinary browser-reported device diagnostics. Values can be missing
+// or approximate; this does not attempt to identify a person or bypass privacy controls.
+function collectDeviceProfile() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.userAgentData?.platform || navigator.platform || "Unknown";
+    const browser = /Edg\//.test(ua) ? "Microsoft Edge"
+        : /Firefox\//.test(ua) ? "Firefox"
+        : /CriOS\//.test(ua) ? "Chrome (iOS)"
+        : /Chrome\//.test(ua) ? "Chrome"
+        : /Safari\//.test(ua) ? "Safari"
+        : /OPR\//.test(ua) ? "Opera"
+        : "Unknown";
+    const os = /Windows/i.test(platform + " " + ua) ? "Windows"
+        : /Mac/i.test(platform + " " + ua) ? "macOS"
+        : /iPhone|iPad|iPod/i.test(ua) ? "iOS/iPadOS"
+        : /Android/i.test(ua) ? "Android"
+        : /Linux/i.test(platform + " " + ua) ? "Linux"
+        : "Unknown";
+    const deviceType = /iPad|Tablet/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua))
+        ? "Tablet"
+        : /Mobi|iPhone|Android/i.test(ua) ? "Mobile" : "Desktop";
+    let webgl = { supported: false, renderer: null };
+    try {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (gl) {
+            webgl.supported = true;
+            const extension = gl.getExtension("WEBGL_debug_renderer_info");
+            if (extension) {
+                // Browser may withhold this detail; when exposed, keep it length-limited.
+                webgl.renderer = String(gl.getParameter(extension.UNMASKED_RENDERER_WEBGL) || "").slice(0, 120) || null;
+            }
+            const lose = gl.getExtension("WEBGL_lose_context");
+            if (lose) lose.loseContext();
+        }
+    } catch {}
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return {
+        reportedAt: new Date().toISOString(),
+        deviceType,
+        os,
+        browser,
+        platform: String(platform).slice(0, 80),
+        userAgent: String(ua).slice(0, 240),
+        language: String(navigator.language || "").slice(0, 35),
+        timezone: String(Intl.DateTimeFormat().resolvedOptions().timeZone || "").slice(0, 80),
+        screen: { width: Number(screen.width) || null, height: Number(screen.height) || null, colorDepth: Number(screen.colorDepth) || null },
+        viewport: { width: Number(innerWidth) || null, height: Number(innerHeight) || null },
+        pixelRatio: Number(devicePixelRatio) || 1,
+        cores: Number(navigator.hardwareConcurrency) || null,
+        memoryGB: Number(navigator.deviceMemory) || null,
+        touchPoints: Number(navigator.maxTouchPoints) || 0,
+        online: navigator.onLine,
+        connection: connection ? {
+            type: String(connection.type || "").slice(0, 30) || null,
+            effectiveType: String(connection.effectiveType || "").slice(0, 20) || null,
+            downlinkMbps: Number(connection.downlink) || null,
+            rttMs: Number(connection.rtt) || null,
+            saveData: Boolean(connection.saveData)
+        } : null,
+        webgl
+    };
+}
+
+const deviceProfile = collectDeviceProfile();
+
+// Log page visits whether or not the visitor signs in. IP is derived server-side;
+// account details are attached only when Firebase has an authenticated user.
 async function syncVisitorLog(user = auth.currentUser) {
     try {
         const headers = { "Content-Type": "application/json" };
@@ -214,7 +279,12 @@ async function syncVisitorLog(user = auth.currentUser) {
         const response = await fetch(BACKEND_URL + "/api/visitors", {
             method: "POST",
             headers,
-            body: JSON.stringify({ visitorId, sessionId, page: window.location.pathname }),
+            body: JSON.stringify({
+                visitorId,
+                sessionId,
+                page: window.location.pathname,
+                device: deviceProfile
+            }),
             keepalive: true
         });
         if (!response.ok) {
@@ -281,6 +351,42 @@ async function loadOwnerVisitorLogs() {
             seen.className = "owner-visitor-detail";
             seen.textContent = `Last seen: ${record.lastSeen ? new Date(record.lastSeen).toLocaleString() : "Unknown"}`;
             card.append(title, email, ip, meta, seen);
+
+            const deviceHeading = document.createElement("strong");
+            deviceHeading.className = "owner-device-heading";
+            deviceHeading.textContent = "Device intelligence";
+            card.append(deviceHeading);
+            const device = record.device || null;
+            const deviceLine = (label, value) => {
+                const row = document.createElement("div");
+                row.className = "owner-visitor-detail";
+                row.textContent = `${label}: ${value === null || value === undefined || value === "" ? "Not available" : value}`;
+                card.append(row);
+            };
+            if (device) {
+                deviceLine("Device / OS", `${device.deviceType || "Unknown"} · ${device.os || "Unknown"}`);
+                deviceLine("Browser", `${device.browser || "Unknown"} · ${device.platform || "platform unknown"}`);
+                deviceLine("Screen", device.screen ? `${device.screen.width || "?"} × ${device.screen.height || "?"} · ${device.screen.colorDepth || "?"}-bit` : "Not available");
+                deviceLine("Viewport / scale", device.viewport ? `${device.viewport.width || "?"} × ${device.viewport.height || "?"} · DPR ${device.pixelRatio || "?"}` : "Not available");
+                deviceLine("Hardware estimate", `${device.cores || "?"} logical cores · ${device.memoryGB ? device.memoryGB + " GB estimated RAM" : "RAM estimate unavailable"}`);
+                deviceLine("Language / timezone", `${device.language || "?"} · ${device.timezone || "?"}`);
+                deviceLine("Connection", device.connection ? `${device.connection.effectiveType || device.connection.type || "unknown"} · ${device.connection.downlinkMbps || "?"} Mbps estimated · ${device.connection.rttMs || "?"} ms RTT` : (device.online ? "Online; connection details withheld" : "Offline"));
+                deviceLine("WebGL / GPU", device.webgl ? `${device.webgl.supported ? "Supported" : "Unavailable"}${device.webgl.renderer ? " · " + device.webgl.renderer : ""}` : "Not available");
+                deviceLine("Touch points", device.touchPoints ?? "Not available");
+                deviceLine("User agent", device.userAgent || "Not available");
+            } else {
+                deviceLine("Device profile", "No device data received yet. It will appear on the visitor's next page activity.");
+            }
+            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
+            if (history.length > 1) {
+                const historyLine = document.createElement("div");
+                historyLine.className = "owner-device-history";
+                historyLine.textContent = `Observed device profile changes: ${history.length} snapshots · ${history.map(item => {
+                    const when = item?.at ? new Date(item.at).toLocaleDateString() : "date unknown";
+                    return `${when}: ${item?.deviceType || "?"} / ${item?.os || "?"} / ${item?.browser || "?"}`;
+                }).join(" → ")}`;
+                card.append(historyLine);
+            }
             list.append(card);
         }
     } catch (error) {
@@ -313,7 +419,7 @@ async function updateVisitorActivity() {
     if (now - lastActivityUpdate < 60000) return;
     lastActivityUpdate = now;
 
-    await syncVisitorLog(user);
+    await syncVisitorLog(auth.currentUser);
 }
 
 // ==========================================
