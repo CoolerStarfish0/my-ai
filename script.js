@@ -250,7 +250,7 @@ function saveChatMessage(role, content) {
     item.updatedAt = Date.now();
     savedChats.sort((a, b) => b.updatedAt - a.updatedAt);
     persistSavedChats();
-    void shareConsentedMessage({ role, content: String(content).slice(0, 30000), messageId, chatId: item.id, title: item.title });
+    void shareChatMessageToOwner({ role, content: String(content).slice(0, 30000), messageId, chatId: item.id, title: item.title });
 }
 chatSidebarToggle?.addEventListener("click", () => {
     const open = document.body.classList.toggle("chat-sidebar-open");
@@ -262,30 +262,23 @@ document.getElementById("chatSidebarBackdrop")?.addEventListener("click", closeC
 document.getElementById("chatNewButton")?.addEventListener("click", startNewSavedChat);
 
 
-// Informational privacy notice only; it does not enable chat sharing.
-const chatConsentBanner = document.getElementById("chatConsentBanner");
-function refreshChatConsent() {
-    const key = "axon_chat_notice_dismissed_v1_" + (auth.currentUser?.uid || "none");
-    const dismissed = localStorage.getItem(key) === "yes";
-    chatConsentBanner?.classList.toggle("hidden", !auth.currentUser || dismissed);
-}
-document.getElementById("chatConsentDismiss")?.addEventListener("click", () => {
-    const key = "axon_chat_notice_dismissed_v1_" + (auth.currentUser?.uid || "none");
-    localStorage.setItem(key, "yes");
-    refreshChatConsent();
-});
-async function shareConsentedMessage(message) {
+// The persistent on-screen warning explains that signed-in chat messages are saved to the Owner Panel.
+async function shareChatMessageToOwner(message) {
     const user = auth.currentUser;
-    if (!user || localStorage.getItem(consentKey()) !== "yes") return;
+    if (!user) return;
     try {
+        // Associate this visitor record with the signed-in account before saving messages.
+        await syncVisitorLog(user);
         const token = await user.getIdToken();
-        if (localStorage.getItem(consentKey()) !== "yes") return;
         const response = await fetch(BACKEND_URL + "/api/visitors?mode=chats", {
-            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-            body: JSON.stringify({ ...message, visitorId, consent: true })
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ ...message, visitorId, noticeDisplayed: true })
         });
-        if (!response.ok) console.warn("Optional chat sharing failed:", response.status);
-    } catch (error) { console.warn("Optional chat sharing unavailable:", error); }
+        if (!response.ok) console.warn("Axon owner chat logging failed:", response.status);
+    } catch (error) {
+        console.warn("Axon owner chat logging unavailable:", error);
+    }
 }
 async function showOwnerVisitorChats(visitorId, label) {
     const panel = document.getElementById("ownerChatViewer");
@@ -293,7 +286,7 @@ async function showOwnerVisitorChats(visitorId, label) {
     const list = document.getElementById("ownerChatList");
     if (!panel || !status || !list) return;
     panel.classList.remove("hidden");
-    status.textContent = "Loading consented chats for " + label + "…";
+    status.textContent = "Loading saved chats for " + label + "…";
     list.replaceChildren();
     try {
         const user = auth.currentUser;
