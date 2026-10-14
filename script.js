@@ -262,21 +262,29 @@ document.getElementById("chatSidebarBackdrop")?.addEventListener("click", closeC
 document.getElementById("chatNewButton")?.addEventListener("click", startNewSavedChat);
 
 
-// Optional, explicit consent: never upload chat contents without it.
-const chatSharingConsent = document.getElementById("chatSharingConsent");
+// Chat sharing choices are optional and account-specific.
+const chatConsentBanner = document.getElementById("chatConsentBanner");
 function consentKey() { return "axon_chat_share_v1_" + (auth.currentUser?.uid || "none"); }
 function refreshChatConsent() {
-    if (chatSharingConsent) chatSharingConsent.checked = localStorage.getItem(consentKey()) === "yes";
+    const choice = auth.currentUser ? localStorage.getItem(consentKey()) : null;
+    chatConsentBanner?.classList.toggle("hidden", !auth.currentUser || choice === "yes" || choice === "no");
+    const settings = document.getElementById("chatConsentSettings");
+    if (settings) settings.textContent = choice === "yes" ? "Chat privacy · Sharing on" : "Chat privacy · Sharing off";
 }
-chatSharingConsent?.addEventListener("change", () => {
-    localStorage.setItem(consentKey(), chatSharingConsent.checked ? "yes" : "no");
-});
+function chooseChatSharing(allow) {
+    if (!auth.currentUser) return;
+    localStorage.setItem(consentKey(), allow ? "yes" : "no");
+    refreshChatConsent();
+}
+document.getElementById("chatConsentAllow")?.addEventListener("click", () => chooseChatSharing(true));
+document.getElementById("chatConsentDecline")?.addEventListener("click", () => chooseChatSharing(false));
+document.getElementById("chatConsentSettings")?.addEventListener("click", () => chatConsentBanner?.classList.toggle("hidden"));
 async function shareConsentedMessage(message) {
     const user = auth.currentUser;
-    if (!user || !chatSharingConsent?.checked || localStorage.getItem(consentKey()) !== "yes") return;
+    if (!user || localStorage.getItem(consentKey()) !== "yes") return;
     try {
         const token = await user.getIdToken();
-        if (!chatSharingConsent.checked || localStorage.getItem(consentKey()) !== "yes") return;
+        if (localStorage.getItem(consentKey()) !== "yes") return;
         const response = await fetch(BACKEND_URL + "/api/visitors?mode=chats", {
             method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
             body: JSON.stringify({ ...message, visitorId, consent: true })
