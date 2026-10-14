@@ -148,6 +148,117 @@ let workActionBusy = false;
 const conversationHistory = [];
 const MAX_CONTEXT_MESSAGES = 16;
 
+
+// ==========================================
+// PERSONAL CHAT HISTORY (PER BROWSER / ACCOUNT)
+// ==========================================
+const CHAT_STORE_PREFIX = "axon_chats_v1_";
+let savedChats = [];
+let activeChatId = null;
+const chatSidebar = document.getElementById("chatSidebar");
+const chatHistoryList = document.getElementById("chatHistoryList");
+const chatSidebarToggle = document.getElementById("chatSidebarToggle");
+function chatStorageKey() {
+    const user = auth.currentUser;
+    return CHAT_STORE_PREFIX + (user ? user.uid : "signed_out");
+}
+function loadSavedChats() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(chatStorageKey()) || "[]");
+        savedChats = Array.isArray(parsed) ? parsed.filter(c => c && typeof c.id === "string" && Array.isArray(c.messages)).slice(0, 100) : [];
+    } catch { savedChats = []; }
+    activeChatId = savedChats[0]?.id || null;
+    renderSavedChats();
+}
+function persistSavedChats() {
+    try { localStorage.setItem(chatStorageKey(), JSON.stringify(savedChats.slice(0, 100))); }
+    catch (error) { console.warn("Chat history could not be saved (browser storage may be full).", error); }
+    renderSavedChats();
+}
+function renderSavedChats() {
+    if (!chatHistoryList) return;
+    chatHistoryList.replaceChildren();
+    if (!savedChats.length) {
+        const empty = document.createElement("p");
+        empty.className = "chat-storage-note";
+        empty.textContent = "No saved chats yet. Start a conversation!";
+        chatHistoryList.append(empty);
+    }
+    for (const item of savedChats) {
+        const row = document.createElement("div");
+        row.className = "chat-history-item" + (item.id === activeChatId ? " active" : "");
+        const open = document.createElement("button");
+        open.type = "button"; open.className = "chat-history-open";
+        open.textContent = item.title || "New chat";
+        open.title = item.title || "New chat";
+        open.addEventListener("click", () => openSavedChat(item.id));
+        const del = document.createElement("button");
+        del.type = "button"; del.className = "chat-history-delete";
+        del.textContent = "✕"; del.title = "Delete chat"; del.setAttribute("aria-label", "Delete " + (item.title || "chat"));
+        del.addEventListener("click", () => {
+            if (!confirm("Delete this chat from this browser?")) return;
+            savedChats = savedChats.filter(c => c.id !== item.id);
+            if (activeChatId === item.id) {
+                activeChatId = null;
+                conversationHistory.length = 0;
+                clearChat();
+            }
+            persistSavedChats();
+        });
+        row.append(open, del); chatHistoryList.append(row);
+    }
+}
+function closeChatSidebar() {
+    document.body.classList.remove("chat-sidebar-open");
+    chatSidebarToggle?.setAttribute("aria-expanded", "false");
+    document.getElementById("chatSidebarBackdrop")?.classList.add("hidden");
+}
+function openSavedChat(id) {
+    if (workActionBusy) return;
+    const item = savedChats.find(c => c.id === id);
+    if (!item) return;
+    activeChatId = id;
+    conversationHistory.length = 0;
+    clearChat();
+    for (const msg of item.messages) {
+        if (!msg || !["USER", "AXON"].includes(msg.role) || typeof msg.content !== "string") continue;
+        addMessage(msg.role === "USER" ? "USER" : "AI", msg.content);
+        conversationHistory.push({ role: msg.role, content: msg.content });
+    }
+    if (conversationHistory.length > MAX_CONTEXT_MESSAGES) conversationHistory.splice(0, conversationHistory.length - MAX_CONTEXT_MESSAGES);
+    renderSavedChats(); closeChatSidebar();
+}
+function startNewSavedChat() {
+    if (workActionBusy) return;
+    activeChatId = null;
+    conversationHistory.length = 0;
+    clearChat();
+    renderSavedChats(); closeChatSidebar();
+    messageInput?.focus();
+}
+function saveChatMessage(role, content) {
+    if (!auth.currentUser || !["USER", "AXON"].includes(role)) return;
+    if (!activeChatId) {
+        activeChatId = generateId("chat");
+        savedChats.unshift({ id: activeChatId, title: "New chat", messages: [], updatedAt: Date.now() });
+    }
+    const item = savedChats.find(c => c.id === activeChatId);
+    if (!item) return;
+    item.messages.push({ role, content: String(content).slice(0, 30000) });
+    if (role === "USER" && item.title === "New chat") item.title = String(content).replace(/\\s+/g, " ").slice(0, 55) || "New chat";
+    item.updatedAt = Date.now();
+    savedChats.sort((a, b) => b.updatedAt - a.updatedAt);
+    persistSavedChats();
+}
+chatSidebarToggle?.addEventListener("click", () => {
+    const open = document.body.classList.toggle("chat-sidebar-open");
+    chatSidebarToggle.setAttribute("aria-expanded", String(open));
+    document.getElementById("chatSidebarBackdrop")?.classList.toggle("hidden", !open);
+});
+document.getElementById("chatSidebarClose")?.addEventListener("click", closeChatSidebar);
+document.getElementById("chatSidebarBackdrop")?.addEventListener("click", closeChatSidebar);
+document.getElementById("chatNewButton")?.addEventListener("click", startNewSavedChat);
+
 // ==========================================
 // VISITOR TRACKING — AXON 5158
 // ==========================================
@@ -852,6 +963,7 @@ onAuthStateChanged(
 
         workModeEnabled = false;
         updateWorkModeUI();
+        loadSavedChats();
 
         if (user) {
 
@@ -888,6 +1000,7 @@ onAuthStateChanged(
                 0;
 
             clearChat();
+            if (activeChatId) { openSavedChat(activeChatId); return; }
 
             const rank =
                 getCurrentRank(user);
@@ -3466,6 +3579,7 @@ function addConversationMessage(
         role,
         content
     });
+    saveChatMessage(role, content);
 
     if (
         conversationHistory.length >
