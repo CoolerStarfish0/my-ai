@@ -324,7 +324,7 @@ function handleCalendarAddCommand(message) {
         addCalendarEvent(event);
         calendarSelectedDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
         calendarViewDate = new Date(start.getFullYear(), start.getMonth(), 1);
-        return `Done! 📅 I added “${event.title}” to your Axon Calendar for ${formatCalendarDate(new Date(event.start))}${hasTime ? " at " + start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : " (all day"}.`;
+        return `Done! 📅 I added “${event.title}” to your Axon Calendar for ${formatCalendarDate(new Date(event.start))}${hasTime ? " at " + start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : " (all day)"}.`;
     } catch (error) {
         console.error("Calendar save error:", error);
         return "I couldn't save that calendar event in this browser. Open the Calendar and try adding it there.";
@@ -2724,7 +2724,7 @@ function buildSystemPrompt(
         .sort((a, b) => new Date(a.start) - new Date(b.start))
         .slice(0, 40)
         .map(event => `- ${event.title}: ${event.allDay ? "all day" : new Date(event.start).toLocaleString()}`)
-        .join("\\n") || "(No saved calendar events.)";
+        .join("\n") || "(No saved calendar events.)";
 
     return `
 
