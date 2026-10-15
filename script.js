@@ -1,4 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import * as chrono from "https://esm.sh/chrono-node@2.8.0";
 
 import {
     getAuth,
@@ -78,6 +79,282 @@ const RANKS = {
     VISITOR: { name: "VISITOR", description: "New or guest visitor" }
 };
 let currentRankName = "VISITOR";
+
+// Approximate IP-based location only; never request precise browser geolocation.
+let approximateLocation = null;
+let calendarViewDate = new Date();
+let calendarSelectedDate = new Date();
+const CALENDAR_STORE_PREFIX = "axon_calendar_events_v1_";
+
+function calendarStorageKey() {
+    const user = auth.currentUser;
+    return CALENDAR_STORE_PREFIX + (user ? user.uid : "signed_out");
+}
+
+function getCalendarEvents() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(calendarStorageKey()) || "[]");
+        return Array.isArray(parsed) ? parsed.filter(event =>
+            event && typeof event.id === "string" &&
+            typeof event.title === "string" && typeof event.start === "string"
+        ) : [];
+    } catch (error) {
+        console.warn("Calendar load error:", error);
+        return [];
+    }
+}
+
+function saveCalendarEvents(events) {
+    localStorage.setItem(calendarStorageKey(), JSON.stringify(events));
+}
+
+function dateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function eventDateKey(event) {
+    return dateKey(new Date(event.start));
+}
+
+function formatCalendarDate(date) {
+    return date.toLocaleDateString(undefined, {
+        weekday: "long", month: "long", day: "numeric", year: "numeric"
+    });
+}
+
+function addCalendarEvent(event) {
+    const events = getCalendarEvents();
+    events.push(event);
+    events.sort((a, b) => new Date(a.start) - new Date(b.start));
+    saveCalendarEvents(events);
+}
+
+function removeCalendarEvent(eventId) {
+    saveCalendarEvents(getCalendarEvents().filter(event => event.id !== eventId));
+}
+
+function renderCalendar() {
+    const grid = document.getElementById("calendarGrid");
+    const monthLabel = document.getElementById("calendarMonthLabel");
+    const selectedLabel = document.getElementById("calendarSelectedDateLabel");
+    const eventList = document.getElementById("calendarEventList");
+    const dateInput = document.getElementById("calendarEventDate");
+    if (!grid || !monthLabel || !selectedLabel || !eventList) return;
+
+    monthLabel.textContent = calendarViewDate.toLocaleDateString(undefined, {
+        month: "long", year: "numeric"
+    });
+    selectedLabel.textContent = formatCalendarDate(calendarSelectedDate);
+    if (dateInput) dateInput.value = dateKey(calendarSelectedDate);
+
+    const events = getCalendarEvents();
+    const firstDay = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), 1);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
+    grid.replaceChildren();
+
+    for (let i = 0; i < 42; i++) {
+        const day = new Date(gridStart);
+        day.setDate(gridStart.getDate() + i);
+        const key = dateKey(day);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "calendar-date";
+        if (day.getMonth() !== calendarViewDate.getMonth()) button.classList.add("outside-month");
+        if (key === dateKey(calendarSelectedDate)) button.classList.add("selected");
+        if (key === dateKey(new Date())) button.classList.add("today");
+        if (events.some(event => eventDateKey(event) === key)) button.classList.add("has-events");
+        button.textContent = String(day.getDate());
+        button.setAttribute("aria-label", formatCalendarDate(day));
+        button.addEventListener("click", () => {
+            calendarSelectedDate = day;
+            if (day.getMonth() !== calendarViewDate.getMonth()) {
+                calendarViewDate = new Date(day.getFullYear(), day.getMonth(), 1);
+            }
+            renderCalendar();
+        });
+        grid.append(button);
+    }
+
+    const dayEvents = events
+        .filter(event => eventDateKey(event) === dateKey(calendarSelectedDate))
+        .sort((a, b) => new Date(a.start) - new Date(b.start));
+    eventList.replaceChildren();
+    if (!dayEvents.length) {
+        const empty = document.createElement("p");
+        empty.className = "calendar-empty";
+        empty.textContent = "Nothing scheduled for this day.";
+        eventList.append(empty);
+    } else {
+        for (const event of dayEvents) {
+            const card = document.createElement("div");
+            card.className = "calendar-event-card";
+            const copy = document.createElement("div");
+            copy.className = "calendar-event-copy";
+            const title = document.createElement("strong");
+            title.textContent = event.title;
+            const time = document.createElement("span");
+            time.textContent = event.allDay
+                ? "All day"
+                : new Date(event.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            copy.append(title, time);
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "calendar-delete-event";
+            remove.textContent = "Delete";
+            remove.setAttribute("aria-label", "Delete " + event.title);
+            remove.addEventListener("click", () => {
+                removeCalendarEvent(event.id);
+                renderCalendar();
+                const status = document.getElementById("calendarStatus");
+                if (status) status.textContent = "Event deleted.";
+            });
+            card.append(copy, remove);
+            eventList.append(card);
+        }
+    }
+}
+
+function initCalendarUI() {
+    const dialog = document.getElementById("calendarDialog");
+    const openButton = document.getElementById("calendarButton");
+    const status = document.getElementById("calendarStatus");
+    if (!dialog || !openButton) return;
+
+    openButton.addEventListener("click", () => {
+        if (!auth.currentUser) {
+            addMessage("AI", "Choose Google Login or Guest Mode before using your calendar. 👋");
+            return;
+        }
+        calendarViewDate = new Date(calendarSelectedDate.getFullYear(), calendarSelectedDate.getMonth(), 1);
+        if (status) status.textContent = "";
+        renderCalendar();
+        dialog.showModal();
+    });
+    document.getElementById("calendarCloseButton")?.addEventListener("click", () => dialog.close());
+    document.getElementById("calendarPrevMonth")?.addEventListener("click", () => {
+        calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1, 1);
+        renderCalendar();
+    });
+    document.getElementById("calendarNextMonth")?.addEventListener("click", () => {
+        calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1, 1);
+        renderCalendar();
+    });
+
+    document.getElementById("calendarEventForm")?.addEventListener("submit", event => {
+        event.preventDefault();
+        const titleInput = document.getElementById("calendarEventTitle");
+        const dateValue = document.getElementById("calendarEventDate")?.value;
+        const timeValue = document.getElementById("calendarEventTime")?.value;
+        const title = titleInput?.value.trim();
+        if (!title || !dateValue) {
+            if (status) status.textContent = "Enter an event name and date.";
+            return;
+        }
+        const [year, month, day] = dateValue.split("-").map(Number);
+        const [hour, minute] = timeValue ? timeValue.split(":").map(Number) : [0, 0];
+        const start = new Date(year, month - 1, day, hour, minute, 0, 0);
+        const allDay = !timeValue;
+        const end = new Date(start.getTime() + (allDay ? 0 : 60 * 60 * 1000));
+        addCalendarEvent({
+            id: "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+            title: title.slice(0, 160),
+            start: start.toISOString(),
+            end: end.toISOString(),
+            allDay,
+            createdAt: new Date().toISOString()
+        });
+        calendarSelectedDate = new Date(year, month - 1, day);
+        calendarViewDate = new Date(year, month - 1, 1);
+        if (titleInput) titleInput.value = "";
+        const timeInput = document.getElementById("calendarEventTime");
+        if (timeInput) timeInput.value = "";
+        if (status) status.textContent = "Saved to your calendar.";
+        renderCalendar();
+    });
+}
+
+function detectCalendarAddCommand(message) {
+    return /\b(?:add|put|schedule|create|book)\b[\s\S]*\b(?:to|on|in)\s+(?:my\s+|the\s+)?calendar\b/i.test(message) ||
+        /\b(?:add|create|schedule)\s+(?:a\s+)?calendar\s+event\b/i.test(message) ||
+        /\bremind me (?:to|about)\b/i.test(message);
+}
+
+function handleCalendarAddCommand(message) {
+    const parsedDates = chrono.parse(message, new Date(), { forwardDate: true });
+    const parsed = parsedDates[0];
+    if (!parsed) {
+        return "I can add that to your Axon Calendar! 📅 What date should I use? You can say something like “tomorrow at 4 PM” or “next Friday.”";
+    }
+
+    const hasTime = parsed.start.isCertain("hour");
+    let title = message.replace(parsed.text, " ");
+    title = title
+        .replace(/\b(?:please|axon|add|put|schedule|create|book|remind me to|remind me about)\b/gi, " ")
+        .replace(/\b(?:to|on|in)\s+(?:my\s+|the\s+)?calendar\b/gi, " ")
+        .replace(/\bcalendar\s+event\b/gi, " ")
+        .replace(/\b(?:for me|as a reminder)\b/gi, " ")
+        .replace(/[,.!?]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/^my\s+/i, "");
+
+    if (!title) {
+        return "What should I call the event? Tell me the event name and date, for example: “Add my math exam tomorrow at 4 PM to my calendar.”";
+    }
+
+    const parsedStart = parsed.start.date();
+    const start = hasTime
+        ? parsedStart
+        : new Date(parsedStart.getFullYear(), parsedStart.getMonth(), parsedStart.getDate(), 0, 0, 0, 0);
+    const end = new Date(start.getTime() + (hasTime ? 60 * 60 * 1000 : 0));
+    const event = {
+        id: "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        title: title.slice(0, 160),
+        start: start.toISOString(),
+        end: end.toISOString(),
+        allDay: !hasTime,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        addCalendarEvent(event);
+        calendarSelectedDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        calendarViewDate = new Date(start.getFullYear(), start.getMonth(), 1);
+        return `Done! 📅 I added “${event.title}” to your Axon Calendar for ${formatCalendarDate(new Date(event.start))}${hasTime ? " at " + start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : " (all day"}.`;
+    } catch (error) {
+        console.error("Calendar save error:", error);
+        return "I couldn't save that calendar event in this browser. Open the Calendar and try adding it there.";
+    }
+}
+
+async function loadApproximateLocation() {
+    try {
+        const cached = sessionStorage.getItem("axon_approx_location_v1");
+        if (cached) {
+            approximateLocation = JSON.parse(cached);
+            return approximateLocation;
+        }
+        const response = await fetch("https://ipwho.is/", { cache: "no-store" });
+        if (!response.ok) throw new Error("IP location lookup failed");
+        const data = await response.json();
+        if (!data.success) throw new Error("IP location was unavailable");
+        approximateLocation = {
+            city: typeof data.city === "string" ? data.city : "",
+            region: typeof data.region === "string" ? data.region : "",
+            country: typeof data.country === "string" ? data.country : ""
+        };
+        sessionStorage.setItem("axon_approx_location_v1", JSON.stringify(approximateLocation));
+        return approximateLocation;
+    } catch (error) {
+        console.warn("Approximate location unavailable:", error);
+        approximateLocation = null;
+        return null;
+    }
+}
 
 // ==========================================
 // FIREBASE INIT
@@ -2386,6 +2663,9 @@ sendButton.addEventListener(
     sendMessage
 );
 
+void loadApproximateLocation();
+initCalendarUI();
+
 messageInput.addEventListener(
     "keydown",
     event => {
@@ -2437,9 +2717,24 @@ function buildSystemPrompt(
     const recentConversation =
         buildConversationContext();
 
+    const locationPromptContext = approximateLocation
+        ? [approximateLocation.city, approximateLocation.region, approximateLocation.country].filter(Boolean).join(", ")
+        : "Unavailable; do not guess the user's location.";
+    const calendarPromptContext = getCalendarEvents()
+        .sort((a, b) => new Date(a.start) - new Date(b.start))
+        .slice(0, 40)
+        .map(event => `- ${event.title}: ${event.allDay ? "all day" : new Date(event.start).toLocaleString()}`)
+        .join("\\n") || "(No saved calendar events.)";
+
     return `
 
 # AXON — CORE SYSTEM
+
+Approximate IP-based location (may reflect a VPN/proxy server; never treat it as exact):
+${locationPromptContext}
+
+The user's saved Axon Calendar events (these are browser-local events; do not claim an event was saved unless the app confirms it):
+${calendarPromptContext}
 
 You are Axon.
 
@@ -3553,6 +3848,15 @@ async function sendMessage() {
     addConversationMessage("USER", userMessage, attachments);
     if (activeSharedChatId) {
         await sendSharedChatMessage(userMessage, attachments);
+        return;
+    }
+
+    // Calendar actions are handled locally so Axon only confirms events
+    // after they have actually been saved.
+    if (!attachments.length && detectCalendarAddCommand(originalMessage)) {
+        const calendarReply = handleCalendarAddCommand(originalMessage);
+        addConversationMessage("AXON", calendarReply);
+        addMessage("AI", calendarReply);
         return;
     }
 
