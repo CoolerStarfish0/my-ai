@@ -177,6 +177,8 @@
 
             <div class="auth-buttons">
 
+                <button id="calendarButton" class="calendar-launch-button" type="button" title="Open your calendar">📅 Calendar</button>
+
                 <button id="loginButton">
                     Sign in with Google
                 </button>
@@ -457,5 +459,48 @@
                 <button id="sendButton" type="button"><span>Send</span><span class="send-arrow">↗</span></button>
             </div>
 
+    <dialog id="calendarDialog" class="calendar-dialog" aria-labelledby="calendarDialogTitle">
+        <div class="calendar-dialog-header">
+            <div>
+                <span class="calendar-kicker">YOUR PERSONAL SCHEDULE</span>
+                <h2 id="calendarDialogTitle">📅 Axon Calendar</h2>
+            </div>
+            <button id="calendarCloseButton" class="calendar-close-button" type="button" aria-label="Close calendar">✕</button>
+        </div>
+        <div class="calendar-month-toolbar">
+            <button id="calendarPrevMonth" type="button" aria-label="Previous month">‹</button>
+            <strong id="calendarMonthLabel"></strong>
+            <button id="calendarNextMonth" type="button" aria-label="Next month">›</button>
+        </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div id="calendarGrid" class="calendar-grid" role="group" aria-label="Calendar dates"></div>
+        <section class="calendar-day-section">
+            <h3 id="calendarSelectedDateLabel">Events</h3>
+            <div id="calendarEventList" class="calendar-event-list"></div>
+        </section>
+        <form id="calendarEventForm" class="calendar-event-form">
+            <h3>＋ Add an event</h3>
+            <label for="calendarEventTitle">Event name</label>
+            <input id="calendarEventTitle" name="title" maxlength="160" placeholder="Math exam, birthday, appointment…" required>
+            <div class="calendar-date-time-fields">
+                <div>
+                    <label for="calendarEventDate">Date</label>
+                    <input id="calendarEventDate" name="date" type="date" required>
+                </div>
+                <div>
+                    <label for="calendarEventTime">Time (optional)</label>
+                    <input id="calendarEventTime" name="time" type="time">
+                </div>
+            </div>
+            <button type="submit">Save event</button>
+            <p id="calendarStatus" class="calendar-status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="calendar-storage-note">Events are saved in this browser for the current Axon account or guest session.</p>
+    </dialog>
+    <footer class="axon-privacy-footer">
+        ⚠️ <strong>Location notice:</strong> Axon may use your IP address to estimate your approximate region. VPNs or proxies may show the server's location instead. Axon does not request precise browser location.
+    </footer>
 </body>
 </html>
