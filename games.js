@@ -389,6 +389,7 @@ function playMystery(){
   stageHandlers["mystery-clue"]=b=>showClue(b.dataset.clue);
   stageHandlers["mystery-interview"]=b=>{activeSuspect=Number(b.dataset.suspect);draw();};
   stageHandlers["mystery-case"]=()=>{activeSuspect=-1;draw();};
+  stageHandlers["mystery-ask"]=form=>{const question=new FormData(form).get("question");questionSuspect(activeSuspect,question);};
   stageHandlers["mystery-question"]=b=>{
     const s=caseFile?.suspects[activeSuspect];if(!s)return;
     const prompts=[
