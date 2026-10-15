@@ -2439,6 +2439,7 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .shared-chat-modal.hidden{display:none}
 .shared-chat-modal{position:fixed;inset:0;z-index:1400;display:flex;align-items:center;justify-content:center;padding:18px;isolation:isolate;overscroll-behavior:contain}
 .shared-chat-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:rgba(3,5,15,.90);backdrop-filter:none;-webkit-backdrop-filter:none;transform:none;cursor:default}
+.shared-chat-modal-backdrop:hover,.shared-chat-modal-backdrop:focus,.shared-chat-modal-backdrop:active{background:rgba(3,5,15,.90);border-color:transparent;box-shadow:none;transform:none;outline:none}
 .shared-chat-dialog{position:relative;z-index:1;flex:0 1 680px;width:min(680px,100%);max-height: min(88dvh,900px);overflow:auto;overscroll-behavior:contain;padding:clamp(16px,3vw,24px);border:1px solid rgba(167,139,250,.48);border-radius:22px;background:#101322;color:var(--white,#fff);box-shadow:0 25px 90px rgba(0,0,0,.72);transform:none}
 .shared-invite-form{display:flex;flex-direction:column;gap:10px;margin-top:16px;padding:16px;border:1px solid rgba(167,139,250,.22);border-radius:15px;background:rgba(255,255,255,.035)}
 .shared-invite-form label{font-weight:800;font-size:13px;color:#eee7ff}
