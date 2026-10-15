@@ -166,12 +166,14 @@ function playShooter(){canvasGame("Space Shooter","Move with ← → or A/D. Hol
 
 async function askAxon(system,prompt,fallback){try{const user=getAuth(getApps()[0]).currentUser;const headers={"Content-Type":"application/json"};if(user)headers.Authorization="Bearer "+await user.getIdToken();const res=await fetch(BACKEND_URL+"/api/chat",{method:"POST",headers,body:JSON.stringify({prompt,system,workMode:false,adminAction:null,targetUser:null})});const data=await res.json();if(res.ok&&data.answer)return data.answer;}catch(e){console.warn("Axon Games AI fallback:",e);}return fallback;}
 function playAdventure(){
-  let history=[],turn=0,currentScene="",busy=false,requestId=0;
+  let history=[],turn=0,currentScene="",busy=false,requestId=0,batchId=0;
+  let branchPromises=[],branchResults=[];
   const fallbackScenes=[
     {scene:"You arrive at a strange crossroads where a lantern glows with blue fire. A narrow path leads into mist, another winds toward distant bells, and a tiny boat waits beside a silent river.",choices:["Follow the blue lanterns","Walk toward the bells","Ask the boat's mysterious ferryman for help"]},
     {scene:"Your choice leads somewhere unexpected. The air shifts, a new landmark appears ahead, and you notice a small detail that might become important later.",choices:["Investigate the unusual detail","Continue toward the new landmark","Speak to the nearest character"]},
     {scene:"The world reacts to what you did. Someone nearby recognizes you, and a fresh opportunity opens up that wasn't there before.",choices:["Hear them out","Test the new opportunity","Look around for another way forward"]}
   ];
+  const system="You are the game master for Axon Adventure, an ongoing, branching, family-friendly interactive story. Invent a genuinely NEW next scene and three meaningful choices. Never repeat a fixed story path, never force a predetermined ending, and never mention a Crystal Archive. The world, characters, items, consequences, mysteries and goals should evolve from the player's previous choices. Remember continuity: don't contradict established facts, and let past choices matter. The story can continue indefinitely; do not conclude it unless the player explicitly asks to finish. Keep it vivid but concise (2-5 sentences). Provide exactly three short actionable choices. Keep content suitable for a teen; no graphic violence or sexual content. Return ONLY valid JSON with this shape: {\"scene\":\"scene text\",\"choices\":[\"choice one\",\"choice two\",\"choice three\"]}.";
   function parseScene(raw){
     const cleaned=String(raw||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
     let data;
@@ -189,54 +191,94 @@ function playAdventure(){
     const f=fallbackScenes[turn%fallbackScenes.length];
     return {scene:(choice?"After you "+choice.charAt(0).toLowerCase()+choice.slice(1)+", ":"")+f.scene,choices:f.choices};
   }
-  function draw(loading=false){
-    const visibleChoices=loading?[]:(window.__axonAdventureChoices||[]);
-    showStage("AI Adventure",`<div class="adventure-scene"><div class="adventure-art">🌌</div><div class="quiz-progress"><strong>YOUR STORY</strong><span>Chapter ${turn+1} · ${history.length} decisions</span></div><p id="adventureSceneText" aria-live="polite">${safeText(currentScene||"Axon is creating a brand-new adventure for you…")}</p><div class="adventure-choices">${loading?'<p class="game-muted">✨ Axon is imagining what happens next…</p>':visibleChoices.map((c,i)=>button(safeText(c),"adventure-choice","secondary")).join("")}</div><p id="adventureStatus" class="game-result" role="status">${loading?"Generating your next scene…":"Every choice changes what happens next. There is no fixed ending."}</p><div class="game-actions">${button("🔄 Start a new story","adventure-restart","secondary")}</div></div>`);
-    stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>{el.dataset.choice=String(i);});
-    stage.querySelectorAll('[data-action="adventure-choice"],[data-action="adventure-restart"]').forEach(el=>el.disabled=loading);
-  }
-  async function generateNext(choice){
-    if(busy)return;
-    busy=true;
-    const thisRequest=++requestId;
-    if(choice)history.push({turn,choice,scene:currentScene});
-    turn=history.length;
-    window.__axonAdventureChoices=[];
-    currentScene=choice?"Your choice: "+choice+"\n\nAxon is creating the consequences…":"";
-    draw(true);
-    const recent=history.slice(-12).map((h,i)=>`${i+1}. Scene: ${h.scene}\nPlayer chose: ${h.choice}`).join("\n\n")||"This is the very beginning. Invent a fresh, intriguing opening scene.";
-    const system="You are the game master for Axon Adventure, an ongoing, branching, family-friendly interactive story. Every time the player makes a choice, invent a genuinely NEW next scene and three meaningful choices. Never repeat a fixed story path, never force a predetermined ending, and never mention a Crystal Archive. The world, characters, items, consequences, mysteries and goals should evolve from the player's previous choices. Remember continuity: don't contradict established facts, and let past choices matter. The story can continue indefinitely; do not conclude it unless the player explicitly asks to finish. Keep it vivid but concise (2-5 sentences). Provide exactly three short actionable choices. Keep content suitable for a teen; no graphic violence or sexual content. Return ONLY valid JSON with this shape: {\"scene\":\"scene text\",\"choices\":[\"choice one\",\"choice two\",\"choice three\"]}.";
-    const prompt="Create the next playable scene for this continuing adventure.\nDecision number: "+(history.length+1)+"\nPrevious journey (oldest first):\n"+recent+"\n\n"+(choice?"The player just chose: "+choice+". Show a consequence and advance the story in an interesting, not necessarily predictable way.":"Begin with a compelling opening and a clear situation to explore.")+"\nGenerate a new scene and three distinct choices. Do not repeat previous scenes or choices verbatim.";
-    let result=null;
+  async function createScene(priorHistory,choice){
+    const recent=priorHistory.slice(-12).map((h,i)=>`${i+1}. Scene: ${h.scene}\nPlayer chose: ${h.choice}`).join("\n\n")||"This is the very beginning. Invent a fresh, intriguing opening scene.";
+    const previousScene=priorHistory.length?priorHistory[priorHistory.length-1].scene:currentScene;
+    const prompt="Create the next playable scene for this continuing adventure.\nDecision number: "+(priorHistory.length+1)+"\nPrevious journey (oldest first):\n"+recent+"\n\n"+(choice?"The player chose: "+choice+". The scene immediately before this choice was: "+previousScene+". Show a consequence and advance the story in an interesting, not necessarily predictable way.":"Begin with a compelling opening and a clear situation to explore.")+"\nGenerate a new scene and three distinct choices. Do not repeat previous scenes or choices verbatim.";
     try{
       const raw=await askAxon(system,prompt,"");
-      result=parseScene(raw);
+      const parsed=parseScene(raw);
+      if(parsed)return {...parsed,aiGenerated:true};
     }catch(err){console.warn("Axon Adventure generation failed:",err);}
-    if(thisRequest!==requestId)return;
-    if(!result){
-      result=fallbackFor(choice);
-      currentScene=(choice?"After your decision, the adventure continues. ":"")+"Axon couldn't reach the AI just now, so here's a temporary scene. Your journey can keep going.";
-      window.__axonAdventureChoices=result.choices;
-      const text=$("adventureSceneText");if(text)text.textContent=currentScene;
-      const status=$("adventureStatus");if(status)status.textContent="AI generation didn't respond this time. You can keep playing; try again later for fully generated scenes.";
-      const list=stage.querySelector(".adventure-choices");if(list)list.innerHTML=result.choices.map(c=>button(safeText(c),"adventure-choice","secondary")).join("");
-      stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>el.dataset.choice=String(i));
-    }else{
-      currentScene=result.scene;
-      window.__axonAdventureChoices=result.choices;
-      draw(false);
-    }
-    busy=false;
+    return {...fallbackFor(choice),aiGenerated:false};
   }
-  stageHandlers["adventure-choice"]=b=>{
+  function draw(loading=false){
+    const visibleChoices=loading?[]:(window.__axonAdventureChoices||[]);
+    showStage("AI Adventure",`<div class="adventure-scene"><div class="adventure-art">🌌</div><div class="quiz-progress"><strong>YOUR STORY</strong><span>Chapter ${turn+1} · ${history.length} decisions</span></div><p id="adventureSceneText" aria-live="polite">${safeText(currentScene||"Axon is creating a brand-new adventure for you…")}</p><div class="adventure-choices">${loading?'<p class="game-muted">✨ Axon is imagining what happens next…</p>':visibleChoices.map((c,i)=>button(safeText(c),"adventure-choice","secondary")).join("")}</div><p id="adventureStatus" class="game-result" role="status">${loading?"Generating your next scene…":"Axon is quietly preparing possible outcomes while you decide. There is no fixed ending."}</p><div class="game-actions">${button("🔄 Start a new story","adventure-restart","secondary")}</div></div>`);
+    stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>{el.dataset.choice=String(i);});
+    stage.querySelectorAll('[data-action="adventure-choice"],[data-action="adventure-restart"]').forEach(el=>{el.disabled=loading;});
+  }
+  function prefetchBranches(){
+    const thisBatch=++batchId;
+    const sceneAtDecision=currentScene;
+    const options=[...(window.__axonAdventureChoices||[])];
+    branchResults=new Array(options.length);
+    branchPromises=options.map((choice,index)=>{
+      const hypotheticalHistory=[...history,{turn,choice,scene:sceneAtDecision}];
+      return createScene(hypotheticalHistory,choice).then(result=>{
+        if(thisBatch===batchId)branchResults[index]=result;
+        return result;
+      });
+    });
+    Promise.allSettled(branchPromises).then(()=>{
+      if(thisBatch!==batchId||busy)return;
+      const status=$("adventureStatus");
+      if(status)status.textContent="✨ Possible outcomes are ready. Pick any choice to continue instantly.";
+    });
+  }
+  async function startStory(){
+    busy=true;
+    const thisRequest=++requestId;
+    batchId++;
+    history=[];turn=0;currentScene="";window.__axonAdventureChoices=[];branchPromises=[];branchResults=[];
+    draw(true);
+    const result=await createScene([],"");
+    if(thisRequest!==requestId)return;
+    currentScene=result.scene;
+    window.__axonAdventureChoices=result.choices;
+    draw(false);
+    const status=$("adventureStatus");
+    if(status&&!result.aiGenerated)status.textContent="AI didn't respond, so this is a temporary scene. You can keep playing.";
+    busy=false;
+    prefetchBranches();
+  }
+  async function chooseBranch(index){
     if(busy)return;
-    const choice=window.__axonAdventureChoices?.[Number(b.dataset.choice)];
-    if(choice)generateNext(choice);
-  };
-  stageHandlers["adventure-restart"]=()=>{
-    requestId++;busy=false;history=[];turn=0;currentScene="";window.__axonAdventureChoices=[];generateNext("");
-  };
-  generateNext("");
+    const choice=window.__axonAdventureChoices?.[index];
+    if(!choice)return;
+    busy=true;
+    const thisRequest=++requestId;
+    const selectedPromise=branchPromises[index];
+    const ready=branchResults[index];
+    history.push({turn,choice,scene:currentScene});
+    turn=history.length;
+    if(ready){
+      currentScene=ready.scene;
+      window.__axonAdventureChoices=ready.choices;
+      draw(false);
+      const status=$("adventureStatus");
+      if(status&&!ready.aiGenerated)status.textContent="AI didn't respond for that branch, so this is a temporary scene. Your adventure continues.";
+      busy=false;
+      prefetchBranches();
+      return;
+    }
+    window.__axonAdventureChoices=[];
+    currentScene="Your choice: "+choice+"\n\nAxon is finishing the scene it started preparing…";
+    draw(true);
+    let result;
+    try{result=selectedPromise?await selectedPromise:await createScene(history,choice);}catch{result={...fallbackFor(choice),aiGenerated:false};}
+    if(thisRequest!==requestId)return;
+    currentScene=result.scene;
+    window.__axonAdventureChoices=result.choices;
+    draw(false);
+    const status=$("adventureStatus");
+    if(status&&!result.aiGenerated)status.textContent="AI didn't respond for that branch, so this is a temporary scene. Your adventure continues.";
+    busy=false;
+    prefetchBranches();
+  }
+  stageHandlers["adventure-choice"]=b=>chooseBranch(Number(b.dataset.choice));
+  stageHandlers["adventure-restart"]=()=>{requestId++;batchId++;busy=false;startStory();};
+  startStory();
 }
 function playMystery(){let seen=new Set(),solved=false;const clues=[{id:"note",icon:"📝",title:"The note",text:"A note reads: 'Meet me at 8. Bring the blue folder.' The ink is fresh."},{id:"clock",icon:"🕰️",title:"The stopped clock",text:"The office clock stopped at 7:45, but the hallway clock says 8:10."},{id:"footprints",icon:"👣",title:"The footprints",text:"Damp footprints lead from the garden door to the archive shelf."},{id:"log",icon:"📋",title:"The access log",text:"The archive was opened with the caretaker's key at 8:05."}];function draw(){showStage("Mystery Detective",`<p class="game-subtitle">Case 01: The Missing Blue Folder. Inspect every clue, then identify who moved it.</p><div class="mystery-clues">${clues.map(c=>`<button class="mystery-clue ${seen.has(c.id)?"clue-seen":""}" data-action="mystery-clue" data-clue="${c.id}"><span>${c.icon}</span><b>${c.title}</b><small>${seen.has(c.id)?"Inspected":"Inspect clue"}</small></button>`).join("")}</div><div id="mysteryNote" class="mystery-note">${seen.size?seen.size+" of "+clues.length+" clues inspected.": "Click a clue to investigate."}</div><h3>Who moved the folder?</h3><div class="quiz-options">${["The caretaker","The gardener","The archivist"].map((n,i)=>`<button class="quiz-option" data-action="mystery-answer" data-answer="${i}" ${seen.size<clues.length?"disabled":""}>${n}</button>`).join("")}</div><div id="mysteryFeedback" class="game-result"></div>${button("Reset case","mystery-restart","secondary")}`);}stageHandlers["mystery-clue"]=b=>{seen.add(b.dataset.clue);draw();const clue=clues.find(c=>c.id===b.dataset.clue);$("mysteryNote").textContent=clue.title+": "+clue.text;};stageHandlers["mystery-answer"]=b=>{if(solved)return;solved=true;$("mysteryFeedback").textContent=Number(b.dataset.answer)===0?"Case solved! The access log and damp footprints point to the caretaker. 🕵️":"Not quite. The clues point to the caretaker: the key log and garden footprints match.";stage.querySelectorAll('[data-action="mystery-answer"]').forEach(x=>x.disabled=true);};stageHandlers["mystery-restart"]=()=>{seen=new Set();solved=false;draw();};draw();}
 
