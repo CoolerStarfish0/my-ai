@@ -3940,6 +3940,10 @@ async function sendMessage() {
         !user.isAnonymous &&
         user.uid === OWNER_UID;
 
+    if (!approximateLocation) {
+        await loadApproximateLocation();
+    }
+
     const systemPrompt =
         buildSystemPrompt(
             user,
