@@ -2475,8 +2475,69 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .attach-image-button{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(167,139,250,.4);border-radius:12px;background:rgba(109,70,190,.16);color:inherit;font-size:25px;line-height:1;cursor:pointer}
 .attach-image-button:hover{background:rgba(109,70,190,.32)}
 .attach-image-button:disabled{opacity:.4;cursor:not-allowed}
-.input-area{display:flex;align-items:flex-end;gap:8px}
-.input-area #messageInput{flex:1;min-width:0}
+.input-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: min(950px, 100%);
+}
+
+.input-area #messageInput {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
+    align-self: stretch;
+}
+
+.input-area #attachImageButton,
+.input-area #sendButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex-shrink: 0;
+    margin: 0;
+    transform: none;
+}
+
+.input-area #attachImageButton {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    line-height: 1;
+}
+
+.input-area #attachImageButton:hover,
+.input-area #sendButton:hover {
+    transform: none;
+}
+
+.input-area #sendButton {
+    min-height: 42px;
+}
+
+@media (max-width: 520px) {
+    .input-area {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .input-area #attachImageButton {
+        width: 38px;
+        min-width: 38px;
+        height: 40px;
+        min-height: 40px;
+        font-size: 23px;
+    }
+
+    .input-area #sendButton {
+        min-width: 59px;
+        min-height: 40px;
+        padding: 8px;
+    }
+}
 .message-image-gallery{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
 .message-image-gallery img{display:block;max-width:min(100%,320px);max-height:320px;object-fit:contain;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.15)}
 @media(max-width:520px){.image-attachment-item{max-width:100%}.message-image-gallery img{max-width:100%;max-height:260px}.attach-image-button{flex-basis:38px;width:38px;height:40px}}
