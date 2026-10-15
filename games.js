@@ -280,6 +280,146 @@ function playAdventure(){
   stageHandlers["adventure-restart"]=()=>{requestId++;batchId++;busy=false;startStory();};
   startStory();
 }
-function playMystery(){let seen=new Set(),solved=false;const clues=[{id:"note",icon:"📝",title:"The note",text:"A note reads: 'Meet me at 8. Bring the blue folder.' The ink is fresh."},{id:"clock",icon:"🕰️",title:"The stopped clock",text:"The office clock stopped at 7:45, but the hallway clock says 8:10."},{id:"footprints",icon:"👣",title:"The footprints",text:"Damp footprints lead from the garden door to the archive shelf."},{id:"log",icon:"📋",title:"The access log",text:"The archive was opened with the caretaker's key at 8:05."}];function draw(){showStage("Mystery Detective",`<p class="game-subtitle">Case 01: The Missing Blue Folder. Inspect every clue, then identify who moved it.</p><div class="mystery-clues">${clues.map(c=>`<button class="mystery-clue ${seen.has(c.id)?"clue-seen":""}" data-action="mystery-clue" data-clue="${c.id}"><span>${c.icon}</span><b>${c.title}</b><small>${seen.has(c.id)?"Inspected":"Inspect clue"}</small></button>`).join("")}</div><div id="mysteryNote" class="mystery-note">${seen.size?seen.size+" of "+clues.length+" clues inspected.": "Click a clue to investigate."}</div><h3>Who moved the folder?</h3><div class="quiz-options">${["The caretaker","The gardener","The archivist"].map((n,i)=>`<button class="quiz-option" data-action="mystery-answer" data-answer="${i}" ${seen.size<clues.length?"disabled":""}>${n}</button>`).join("")}</div><div id="mysteryFeedback" class="game-result"></div>${button("Reset case","mystery-restart","secondary")}`);}stageHandlers["mystery-clue"]=b=>{seen.add(b.dataset.clue);draw();const clue=clues.find(c=>c.id===b.dataset.clue);$("mysteryNote").textContent=clue.title+": "+clue.text;};stageHandlers["mystery-answer"]=b=>{if(solved)return;solved=true;$("mysteryFeedback").textContent=Number(b.dataset.answer)===0?"Case solved! The access log and damp footprints point to the caretaker. 🕵️":"Not quite. The clues point to the caretaker: the key log and garden footprints match.";stage.querySelectorAll('[data-action="mystery-answer"]').forEach(x=>x.disabled=true);};stageHandlers["mystery-restart"]=()=>{seen=new Set();solved=false;draw();};draw();}
+function playMystery(){
+  let caseFile=null,seen=new Set(),interviews={},activeSuspect=-1,solved=false,busy=false,caseId=0;
+  const fallbackCase={
+    title:"The Vanishing Observatory Key",
+    intro:"At 9:15 PM, the key to the hilltop observatory vanished just before a rare comet appeared. Three people were nearby, and each has a reason to be hiding something.",
+    suspects:[
+      {name:"Mira Vale",role:"Astronomy student",personality:"precise and nervous",alibi:"She says she was recording the comet forecast in the control room.",secret:"She borrowed a star chart earlier without signing it out."},
+      {name:"Jonah Reed",role:"Night caretaker",personality:"gruff but observant",alibi:"He says he was checking the generator in the basement.",secret:"He heard footsteps on the stairs but didn't report them."},
+      {name:"Tess Morgan",role:"Science journalist",personality:"charming and evasive",alibi:"She says she was outside taking photographs.",secret:"She wanted an exclusive photograph from inside the observatory."}
+    ],
+    clues:[
+      {id:"mud",icon:"👣",title:"Muddy prints",text:"A line of muddy prints runs from the outside stairwell to the observatory door. The prints are narrow and stop at the door."},
+      {id:"log",icon:"📋",title:"Generator log",text:"The generator log shows a brief restart at 9:08 PM. The basement lights would have flickered during the restart."},
+      {id:"chart",icon:"🌠",title:"Marked star chart",text:"A star chart has a fresh pencil mark pointing to a window beside the key cabinet."},
+      {id:"photo",icon:"📷",title:"Camera photo",text:"A photo timestamped 9:11 PM shows a reflection in the observatory glass, but the person holding the camera is outside."}
+    ],
+    culprit:2,
+    solution:"Tess took the key to get an exclusive inside photograph. The muddy prints and her photo timestamp put her at the door, while the marked chart shows she had found a way to reach the cabinet."
+  };
+  const system="You design fair, solvable, family-friendly detective mysteries for a teen. Invent a completely new case every time: change the setting, missing/stolen/mysterious event, suspects, motives, evidence, and culprit. No gore or sexual content. The culprit must be exactly one of the three suspects, and the clues must logically support the solution without making it obvious from the start. Return ONLY valid JSON: {\"title\":\"case title\",\"intro\":\"2-3 sentence setup\",\"suspects\":[{\"name\":\"name\",\"role\":\"role\",\"personality\":\"brief personality\",\"alibi\":\"what they claim\",\"secret\":\"a secret that may or may not prove guilt\"}],\"clues\":[{\"id\":\"shortid\",\"icon\":\"emoji\",\"title\":\"clue title\",\"text\":\"specific evidence\"}],\"culprit\":0,\"solution\":\"clear explanation using the evidence\"}. Exactly 3 distinct suspects and 4 distinct clues. culprit is 0, 1, or 2. Ensure all names and case details are new.";
+  function parseJSON(raw){
+    const cleaned=String(raw||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
+    try{return JSON.parse(cleaned);}catch{const m=cleaned.match(/\{[\s\S]*\}/);if(m){try{return JSON.parse(m[0]);}catch{}}}
+    return null;
+  }
+  function validCase(data){
+    if(!data||typeof data!=="object"||!String(data.title||"").trim()||!String(data.intro||"").trim()||!String(data.solution||"").trim())return false;
+    if(!Array.isArray(data.suspects)||data.suspects.length!==3||!Array.isArray(data.clues)||data.clues.length<3||![0,1,2].includes(Number(data.culprit)))return false;
+    return data.suspects.every(s=>s&&s.name&&s.role&&s.alibi&&s.secret)&&data.clues.every(c=>c&&c.id&&c.title&&c.text);
+  }
+  async function askForCase(){
+    try{
+      const raw=await askAxon(system,"Create one original detective case. Avoid common repeated setups like a missing blue folder. Make the evidence useful for both clue inspection and suspect questioning.","");
+      const data=parseJSON(raw);
+      if(validCase(data))return {...data,culprit:Number(data.culprit),aiGenerated:true};
+    }catch(err){console.warn("Mystery case generation failed:",err);}
+    return {...fallbackCase,aiGenerated:false};
+  }
+  function suspectQuestions(s,index){
+    return ["Check their alibi against the timeline","Ask what they know about one clue","Ask what they were trying to achieve that night"];
+  }
+  function draw(){
+    if(!caseFile)return;
+    const suspect=activeSuspect>=0?caseFile.suspects[activeSuspect]:null;
+    const content=suspect? `
+      <p class="game-subtitle">QUESTIONING ROOM · Interview one suspect at a time. Compare their answers with your evidence.</p>
+      <div class="mystery-note"><b>${safeText(suspect.name)}</b> · ${safeText(suspect.role)}<br><i>Claimed alibi:</i> ${safeText(suspect.alibi)}</div>
+      <div class="mystery-clues">${suspectQuestions(suspect,activeSuspect).map((q,i)=>button(safeText(q),"mystery-question","secondary")).join("")}</div>
+      <form data-game-form="mystery-ask" class="mystery-note" style="display:grid;gap:10px;margin-top:14px">
+        <label for="mysteryQuestionInput"><b>Ask your own question</b></label>
+        <input id="mysteryQuestionInput" name="question" maxlength="240" required placeholder="Where were you when the key disappeared?" style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px">
+        <button type="submit" class="axon-game-button">Ask ${safeText(suspect.name)}</button>
+      </form>
+      <div id="mysteryInterview" class="mystery-note" aria-live="polite">${(interviews[activeSuspect]||[]).map(m=>`<p><b>Detective:</b> ${safeText(m.q)}<br><b>${safeText(suspect.name)}:</b> ${safeText(m.a)}</p>`).join("")||"The suspect is waiting for your questions."}</div>
+      <div class="game-actions">${button("← Back to case","mystery-case","secondary")}</div>` : `
+      <p class="game-subtitle">${safeText(caseFile.intro)}</p>
+      <div class="quiz-progress"><strong>${safeText(caseFile.title)}</strong><span>${seen.size}/${caseFile.clues.length} clues examined</span></div>
+      <h3>Evidence board</h3>
+      <div class="mystery-clues">${caseFile.clues.map(c=>`<button class="mystery-clue ${seen.has(c.id)?"clue-seen":""}" data-action="mystery-clue" data-clue="${safeText(c.id)}"><span>${safeText(c.icon||"🔎")}</span><b>${safeText(c.title)}</b><small>${seen.has(c.id)?"Examined":"Inspect evidence"}</small></button>`).join("")}</div>
+      <div id="mysteryNote" class="mystery-note">${seen.size?seen.size+" of "+caseFile.clues.length+" clues examined. Select any clue to read it.":"Inspect the evidence and question the suspects before making your accusation."}</div>
+      <h3>Question the suspects</h3>
+      <div class="mystery-clues">${caseFile.suspects.map((s,i)=>`<button class="mystery-clue" data-action="mystery-interview" data-suspect="${i}"><span>🗣️</span><b>${safeText(s.name)}</b><small>${safeText(s.role)}</small></button>`).join("")}</div>
+      <h3>Make your accusation</h3>
+      <p class="game-muted">You can accuse someone at any time, but checking the clues and alibis may help.</p>
+      <div class="quiz-options">${caseFile.suspects.map((s,i)=>`<button class="quiz-option" data-action="mystery-answer" data-answer="${i}" ${solved?"disabled":""}>${safeText(s.name)}</button>`).join("")}</div>
+      <div id="mysteryFeedback" class="game-result" role="status">${solved?(Number(caseFile.culprit)===-1?"": ""):""}</div>
+      ${button("🗂️ Generate a new case","mystery-restart","secondary")}`;
+    showStage("Mystery Detective",`<div class="adventure-scene"><div class="adventure-art">🕵️</div>${content}</div>`);
+    if(suspect){
+      stage.querySelectorAll('[data-action="mystery-question"]').forEach((el,i)=>el.dataset.questionIndex=String(i));
+      const input=$("mysteryQuestionInput");
+      if(input)input.focus();
+    }
+    if(solved&&!suspect){
+      const feedback=$("mysteryFeedback");
+      if(feedback)feedback.textContent=caseFile.lastFeedback||"Case closed.";
+    }
+  }
+  function showClue(id){
+    const clue=caseFile.clues.find(c=>c.id===id);
+    if(!clue)return;
+    seen.add(id);draw();
+    const note=$("mysteryNote");
+    if(note)note.textContent=clue.title+": "+clue.text;
+  }
+  async function questionSuspect(index,question){
+    if(busy||!caseFile?.suspects[index])return;
+    const q=String(question||"").trim();if(!q)return;
+    busy=true;
+    const suspect=caseFile.suspects[index];
+    const prior=interviews[index]||[];
+    const transcript=prior.slice(-8).map(m=>"Detective: "+m.q+"\n"+suspect.name+": "+m.a).join("\n");
+    const prompt="You are roleplaying as a suspect in a fair, family-friendly detective mystery. Stay in character as this suspect; answer the detective's question naturally in 1-4 sentences. You may be nervous, evasive, mistaken, or truthful, but never contradict the case facts or invent evidence that breaks the solution. The culprit is secretly "+caseFile.suspects[caseFile.culprit].name+"; only that suspect may gradually reveal inconsistencies. Do not plainly announce who is guilty.\nCASE: "+caseFile.title+"\nSETUP: "+caseFile.intro+"\nALL SUSPECTS: "+caseFile.suspects.map(s=>s.name+" ("+s.role+"), alibi: "+s.alibi+", private detail: "+s.secret).join(" | ")+"\nEVIDENCE: "+caseFile.clues.map(c=>c.title+": "+c.text).join(" | ")+"\nSOLUTION (keep secret): "+caseFile.solution+"\nYOU ARE: "+suspect.name+"; role: "+suspect.role+"; personality: "+suspect.personality+"; alibi: "+suspect.alibi+"; secret: "+suspect.secret+"\nPREVIOUS INTERVIEW:\n"+(transcript||"This is the first question.")+"\nDETECTIVE'S QUESTION: "+q+"\nRespond only with the suspect's spoken answer, no labels or narration.";
+    const target=$("mysteryInterview");
+    if(target)target.innerHTML='<p class="game-muted">💬 The suspect is thinking…</p>';
+    try{
+      const raw=await askAxon("You are an actor playing one suspect in an interactive detective game. Follow the supplied case facts and remain in character. Keep it teen-friendly.",prompt,"");
+      const answer=String(raw||"").trim()||"I… I'm not sure how to answer that.";
+      (interviews[index]??=[]).push({q,a:answer});
+    }catch(err){
+      console.warn("Suspect questioning failed:",err);
+      (interviews[index]??=[]).push({q,a:"I can't answer right now. Try asking again in a moment."});
+    }
+    busy=false;
+    draw();
+  }
+  stageHandlers["mystery-clue"]=b=>showClue(b.dataset.clue);
+  stageHandlers["mystery-interview"]=b=>{activeSuspect=Number(b.dataset.suspect);draw();};
+  stageHandlers["mystery-case"]=()=>{activeSuspect=-1;draw();};
+  stageHandlers["mystery-question"]=b=>{
+    const s=caseFile?.suspects[activeSuspect];if(!s)return;
+    const prompts=[
+      "Can you explain your alibi and the timeline?",
+      "What do you know about the evidence in this case?",
+      "What were you hoping to accomplish that night?"
+    ];
+    questionSuspect(activeSuspect,prompts[Number(b.dataset.questionIndex)]||prompts[0]);
+  };
+  stageHandlers["mystery-answer"]=b=>{
+    if(solved||activeSuspect>=0)return;
+    solved=true;
+    const correct=Number(b.dataset.answer)===Number(caseFile.culprit);
+    caseFile.lastFeedback=correct?"Case solved! "+caseFile.solution:"Not quite. The evidence points to "+caseFile.suspects[caseFile.culprit].name+". "+caseFile.solution;
+    draw();
+  };
+  stageHandlers["mystery-restart"]=()=>{caseId++;seen=new Set();interviews={};activeSuspect=-1;solved=false;busy=false;caseFile=null;startCase();};
+  async function startCase(){
+    const thisCase=++caseId;
+    busy=true;
+    showStage("Mystery Detective",'<div class="adventure-scene"><div class="adventure-art">🕵️</div><p class="game-muted">Axon is inventing a brand-new case, suspects, clues and a solution…</p></div>');
+    const generated=await askForCase();
+    if(thisCase!==caseId)return;
+    caseFile=generated;seen=new Set();interviews={};activeSuspect=-1;solved=false;busy=false;
+    draw();
+    if(!generated.aiGenerated){
+      const note=$("mysteryNote");
+      if(note)note.textContent="AI couldn't generate a new case just now, so a backup case is loaded. Generate a new case to try again later.";
+    }
+  }
+  startCase();
+}
 
 cards.innerHTML = games.map(g => `<button type="button" class="game-card" data-game="${g.id}"><span class="game-card-icon">${g.icon}</span><span class="game-card-category">${g.category}</span><strong>${g.title}</strong><span class="game-card-desc">${g.desc}</span><span class="game-card-play">Play game <span aria-hidden="true">↗</span></span></button>`).join("");
