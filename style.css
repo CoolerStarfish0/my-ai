@@ -2437,9 +2437,18 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .shared-invites-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;margin-left:4px;border-radius:99px;background:#ec4899;color:#fff;font-size:11px}
 .shared-invites-badge.hidden{display:none}
 .shared-chat-modal.hidden{display:none}
-.shared-chat-modal{position:fixed;inset:0;z-index:1400;display:flex;align-items:center;justify-content:center;padding:18px}
-.shared-chat-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;background:rgba(3,5,15,.78);backdrop-filter:blur(7px);cursor:default}
-.shared-chat-dialog{position:relative;z-index:1;width:min(680px,100%);max-height:min(88vh,900px);overflow:auto;padding:22px;border:1px solid rgba(167,139,250,.42);border-radius:22px;background:var(--panel,#101322);color:var(--white,#fff);box-shadow:0 25px 90px #0009}
+.shared-chat-modal{position:fixed;inset:0;z-index:1400;display:flex;align-items:center;justify-content:center;padding:18px;isolation:isolate;overscroll-behavior:contain}
+.shared-chat-modal-backdrop{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:rgba(3,5,15,.90);backdrop-filter:none;-webkit-backdrop-filter:none;transform:none;cursor:default}
+.shared-chat-dialog{position:relative;z-index:1;flex:0 1 680px;width:min(680px,100%);max-height: min(88dvh,900px);overflow:auto;overscroll-behavior:contain;padding:clamp(16px,3vw,24px);border:1px solid rgba(167,139,250,.48);border-radius:22px;background:#101322;color:var(--white,#fff);box-shadow:0 25px 90px rgba(0,0,0,.72);transform:none}
+.shared-invite-form{display:flex;flex-direction:column;gap:10px;margin-top:16px;padding:16px;border:1px solid rgba(167,139,250,.22);border-radius:15px;background:rgba(255,255,255,.035)}
+.shared-invite-form label{font-weight:800;font-size:13px;color:#eee7ff}
+.shared-invite-form textarea{display:block;box-sizing:border-box;width:100%;min-width:0;resize:vertical;min-height:82px;padding:12px;border:1px solid rgba(167,139,250,.4);border-radius:10px;background:#080914;color:#f7f4ff;font:inherit;line-height:1.5;outline:none}
+.shared-invite-form small{font-size:11px;line-height:1.5;color:#c5bbdc;opacity:.82}
+.shared-invite-form button{align-self:flex-start;min-height:40px;padding:10px 15px;border:1px solid rgba(196,181,253,.35);border-radius:10px;background:#7048c8;color:#fff;font-weight:750;cursor:pointer}
+.shared-invite-form button:disabled{opacity:.5;cursor:not-allowed}
+.shared-chat-dialog .shared-chat-modal-status{overflow-wrap:anywhere}
+.shared-chat-dialog .shared-chat-manager-section{padding-top:4px}
+@media(max-width:650px){.shared-chat-modal{padding:9px}.shared-chat-dialog{max-height:92dvh;padding:16px;border-radius:17px}.shared-chat-dialog-header h2{font-size:21px}.shared-invite-form{padding:12px}}
 .shared-chat-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:12px}
 .shared-chat-dialog-header h2{margin:5px 0 0;font-size:24px}
 .shared-chat-kicker{font-size:10px;font-weight:800;letter-spacing:.16em;color:#b9a3ff}
