@@ -146,7 +146,77 @@ const triviaQuestions=[
  {q:"What is the largest mammal?",a:["African elephant","Blue whale","Giraffe","Orca"],correct:1,why:"The blue whale is the largest known animal."},
  {q:"Which language runs natively in web browsers?",a:["Java","C#","JavaScript","Rust"],correct:2,why:"JavaScript is supported directly by modern browsers."}
 ];
-function playTrivia(){let order=[],i=0,score=0,answered=false;function draw(){answered=false;if(i>=order.length){showStage("Trivia Showdown",`<div class="game-finish"><div class="game-big-icon">🏆</div><h3>Round complete!</h3><p>You scored <b>${score}/${order.length}</b>.</p><p>${score===order.length?"Perfect run. Axon is concerned.":score>=5?"Solid knowledge!":"Rematch and beat your score."}</p>${button("Play again","trivia-restart")}</div>`);return;}const q=order[i];showStage("Trivia Showdown",`<div class="quiz-progress">QUESTION ${i+1} / ${order.length}<span>Score: ${score}</span></div><h3 class="quiz-question">${q.q}</h3><div class="quiz-options">${q.a.map((a,j)=>`<button type="button" class="quiz-option" data-action="trivia-answer" data-answer="${j}">${a}</button>`).join("")}</div><div id="triviaFeedback" class="game-result" aria-live="polite"></div><div class="game-actions">${button("Next question →","trivia-next","secondary")}</div>`);stage.querySelector('[data-action="trivia-next"]').disabled=true;}function start(){order=[...triviaQuestions].sort(()=>Math.random()-.5).slice(0,5);i=0;score=0;draw();}stageHandlers["trivia-answer"]=b=>{if(answered)return;answered=true;const q=order[i],ok=Number(b.dataset.answer)===q.correct;if(ok)score++;stage.querySelectorAll(".quiz-option").forEach((el,j)=>{el.disabled=true;if(j===q.correct)el.classList.add("answer-correct");else if(j===Number(b.dataset.answer))el.classList.add("answer-wrong");});$("triviaFeedback").textContent=(ok?"Correct! ":"Not quite. ")+q.why;stage.querySelector('[data-action="trivia-next"]').disabled=false;};stageHandlers["trivia-next"]=()=>{if(answered){i++;draw();}};stageHandlers["trivia-restart"]=start;start();}
+const recentTriviaQuestions=[];
+function parseTriviaQuestions(raw){
+  try{
+    const cleaned=String(raw||"").replace(/```(?:json)?/gi,"").trim();
+    const parsed=JSON.parse(cleaned.slice(cleaned.indexOf("{"),cleaned.lastIndexOf("}")+1));
+    const list=Array.isArray(parsed)?parsed:parsed.questions;
+    if(!Array.isArray(list)||list.length<5)return null;
+    const valid=list.slice(0,5).map(q=>({
+      q:String(q.q||q.question||"").trim(),
+      a:Array.isArray(q.a||q.options)?(q.a||q.options).map(x=>String(x).trim()):[],
+      correct:Number(q.correct),
+      why:String(q.why||q.explanation||"").trim()
+    }));
+    if(valid.some(q=>!q.q||q.a.length!==4||q.a.some(x=>!x)||!Number.isInteger(q.correct)||q.correct<0||q.correct>3||!q.why||new Set(q.a).size!==4))return null;
+    return valid;
+  }catch{return null;}
+}
+function shuffledTriviaFallback(){
+  return [...triviaQuestions].sort(()=>Math.random()-.5).slice(0,5);
+}
+function playTrivia(){
+  let order=[],i=0,score=0,answered=false,requestId=0;
+  gameCleanup=()=>{requestId++;};
+  function draw(){
+    answered=false;
+    if(i>=order.length){
+      showStage("Trivia Showdown",`<div class="game-finish"><div class="game-big-icon">🏆</div><h3>Round complete!</h3><p>You scored <b>${score}/${order.length}</b>.</p><p>${score===order.length?"Perfect run. Axon is concerned.":score>=3?"Solid knowledge!":"Rematch and beat your score."}</p>${button("Play again","trivia-restart")}</div>`);
+      return;
+    }
+    const q=order[i];
+    showStage("Trivia Showdown",`<div class="quiz-progress">QUESTION ${i+1} / ${order.length}<span>Score: ${score}</span></div><h3 class="quiz-question">${safeText(q.q)}</h3><div class="quiz-options">${q.a.map((a,j)=>`<button type="button" class="quiz-option" data-action="trivia-answer" data-answer="${j}">${safeText(a)}</button>`).join("")}</div><div id="triviaFeedback" class="game-result" aria-live="polite"></div><div class="game-actions">${button("Next question →","trivia-next","secondary")}</div>`);
+    stage.querySelector('[data-action="trivia-next"]').disabled=true;
+  }
+  async function start(){
+    const myRequest=++requestId;
+    i=0;score=0;answered=false;order=[];
+    showStage("Trivia Showdown",'<div class="game-loading"><div class="game-big-icon">🧠</div><h3>Axon is writing a fresh quiz…</h3><p>Making five new questions for this round.</p></div>');
+    const recent=recentTriviaQuestions.slice(-20);
+    const system="You create accurate, varied, age-appropriate multiple-choice trivia. Return ONLY valid JSON, no markdown. Never copy a question from the recent-question list. Avoid ambiguous questions and time-sensitive claims. Exactly five questions; each has a question string q, exactly four distinct answer strings a, zero-based integer correct (0-3), and a brief factual explanation why. Mix science, nature, history, geography, technology, arts, sports, and general knowledge. Ensure exactly one clearly correct answer per question.";
+    const prompt='Create a completely fresh set of exactly 5 trivia questions for a game. Vary topics and difficulty; use a mix of medium and challenging questions, not only basic school facts. JSON format: {"questions":[{"q":"...","a":["...","...","...","..."],"correct":0,"why":"..."}]}. Recent questions to avoid repeating or paraphrasing: '+JSON.stringify(recent);
+    const raw=await askAxon(system,prompt,"");
+    if(myRequest!==requestId)return;
+    const generated=parseTriviaQuestions(raw);
+    if(generated){
+      order=generated;
+      for(const q of generated){recentTriviaQuestions.push(q.q);}
+      if(recentTriviaQuestions.length>40)recentTriviaQuestions.splice(0,recentTriviaQuestions.length-40);
+    }else{
+      order=shuffledTriviaFallback();
+    }
+    draw();
+    if(!generated){
+      const note=document.createElement("p");
+      note.className="game-result";
+      note.textContent="Axon couldn't generate a quiz this time, so this round uses backup questions. Try Play again for a fresh AI-generated set.";
+      stage.querySelector(".game-play-area")?.append(note);
+    }
+  }
+  stageHandlers["trivia-answer"]=b=>{
+    if(answered)return;
+    answered=true;
+    const q=order[i],ok=Number(b.dataset.answer)===q.correct;
+    if(ok)score++;
+    stage.querySelectorAll(".quiz-option").forEach((el,j)=>{el.disabled=true;if(j===q.correct)el.classList.add("answer-correct");else if(j===Number(b.dataset.answer))el.classList.add("answer-wrong");});
+    $("triviaFeedback").textContent=(ok?"Correct! ":"Not quite. ")+q.why;
+    stage.querySelector('[data-action="trivia-next"]').disabled=false;
+  };
+  stageHandlers["trivia-next"]=()=>{if(answered){i++;draw();}};
+  stageHandlers["trivia-restart"]=start;
+  start();
+}
 
 const riddles=[
  {q:"I have keys but no locks. I have space but no room. You can enter, but you can't go outside. What am I?",a:["A keyboard","A map","A piano"],correct:0,hint:"You're probably using one right now."},
