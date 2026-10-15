@@ -11,6 +11,7 @@ let chessModulePromise = null;
 
 const games = [
   {id:"tictactoe", icon:"❌⭕", title:"Tic-Tac-Toe", category:"Strategy", desc:"Outsmart Axon in a classic 3×3 showdown."},
+  {id:"superttt", icon:"🧠❌", title:"Super Tic-Tac-Toe", category:"Strategy", desc:"Nine boards. One huge strategy battle."},
   {id:"connect4", icon:"🔴", title:"Connect Four", category:"Strategy", desc:"Get four in a row before Axon does."},
   {id:"chess", icon:"♟️", title:"Chess", category:"Strategy", desc:"Play a full chess game against an AI opponent."},
   {id:"trivia", icon:"🧠", title:"Trivia Showdown", category:"Brain", desc:"Test your knowledge across a mix of topics."},
@@ -81,7 +82,7 @@ function launchGame(id) {
   gameCleanup = () => {};
   const game = games.find(g => g.id === id);
   if (!game) return;
-  ({tictactoe:playTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, adventure:playAdventure, mystery:playMystery})[id]?.();
+  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, adventure:playAdventure, mystery:playMystery})[id]?.();
 }
 function resultBox(text, good=false) { return `<p class="game-result ${good?"is-good":""}" role="status">${text}</p>`; }
 
@@ -103,6 +104,88 @@ function playTicTacToe() {
   };
   stageHandlers["ttt-restart"]=()=>{board=Array(9).fill("");over=false;paint("Your move.");};
   paint("Your move.");
+}
+
+
+function playSuperTicTacToe(){
+  let boards=Array.from({length:9},()=>Array(9).fill("")),macro=Array(9).fill(""),current="X",active=-1,over=false,difficulty="medium",message="You're X. Win three small boards in a row to win the game.";
+  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function winner(cells){return lines.some(line=>line.every(i=>cells[i]===cells[line[0]]&&cells[i]===cells[line[1]]&&cells[i]===cells[line[2]]&&cells[i]!=="" ))?cells[lines.find(line=>line.every(i=>cells[i]!==""&&cells[i]===cells[line[0]]))?.[0]]||"":"";}
+  function getWinner(cells){for(const line of lines)if(cells[line[0]]&&cells[line[0]]===cells[line[1]]&&cells[line[1]]===cells[line[2]])return cells[line[0]];return "";}
+  function closed(b){return !!macro[b]||boards[b].every(Boolean);}
+  function availableBoards(){if(active>=0&&!closed(active))return [active];return Array.from({length:9},(_,i)=>i).filter(b=>!closed(b));}
+  function smallResult(b){const w=getWinner(boards[b]);if(w)macro[b]=w;else if(boards[b].every(Boolean))macro[b]="D";return macro[b];}
+  function evaluateMacro(mark){let score=0;for(const line of lines){const vals=line.map(i=>macro[i]);if(vals.includes(mark==="X"?"O":"X"))continue;const n=vals.filter(v=>v===mark).length;score+=n===2?24:n===1?4:0;}return score;}
+  function immediateMacroMove(mark){for(const b of availableBoards())if(!closed(b)){for(let c=0;c<9;c++)if(!boards[b][c]){boards[b][c]=mark;const w=getWinner(boards[b]);boards[b][c]="";if(w===mark){let tmp=macro[b];macro[b]=mark;const win=getWinner(macro);macro[b]=tmp;if(win===mark)return {b,c};}}}return null;}
+  function localMove(b,mark){for(let c=0;c<9;c++)if(!boards[b][c]){boards[b][c]=mark;const w=getWinner(boards[b]);boards[b][c]="";if(w===mark)return c;}return -1;}
+  function aiMove(){
+    const legal=availableBoards(),moves=[];
+    for(const b of legal)for(let c=0;c<9;c++)if(!boards[b][c])moves.push({b,c});
+    if(!moves.length)return;
+    let chosen;
+    if(difficulty==="easy"){
+      chosen=moves[Math.floor(Math.random()*moves.length)];
+    }else{
+      const ownWin=immediateMacroMove("O"),blockWin=immediateMacroMove("X");
+      if(ownWin)chosen=ownWin;
+      else if(blockWin)chosen=blockWin;
+      else{
+        let best=-Infinity,ties=[];
+        for(const m of moves){
+          let score=0;const before=macro[m.b];
+          boards[m.b][m.c]="O";const localWin=getWinner(boards[m.b]);
+          if(localWin==="O"){score+=difficulty==="hard"?85:55;}
+          if(localWin==="X")score-=100;
+          const localThreat=localMove(m.b,"O");if(localThreat>=0)score+=difficulty==="hard"?18:8;
+          const sent=m.c, destinationOpen=!closed(sent)&&sent!==m.b;
+          score+=destinationOpen?0:5;
+          if(sent===4)score+=difficulty==="hard"?5:2;
+          score+=Math.random()*(difficulty==="hard"?0.2:4);
+          boards[m.b][m.c]="";
+          macro[m.b]=before;
+          if(difficulty==="hard"){
+            // Prefer moves that do not hand Axon a one-move macro-board win.
+            const oldActive=active;active=sent;
+            const nextBoards=availableBoards();
+            let givesMacroWin=false;
+            if(nextBoards.length){
+              for(const nb of nextBoards){const oc=localMove(nb,"X");if(oc>=0){boards[nb][oc]="X";const win=getWinner(boards[nb]);boards[nb][oc]="";if(win==="X"){givesMacroWin=true;break;}}}
+            }
+            active=oldActive;if(givesMacroWin)score-=65;
+            score+=evaluateMacro("O")*0.7;
+          }
+          if(score>best){best=score;ties=[m];}else if(score===best)ties.push(m);
+        }
+        chosen=ties[Math.floor(Math.random()*ties.length)]||moves[0];
+      }
+    }
+    applyMove(chosen.b,chosen.c,"O");
+  }
+  function paint(){
+    const root=$("superTttBoard");if(!root)return;
+    root.innerHTML=boards.map((cells,b)=>`<div class="superttt-mini ${active===b&&!closed(b)?"is-active":""} ${macro[b]==="X"?"won-x":macro[b]==="O"?"won-o":macro[b]==="D"?"drawn":""}"><div class="superttt-cells">${cells.map((v,c)=>`<button type="button" class="superttt-cell ${v==="X"?"is-x":v==="O"?"is-o":""}" data-action="superttt-move" data-board="${b}" data-cell="${c}" aria-label="Board ${b+1}, cell ${c+1}" ${over||current!=="X"||closed(b)||(active>=0&&!closed(active)&&active!==b)||!!v?"disabled":""}>${v}</button>`).join("")}</div>${macro[b]==="X"||macro[b]==="O"?`<span class="superttt-winner">${macro[b]}</span>`:macro[b]==="D"?'<span class="superttt-winner">＝</span>':""}</div>`).join("");
+    const status=$("superTttStatus");if(status)status.textContent=message;
+  }
+  function applyMove(b,c,mark){
+    boards[b][c]=mark;smallResult(b);
+    const w=getWinner(macro);
+    if(w){over=true;message=w==="X"?"YOU WON SUPER TIC-TAC-TOE! 🏆":"Axon wins the big board. Rematch? 💀";}
+    else if(boards.every((cells,i)=>closed(i))){over=true;message="It's a draw! That was a mega-brain battle.";}
+    else{active=closed(c)?-1:c;current=mark==="X"?"O":"X";message=current==="X"?(active<0?"Your turn! Choose any open small board.":"Your turn! Play in the highlighted small board."):("Axon is thinking…");}
+    paint();
+    if(!over&&current==="O"){window.setTimeout(()=>{if(!over){aiMove();}},180);}
+  }
+  function start(mode="medium"){
+    difficulty=mode;boards=Array.from({length:9},()=>Array(9).fill(""));macro=Array(9).fill("");current="X";active=-1;over=false;
+    message="You're X. Win three small boards in a row to win the game.";
+    showStage("Super Tic-Tac-Toe",`<p class="game-subtitle">Win a small board to claim it. Your cell position sends Axon to the matching small board. If that board is won or full, the next player may choose any open board.</p><div class="superttt-toolbar"><span>Difficulty: <b>${difficulty==="easy"?"Easy":difficulty==="medium"?"Medium":"Hard"}</b></span><span class="superttt-legend"><i class="x-key">X</i> You <i class="o-key">O</i> Axon</span></div><div id="superTttBoard" class="superttt-board"></div><div id="superTttStatus" class="game-result" aria-live="polite"></div><div class="game-actions">${button("Restart","superttt-restart","secondary")}${button("Change difficulty","superttt-difficulty","secondary")}</div>`);
+    paint();
+  }
+  stageHandlers["superttt-move"]=btn=>{const b=Number(btn.dataset.board),c=Number(btn.dataset.cell);if(over||current!=="X"||closed(b)||boards[b][c]||(active>=0&&!closed(active)&&active!==b))return;applyMove(b,c,"X");};
+  stageHandlers["superttt-restart"]=()=>start(difficulty);
+  stageHandlers["superttt-difficulty"]=()=>{showStage("Super Tic-Tac-Toe",`<div class="game-finish"><div class="game-big-icon">🧠</div><h3>Choose difficulty</h3><div class="quiz-options"><button class="quiz-option" data-action="superttt-set-difficulty" data-difficulty="easy">🟢 Easy</button><button class="quiz-option" data-action="superttt-set-difficulty" data-difficulty="medium">🟡 Medium</button><button class="quiz-option" data-action="superttt-set-difficulty" data-difficulty="hard">🔴 Hard</button></div></div>`);};
+  stageHandlers["superttt-set-difficulty"]=btn=>start(btn.dataset.difficulty);
+  start("medium");
 }
 
 function playConnect4() {
