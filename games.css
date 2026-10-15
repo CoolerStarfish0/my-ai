@@ -7,3 +7,67 @@
 
 /* Super Tic-Tac-Toe */
 .superttt-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 14px;color:#bba9d3;font-size:13px}.superttt-legend{display:flex;align-items:center;gap:7px}.superttt-legend i{font-style:normal;font-weight:900;font-size:16px}.x-key{color:#c4b5fd}.o-key{color:#fb7185}.superttt-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(100%,620px);margin:0 auto 16px}.superttt-mini{position:relative;min-width:0;padding:5px;border:1px solid #ffffff25;border-radius:9px;background:#100a1c;transition:border-color .15s,background .15s}.superttt-mini.is-active{border:2px solid #c084fc;background:#25143b;box-shadow:0 0 14px #8b5cf633}.superttt-mini.won-x{background:#4c1d9555;border-color:#a78bfa}.superttt-mini.won-o{background:#88133755;border-color:#fb7185}.superttt-mini.drawn{opacity:.65}.superttt-cells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}.superttt-cell{aspect-ratio:1;min-width:0;padding:0;border:1px solid #ffffff12;border-radius:4px;background:#ffffff08;color:#f5f3ff;font-size:clamp(14px,3.4vw,27px);font-weight:900;cursor:pointer}.superttt-cell:disabled{cursor:default;opacity:.85}.superttt-cell.is-x{color:#c4b5fd;background:#7c3aed22}.superttt-cell.is-o{color:#fb7185;background:#e11d4822}.superttt-winner{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(38px,10vw,90px);font-weight:1000;background:#0b0616b8;border-radius:7px;pointer-events:none}.won-x .superttt-winner{color:#c4b5fd}.won-o .superttt-winner{color:#fb7185}@media(max-width:430px){.superttt-board{gap:4px}.superttt-mini{padding:3px}.superttt-cells{gap:2px}.superttt-cell{border-radius:2px}}
+
+
+/* Mobile-first arcade controls and touch-friendly board layouts */
+.games-hub{min-height:100vh;min-height:100dvh;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+.games-hub-inner{min-width:0}
+.game-play-area,.game-stage,.game-stage-heading{min-width:0}
+.game-stage-heading .game-back{min-height:44px}
+.axon-game-button,.quiz-option,.game-card,.games-close,.superttt-cell,.ttt-cell,.connect-cell,.chess-square,.mystery-clue{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.axon-game-button,.games-close{min-height:44px}
+.arcade-touch-controls{display:none;align-items:center;justify-content:center;gap:12px;margin:12px auto 8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.arcade-touch-controls button{min-width:56px;min-height:52px;padding:10px 14px;border:1px solid #a78bfa88;border-radius:13px;background:linear-gradient(145deg,#281541,#130b20);color:#f5eaff;font-size:20px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none}
+.arcade-touch-controls button.is-pressed{background:#7048c8;border-color:#e9d5ff;transform:scale(.96)}
+.shooter-touch-controls{justify-content:space-between;max-width:420px}
+.arcade-touch-controls .fire-touch-button{flex:1;max-width:180px;background:linear-gradient(135deg,#6d28d9,#be185d);font-size:15px;letter-spacing:.04em}
+.snake-touch-controls{flex-direction:column;gap:5px}
+.snake-touch-controls>div{display:flex;justify-content:center;gap:7px}
+.snake-touch-controls>button{min-width:70px}
+.arcade-wrap canvas{max-width:100%;height:auto;touch-action:none}
+.game-result{overflow-wrap:anywhere}
+@media(max-width:700px){
+  .games-hub{padding:calc(12px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))}
+  .games-topbar{gap:8px;margin-bottom:20px}
+  .games-brand-mark{width:40px;height:40px}
+  .games-brand h1{font-size:16px;letter-spacing:2px}
+  .games-hero h2{font-size:clamp(30px,8vw,42px)}
+  .games-hero p{font-size:14px}
+  .games-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .game-card{min-height:180px;padding:14px;border-radius:15px;gap:8px}
+  .game-card strong{font-size:14px}
+  .game-card-desc{font-size:12px}
+  .game-stage-heading{margin:4px 0 16px}
+  .game-play-area{padding:14px;border-radius:17px}
+  .game-subtitle{font-size:14px;margin-bottom:14px}
+  .arcade-touch-controls{display:flex}
+  .game-actions{gap:8px}
+  .game-actions .axon-game-button{flex:1}
+  .ttt-cell{font-size:clamp(30px,10vw,42px)}
+  .connect-board{width:100%;box-sizing:border-box;gap:clamp(3px,1vw,6px);padding:clamp(6px,2vw,10px)}
+  .connect-cell{min-width:0}
+  .chess-board{width:min(100%,520px)}
+  .chess-square{font-size:clamp(19px,7.2vw,38px)}
+  .superttt-board{width:100%;gap:5px}
+  .superttt-mini{padding:3px}
+  .superttt-cell{font-size:clamp(13px,4vw,23px)}
+  .word-grid{grid-template-columns:repeat(5,minmax(0,43px));gap:5px}
+  .word-tile{height:43px}
+  .mystery-clues{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mystery-clue{min-height:100px}
+}
+@media(max-width:380px){
+  .games-hub{padding-left:9px;padding-right:9px}
+  .games-grid{gap:8px}
+  .game-card{padding:11px;min-height:168px}
+  .games-section-title{gap:8px}
+  .games-section-title span{font-size:11px}
+  .game-play-area{padding:10px}
+  .superttt-board{gap:3px}
+  .superttt-cell{font-size:12px}
+  .chess-square{font-size:18px}
+}
+@media(hover:none) and (pointer:coarse){
+  .game-card:hover{transform:none;box-shadow:none}
+  .games-hub button:active{filter:brightness(1.12)}
+}
