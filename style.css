@@ -2594,3 +2594,75 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .calendar-storage-note{margin:14px 0 0;font-size:11px;line-height:1.5;opacity:.55}
 .axon-privacy-footer{padding:8px 16px 18px;text-align:center;font-size:11px;line-height:1.55;opacity:.58}
 @media(max-width:520px){.calendar-dialog{padding:15px;border-radius:16px}.calendar-dialog-header h2{font-size:21px}.calendar-date{min-height:34px;border-radius:8px}.calendar-grid,.calendar-weekdays{gap:3px}.calendar-date-time-fields{grid-template-columns:1fr}.calendar-launch-button{padding:9px 10px;font-size:12px}}
+
+
+/* Button alignment repair: override global button padding/hover sizing in compact controls. */
+.input-area #attachImageButton,
+.input-area #sendButton {
+    box-sizing: border-box;
+}
+
+.calendar-month-toolbar {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-month-toolbar strong {
+    min-width: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.calendar-month-toolbar button,
+.calendar-close-button {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    transform: none;
+}
+
+.calendar-month-toolbar button:hover,
+.calendar-close-button:hover,
+.calendar-date:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.calendar-date {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.calendar-date.has-events::after {
+    bottom: 3px;
+}
+
+@media (max-width: 520px) {
+    .calendar-month-toolbar {
+        grid-template-columns: 34px minmax(0, 1fr) 34px;
+        gap: 8px;
+    }
+
+    .calendar-month-toolbar button {
+        width: 34px;
+        min-width: 34px;
+        height: 34px;
+        min-height: 34px;
+    }
+}
