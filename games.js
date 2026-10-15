@@ -165,8 +165,79 @@ function playSnake(){canvasGame("Snake","Eat the glowing food. Arrow keys or WAS
 function playShooter(){canvasGame("Space Shooter","Move with ← → or A/D. Hold Space to fire.",()=>{let x=285,bullets=[],enemies=[],frame=0,score=0;return{update(keys){if(keys.has("arrowleft")||keys.has("a"))x-=5;if(keys.has("arrowright")||keys.has("d"))x+=5;x=Math.max(12,Math.min(588,x));if(keys.has(" ")&&frame%8===0)bullets.push({x,y:350});if(++frame%45===0)enemies.push({x:20+Math.random()*560,y:-10});bullets.forEach(b=>b.y-=7);enemies.forEach(e=>e.y+=1.8);bullets=bullets.filter(b=>b.y>0);for(const e of enemies){const hit=bullets.findIndex(b=>Math.abs(b.x-e.x)<17&&Math.abs(b.y-e.y)<17);if(hit>=0){bullets.splice(hit,1);e.y=500;score++;}}enemies=enemies.filter(e=>e.y<420);$("arcadeStatus").textContent="Score: "+score+" · Move: ← → · Fire: Space";if(enemies.some(e=>e.y>365&&Math.abs(e.x-x)<23))return "Ship hit! Final score: "+score;},draw(ctx,c){ctx.fillStyle="#080511";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#a855f7";for(let i=0;i<35;i++){ctx.fillRect((i*97+frame*0.5)%600,(i*61)%400,2,2);}ctx.fillStyle="#c084fc";ctx.beginPath();ctx.moveTo(x,330);ctx.lineTo(x-15,360);ctx.lineTo(x+15,360);ctx.fill();ctx.fillStyle="#67e8f9";bullets.forEach(b=>ctx.fillRect(b.x-2,b.y,4,12));ctx.fillStyle="#fb7185";enemies.forEach(e=>{ctx.beginPath();ctx.arc(e.x,e.y,12,0,Math.PI*2);ctx.fill();});}};});}
 
 async function askAxon(system,prompt,fallback){try{const user=getAuth(getApps()[0]).currentUser;const headers={"Content-Type":"application/json"};if(user)headers.Authorization="Bearer "+await user.getIdToken();const res=await fetch(BACKEND_URL+"/api/chat",{method:"POST",headers,body:JSON.stringify({prompt,system,workMode:false,adminAction:null,targetUser:null})});const data=await res.json();if(res.ok&&data.answer)return data.answer;}catch(e){console.warn("Axon Games AI fallback:",e);}return fallback;}
-function playAdventure(){let history=[],step=0;const scenes=[{text:"You wake beside a ruined portal. A blue forest lies to the north; an old stone tower stands to the east.",choices:["Enter the blue forest","Explore the tower","Inspect the portal"],next:[1,2,3]},{text:"Glowing footprints lead to a fox-shaped spirit guarding a silver key.",choices:["Ask the spirit for help","Try to sneak past","Offer a shiny pebble"],next:[4,5,6]},{text:"The tower door creaks open. A tiny dragon is sitting on a pile of books.",choices:["Offer to help organize books","Challenge the dragon to a riddle","Look for another entrance"],next:[7,8,5]},{text:"The portal flickers. Three symbols glow: moon, leaf, and flame.",choices:["Touch the moon","Touch the leaf","Touch the flame"],next:[9,1,2]},{text:"The spirit smiles and gives you the key. A hidden gate appears between the trees.",choices:["Unlock the gate","Ask where it leads","Return to the portal"],next:[10,9,3]},{text:"A friendly owl swoops down and offers to guide you.",choices:["Follow the owl","Ask it about the tower","Head back"],next:[9,7,3]},{text:"The pebble shines and transforms into a tiny crystal. The spirit bows.",choices:["Take the forest path","Visit the tower","Return to portal"],next:[1,2,3]},{text:"The dragon is delighted. It gives you a map with a star marked on it.",choices:["Follow the map","Ask for a flight","Explore the library"],next:[10,9,8]},{text:"The dragon asks: 'What has pages but isn't a tree?' You know the answer.",choices:["Answer: a book","Ask for a hint","Explore the library"],next:[7,7,10]},{text:"You discover a quiet sanctuary where the portal's creator left a message: 'Courage is a choice.'",choices:["Read the message","Follow a secret stairway","Return to explore"],next:[10,10,3]},{text:"You reach the Crystal Archive! You found the secret ending and earned the Explorer badge. 🎉",choices:["Start a new adventure","Explore the forest again","Visit the tower"],next:[0,1,2]}];function draw(){const s=scenes[step];showStage("AI Adventure",`<div class="adventure-scene"><div class="adventure-art">🌌</div><p>${s.text}</p><div class="adventure-choices">${s.choices.map((c,i)=>button(c,"adventure-choice","secondary")).join("")}</div><p class="game-muted">Story progress: ${history.length} choices</p>${button("✨ Ask Axon to narrate","adventure-narrate","secondary")}<div id="adventureNarration" class="mystery-note hidden" aria-live="polite"></div></div>`);stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>el.dataset.choice=i);}stageHandlers["adventure-choice"]=b=>{const s=scenes[step],choice=Number(b.dataset.choice);history.push(s.choices[choice]);step=s.next[choice];draw();};stageHandlers["adventure-narrate"]=async()=>{const box=$("adventureNarration");box.classList.remove("hidden");box.textContent="Axon is writing your scene…";const s=scenes[step];const answer=await askAxon("You are the creative narrator for a family-friendly fantasy adventure game. Write 2-4 vivid sentences for the current scene only. No menus, no numbered options, and keep it suitable for teens.","Adventure so far: "+history.join(" → ")+"\\nCurrent scene: "+s.text+"\\nWrite a fresh, immersive description of this scene.",s.text);if(box.isConnected)box.textContent=answer;};stageHandlers["adventure-restart"]=()=>{history=[];step=0;draw();};draw();}
-
+function playAdventure(){
+  let history=[],turn=0,currentScene="",busy=false,requestId=0;
+  const fallbackScenes=[
+    {scene:"You arrive at a strange crossroads where a lantern glows with blue fire. A narrow path leads into mist, another winds toward distant bells, and a tiny boat waits beside a silent river.",choices:["Follow the blue lanterns","Walk toward the bells","Ask the boat's mysterious ferryman for help"]},
+    {scene:"Your choice leads somewhere unexpected. The air shifts, a new landmark appears ahead, and you notice a small detail that might become important later.",choices:["Investigate the unusual detail","Continue toward the new landmark","Speak to the nearest character"]},
+    {scene:"The world reacts to what you did. Someone nearby recognizes you, and a fresh opportunity opens up that wasn't there before.",choices:["Hear them out","Test the new opportunity","Look around for another way forward"]}
+  ];
+  function parseScene(raw){
+    const cleaned=String(raw||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
+    let data;
+    try{data=JSON.parse(cleaned);}catch{
+      const match=cleaned.match(/\{[\s\S]*\}/);
+      if(match){try{data=JSON.parse(match[0]);}catch{}}
+    }
+    if(!data||typeof data!=="object")return null;
+    const scene=String(data.scene||data.story||data.narration||"").trim();
+    const choices=Array.isArray(data.choices)?data.choices.map(c=>String(c).trim()).filter(Boolean).slice(0,3):[];
+    if(!scene||choices.length<2)return null;
+    return {scene,choices};
+  }
+  function fallbackFor(choice){
+    const f=fallbackScenes[turn%fallbackScenes.length];
+    return {scene:(choice?"After you "+choice.charAt(0).toLowerCase()+choice.slice(1)+", ":"")+f.scene,choices:f.choices};
+  }
+  function draw(loading=false){
+    const visibleChoices=loading?[]:(window.__axonAdventureChoices||[]);
+    showStage("AI Adventure",`<div class="adventure-scene"><div class="adventure-art">🌌</div><div class="quiz-progress"><strong>YOUR STORY</strong><span>Chapter ${turn+1} · ${history.length} decisions</span></div><p id="adventureSceneText" aria-live="polite">${safeText(currentScene||"Axon is creating a brand-new adventure for you…")}</p><div class="adventure-choices">${loading?'<p class="game-muted">✨ Axon is imagining what happens next…</p>':visibleChoices.map((c,i)=>button(safeText(c),"adventure-choice","secondary")).join("")}</div><p id="adventureStatus" class="game-result" role="status">${loading?"Generating your next scene…":"Every choice changes what happens next. There is no fixed ending."}</p><div class="game-actions">${button("🔄 Start a new story","adventure-restart","secondary")}</div></div>`);
+    stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>{el.dataset.choice=String(i);});
+    stage.querySelectorAll('[data-action="adventure-choice"],[data-action="adventure-restart"]').forEach(el=>el.disabled=loading);
+  }
+  async function generateNext(choice){
+    if(busy)return;
+    busy=true;
+    const thisRequest=++requestId;
+    if(choice)history.push({turn,choice,scene:currentScene});
+    turn=history.length;
+    window.__axonAdventureChoices=[];
+    currentScene=choice?"Your choice: "+choice+"\n\nAxon is creating the consequences…":"";
+    draw(true);
+    const recent=history.slice(-12).map((h,i)=>`${i+1}. Scene: ${h.scene}\nPlayer chose: ${h.choice}`).join("\n\n")||"This is the very beginning. Invent a fresh, intriguing opening scene.";
+    const system="You are the game master for Axon Adventure, an ongoing, branching, family-friendly interactive story. Every time the player makes a choice, invent a genuinely NEW next scene and three meaningful choices. Never repeat a fixed story path, never force a predetermined ending, and never mention a Crystal Archive. The world, characters, items, consequences, mysteries and goals should evolve from the player's previous choices. Remember continuity: don't contradict established facts, and let past choices matter. The story can continue indefinitely; do not conclude it unless the player explicitly asks to finish. Keep it vivid but concise (2-5 sentences). Provide exactly three short actionable choices. Keep content suitable for a teen; no graphic violence or sexual content. Return ONLY valid JSON with this shape: {\"scene\":\"scene text\",\"choices\":[\"choice one\",\"choice two\",\"choice three\"]}.";
+    const prompt="Create the next playable scene for this continuing adventure.\nDecision number: "+(history.length+1)+"\nPrevious journey (oldest first):\n"+recent+"\n\n"+(choice?"The player just chose: "+choice+". Show a consequence and advance the story in an interesting, not necessarily predictable way.":"Begin with a compelling opening and a clear situation to explore.")+"\nGenerate a new scene and three distinct choices. Do not repeat previous scenes or choices verbatim.";
+    let result=null;
+    try{
+      const raw=await askAxon(system,prompt,"");
+      result=parseScene(raw);
+    }catch(err){console.warn("Axon Adventure generation failed:",err);}
+    if(thisRequest!==requestId)return;
+    if(!result){
+      result=fallbackFor(choice);
+      currentScene=(choice?"After your decision, the adventure continues. ":"")+"Axon couldn't reach the AI just now, so here's a temporary scene. Your journey can keep going.";
+      window.__axonAdventureChoices=result.choices;
+      const text=$("adventureSceneText");if(text)text.textContent=currentScene;
+      const status=$("adventureStatus");if(status)status.textContent="AI generation didn't respond this time. You can keep playing; try again later for fully generated scenes.";
+      const list=stage.querySelector(".adventure-choices");if(list)list.innerHTML=result.choices.map(c=>button(safeText(c),"adventure-choice","secondary")).join("");
+      stage.querySelectorAll('[data-action="adventure-choice"]').forEach((el,i)=>el.dataset.choice=String(i));
+    }else{
+      currentScene=result.scene;
+      window.__axonAdventureChoices=result.choices;
+      draw(false);
+    }
+    busy=false;
+  }
+  stageHandlers["adventure-choice"]=b=>{
+    if(busy)return;
+    const choice=window.__axonAdventureChoices?.[Number(b.dataset.choice)];
+    if(choice)generateNext(choice);
+  };
+  stageHandlers["adventure-restart"]=()=>{
+    requestId++;busy=false;history=[];turn=0;currentScene="";window.__axonAdventureChoices=[];generateNext("");
+  };
+  generateNext("");
+}
 function playMystery(){let seen=new Set(),solved=false;const clues=[{id:"note",icon:"📝",title:"The note",text:"A note reads: 'Meet me at 8. Bring the blue folder.' The ink is fresh."},{id:"clock",icon:"🕰️",title:"The stopped clock",text:"The office clock stopped at 7:45, but the hallway clock says 8:10."},{id:"footprints",icon:"👣",title:"The footprints",text:"Damp footprints lead from the garden door to the archive shelf."},{id:"log",icon:"📋",title:"The access log",text:"The archive was opened with the caretaker's key at 8:05."}];function draw(){showStage("Mystery Detective",`<p class="game-subtitle">Case 01: The Missing Blue Folder. Inspect every clue, then identify who moved it.</p><div class="mystery-clues">${clues.map(c=>`<button class="mystery-clue ${seen.has(c.id)?"clue-seen":""}" data-action="mystery-clue" data-clue="${c.id}"><span>${c.icon}</span><b>${c.title}</b><small>${seen.has(c.id)?"Inspected":"Inspect clue"}</small></button>`).join("")}</div><div id="mysteryNote" class="mystery-note">${seen.size?seen.size+" of "+clues.length+" clues inspected.": "Click a clue to investigate."}</div><h3>Who moved the folder?</h3><div class="quiz-options">${["The caretaker","The gardener","The archivist"].map((n,i)=>`<button class="quiz-option" data-action="mystery-answer" data-answer="${i}" ${seen.size<clues.length?"disabled":""}>${n}</button>`).join("")}</div><div id="mysteryFeedback" class="game-result"></div>${button("Reset case","mystery-restart","secondary")}`);}stageHandlers["mystery-clue"]=b=>{seen.add(b.dataset.clue);draw();const clue=clues.find(c=>c.id===b.dataset.clue);$("mysteryNote").textContent=clue.title+": "+clue.text;};stageHandlers["mystery-answer"]=b=>{if(solved)return;solved=true;$("mysteryFeedback").textContent=Number(b.dataset.answer)===0?"Case solved! The access log and damp footprints point to the caretaker. 🕵️":"Not quite. The clues point to the caretaker: the key log and garden footprints match.";stage.querySelectorAll('[data-action="mystery-answer"]').forEach(x=>x.disabled=true);};stageHandlers["mystery-restart"]=()=>{seen=new Set();solved=false;draw();};draw();}
 
 cards.innerHTML = games.map(g => `<button type="button" class="game-card" data-game="${g.id}"><span class="game-card-icon">${g.icon}</span><span class="game-card-category">${g.category}</span><strong>${g.title}</strong><span class="game-card-desc">${g.desc}</span><span class="game-card-play">Play game <span aria-hidden="true">↗</span></span></button>`).join("");
