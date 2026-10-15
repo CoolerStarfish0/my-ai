@@ -45,6 +45,9 @@ function showHub() {
 function closeHub() {
   gameCleanup();
   gameCleanup = () => {};
+  stage.innerHTML = "";
+  stage.classList.add("hidden");
+  cards.classList.remove("hidden");
   hub.classList.add("hidden");
   document.body.classList.remove("games-open");
 }
