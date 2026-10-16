@@ -354,7 +354,7 @@ function playRiddle(){
   showStage("Riddle Master",`<div class="quiz-progress">RIDDLE ${index+1} / ${order.length}<span>Solved: ${score}</span></div><h3 class="quiz-question">${safeText(r.q)}</h3><div class="quiz-options">${r.a.map((a,j)=>`<button class="quiz-option" data-action="riddle-answer" data-answer="${j}">${safeText(a)}</button>`).join("")}</div><div id="riddleFeedback" class="game-result"></div><div class="game-actions">${button("💡 Hint","riddle-hint","secondary")}${button("Next →","riddle-next","secondary")}</div>`);
   stage.querySelector('[data-action="riddle-next"]').disabled=true;
  }
- function fallbackSet(){const pool=[...riddleFallbacks].sort(()=>Math.random()-.5);return pool.slice(0,5).map(r=>({...r,a:[...r.a].sort(()=>Math.random()-.5)})).map(r=>({...r,correct:r.a.indexOf(r.a[r.correct])}));}
+ function fallbackSet(){const pool=[...riddleFallbacks].sort(()=>Math.random()-.5);return pool.slice(0,5).map(r=>{const answer=r.a[r.correct],a=[...r.a].sort(()=>Math.random()-.5);return {...r,a,correct:a.indexOf(answer)};});}
  function validRiddles(data){return Array.isArray(data)&&data.length>=5&&data.slice(0,5).every(r=>r&&typeof r.q==="string"&&r.q.length>8&&Array.isArray(r.a)&&r.a.length===3&&r.a.every(a=>typeof a==="string"&&a.length>0)&&Number.isInteger(Number(r.correct))&&Number(r.correct)>=0&&Number(r.correct)<3&&typeof r.hint==="string");}
  async function start(){
   const id=++requestId;index=0;score=0;order=[];
