@@ -71,3 +71,20 @@
   .game-card:hover{transform:none;box-shadow:none}
   .games-hub button:active{filter:brightness(1.12)}
 }
+
+/* Stickman Showdown */
+.stick-config{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.stick-config label{display:flex;flex-direction:column;gap:7px;font-size:13px;color:#d8cbe9;font-weight:700}
+.stick-config select{min-height:44px;border:1px solid #8b5cf688;background:#1b1230;color:#fff;border-radius:10px;padding:8px 12px}
+.stick-hud{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:800;margin-bottom:9px}
+.stick-hud strong{color:#f5d0fe;text-align:center}
+.stick-bars{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.stick-bars>div{height:12px;border-radius:20px;background:#ffffff20;overflow:hidden}
+.stick-bars i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#7c3aed,#c084fc);transition:width .15s}
+.stick-bars>div:nth-child(2) i{background:linear-gradient(90deg,#fb7185,#f43f5e)}
+.stick-arena{border:1px solid #ffffff30;border-radius:14px;overflow:hidden}
+.stick-arena canvas{display:block;width:100%;height:auto}
+.stick-controls{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:14px;touch-action:none}
+.stick-controls button{min-height:48px;min-width:62px;background:#28183e;color:white;border:1px solid #a78bfa77;border-radius:11px;font-weight:800;touch-action:none;user-select:none}
+.stick-controls button:active{background:#7c3aed}
+@media(max-width:600px){.stick-config label{flex:1;min-width:120px}.stick-config .axon-game-button{width:100%}.stick-hud{font-size:10px}.stick-controls button{flex:1;min-width:27%}}
