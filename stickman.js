@@ -34,11 +34,15 @@ export function playStickman(showStage, setCleanup) {
   }
   function line(x1,y1,x2,y2,color,width=6){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
   function drawFighter(f,t){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.rot*(f.rag>0?1:.2));const c=f.color,walk=Math.sin(t*.013+f.x*.05)*8*(Math.abs(f.vx)>20?1:.12);
-    line(0,-42,-12+walk,0,c);line(0,-42,12-walk,0,c);line(0,-95,0,-42,c,8);ctx.beginPath();ctx.arc(0,-112,17,0,Math.PI*2);ctx.strokeStyle=c;ctx.lineWidth=6;ctx.stroke();
+    const kicking=f.attackType==="kick"&&f.attack>0;
+    // A planted support leg plus a bent, forward-reaching kicking leg.
+    line(0,-42,-f.face*14+walk*.3,-21,c);line(-f.face*14+walk*.3,-21,-f.face*18,0,c);
+    if(kicking){line(0,-42,f.face*19,-24,c);line(f.face*19,-24,f.face*69,-28,c,7);}
+    else {line(0,-42,f.face*13-walk,0,c);}
+    line(0,-95,0,-42,c,8);ctx.beginPath();ctx.arc(0,-112,17,0,Math.PI*2);ctx.strokeStyle=c;ctx.lineWidth=6;ctx.stroke();
     line(0,-84,-f.face*19,-54,c);let handX=f.face*23,handY=-56;
     if(f.attack>0){handX=f.face*(f.attackType==="kick"?18:55);handY=f.attackType==="kick"?-54:-81;}
     line(0,-84,handX,handY,c);if(weapon!=="fists"){const w=weapons[weapon];line(handX,handY,handX+f.face*(w.reach*.6),handY-17,w.color,weapon==="hammer"?11:5);if(weapon==="hammer")line(handX+f.face*(w.reach*.6),handY-30,handX+f.face*(w.reach*.6),handY,w.color,16);}
-    if(f.attackType==="kick"&&f.attack>0)line(0,-42,f.face*61,-42,c,7);
     if(f.block){ctx.strokeStyle="#93c5fd";ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.face*23,-74,27,-1.5,1.5);ctx.stroke();}
     ctx.restore();}
   function render(t){ctx.clearRect(0,0,800,420);const bg=ctx.createLinearGradient(0,0,0,420);bg.addColorStop(0,"#170e30");bg.addColorStop(1,"#070713");ctx.fillStyle=bg;ctx.fillRect(0,0,800,420);
