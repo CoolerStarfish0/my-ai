@@ -323,7 +323,56 @@ const riddles=[
  {q:"What gets wetter the more it dries?",a:["A sponge","A towel","Rain"],correct:1,hint:"It's usually in the bathroom."},
  {q:"What has cities but no houses, forests but no trees, and water but no fish?",a:["A globe","A map","A painting"],correct:1,hint:"It helps you find your way."}
 ];
-function playRiddle(){let index=0,score=0,usedHint=false,order=[];function draw(){usedHint=false;if(index>=order.length){showStage("Riddle Master",`<div class="game-finish"><div class="game-big-icon">🧩</div><h3>Riddle run complete!</h3><p>You solved ${score} of ${order.length}.</p>${button("Play again","riddle-restart")}</div>`);return;}const r=order[index];showStage("Riddle Master",`<div class="quiz-progress">RIDDLE ${index+1} / ${order.length}<span>Solved: ${score}</span></div><h3 class="quiz-question">${r.q}</h3><div class="quiz-options">${r.a.map((a,j)=>`<button class="quiz-option" data-action="riddle-answer" data-answer="${j}">${a}</button>`).join("")}</div><div id="riddleFeedback" class="game-result"></div><div class="game-actions">${button("💡 Hint","riddle-hint","secondary")}${button("Next →","riddle-next","secondary")}</div>`);stage.querySelector('[data-action="riddle-next"]').disabled=true;}function start(){order=[...riddles].sort(()=>Math.random()-.5);index=0;score=0;draw();}stageHandlers["riddle-answer"]=b=>{if(stage.querySelector(".quiz-option").disabled)return;const r=order[index],ok=Number(b.dataset.answer)===r.correct;if(ok)score++;stage.querySelectorAll(".quiz-option").forEach((el,j)=>{el.disabled=true;if(j===r.correct)el.classList.add("answer-correct");else if(j===Number(b.dataset.answer))el.classList.add("answer-wrong");});$("riddleFeedback").textContent=ok?"Correct! 🧠":"Not quite — the answer is "+r.a[r.correct]+".";stage.querySelector('[data-action="riddle-next"]').disabled=false;};stageHandlers["riddle-hint"]=()=>{if(!usedHint){$("riddleFeedback").textContent="Hint: "+order[index].hint;usedHint=true;}};stageHandlers["riddle-next"]=()=>{if(!stage.querySelector(".quiz-option").disabled)return;index++;draw();};stageHandlers["riddle-restart"]=start;start();}
+const riddleFallbacks=[
+ {q:"I have a face and two hands, but no arms or legs. What am I?",a:["A clock","A statue","A robot"],correct:0,hint:"You can check it to know the time."},
+ {q:"What has many teeth but cannot bite?",a:["A shark","A comb","A zipper"],correct:1,hint:"You might use it on your hair."},
+ {q:"I can travel around the world while staying in one corner. What am I?",a:["A stamp","A compass","A postcard"],correct:0,hint:"It goes on an envelope."},
+ {q:"What has one eye but cannot see?",a:["A needle","A storm","A potato"],correct:0,hint:"You might use it when sewing."},
+ {q:"What has branches but no fruit, trunk, or leaves?",a:["A river","A bank","A mountain"],correct:1,hint:"You might deposit money here."},
+ {q:"What can fill a room but takes up no space?",a:["Sound","Light","A smell"],correct:1,hint:"It helps you see in the dark."},
+ {q:"What goes up but never comes back down?",a:["A balloon","Your age","A kite"],correct:1,hint:"It increases every birthday."},
+ {q:"What has words but never speaks?",a:["A book","A radio","A parrot"],correct:0,hint:"You read it."},
+ {q:"The more you remove from me, the bigger I become. What am I?",a:["A hole","A pile","A shadow"],correct:0,hint:"Digging makes it larger."},
+ {q:"What has four fingers and a thumb but isn't alive?",a:["A glove","A hand puppet","A mannequin"],correct:0,hint:"You wear it when it's cold."},
+ {q:"I have lakes with no water, roads with no cars, and towns with no people. What am I?",a:["A map","A dream","A model train"],correct:0,hint:"It helps you navigate."},
+ {q:"What gets broken without ever being held?",a:["A promise","A window","A plate"],correct:0,hint:"You make it with your word."},
+ {q:"What has a ring but no finger?",a:["A telephone","A tree","A planet"],correct:0,hint:"It can ring when someone calls."},
+ {q:"What begins with T, ends with T, and has T inside?",a:["A teapot","A tent","A textbook"],correct:0,hint:"You might pour a drink from it."},
+ {q:"What can you catch but not throw?",a:["A cold","A ball","A frisbee"],correct:0,hint:"It can make you sneeze."},
+ {q:"What has a head and a tail but no body?",a:["A coin","A snake","A comet"],correct:0,hint:"You might flip it to make a choice."},
+ {q:"What kind of room has no doors or windows?",a:["A mushroom","A bedroom","A classroom"],correct:0,hint:"It can grow in a forest."},
+ {q:"What runs but never walks, has a mouth but never talks?",a:["A river","A dog","A clock"],correct:0,hint:"It flows downhill."},
+ {q:"What has 13 hearts but no other organs?",a:["A deck of cards","A box of chocolates","A calendar"],correct:0,hint:"It has four suits."},
+ {q:"What gets sharper the more you use it?",a:["Your brain","A pencil","A knife"],correct:0,hint:"Learning and practice improve it."}
+];
+function playRiddle(){
+ let index=0,score=0,usedHint=false,order=[],requestId=0;
+ function draw(){
+  usedHint=false;
+  if(index>=order.length){showStage("Riddle Master",`<div class="game-finish"><div class="game-big-icon">🧩</div><h3>Riddle run complete!</h3><p>You solved ${score} of ${order.length}.</p>${button("Play a fresh set","riddle-restart")}</div>`);return;}
+  const r=order[index];
+  showStage("Riddle Master",`<div class="quiz-progress">RIDDLE ${index+1} / ${order.length}<span>Solved: ${score}</span></div><h3 class="quiz-question">${safeText(r.q)}</h3><div class="quiz-options">${r.a.map((a,j)=>`<button class="quiz-option" data-action="riddle-answer" data-answer="${j}">${safeText(a)}</button>`).join("")}</div><div id="riddleFeedback" class="game-result"></div><div class="game-actions">${button("💡 Hint","riddle-hint","secondary")}${button("Next →","riddle-next","secondary")}</div>`);
+  stage.querySelector('[data-action="riddle-next"]').disabled=true;
+ }
+ function fallbackSet(){const pool=[...riddleFallbacks].sort(()=>Math.random()-.5);return pool.slice(0,5).map(r=>({...r,a:[...r.a].sort(()=>Math.random()-.5)})).map(r=>({...r,correct:r.a.indexOf(r.a[r.correct])}));}
+ function validRiddles(data){return Array.isArray(data)&&data.length>=5&&data.slice(0,5).every(r=>r&&typeof r.q==="string"&&r.q.length>8&&Array.isArray(r.a)&&r.a.length===3&&r.a.every(a=>typeof a==="string"&&a.length>0)&&Number.isInteger(Number(r.correct))&&Number(r.correct)>=0&&Number(r.correct)<3&&typeof r.hint==="string");}
+ async function start(){
+  const id=++requestId;index=0;score=0;order=[];
+  showStage("Riddle Master",'<div class="adventure-scene"><div class="adventure-art">🧩</div><p class="game-muted">Axon is inventing five fresh riddles for this round…</p></div>');
+  const fallback=fallbackSet();
+  try{
+   const raw=await askAxon("You create original, family-friendly brain-teaser riddles for a game. Each set must contain five NEW, varied riddles, not the usual keyboard/footsteps/bottle/towel/map riddles. Make them solvable and avoid repeating the same question or answer across the set. Return ONLY valid JSON: an array of five objects, each with q (question string), a (exactly three short answer choices), correct (zero-based index of the one correct answer), and hint (short helpful hint). Ensure the correct answer exactly matches one choice.", "Generate five fresh and varied riddles for a new round. Include logic, wordplay, everyday objects, and lateral thinking. Make sure all three choices differ and only one is correct.", "");
+   let data;try{data=JSON.parse(String(raw||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim());}catch{data=null;}
+   if(id!==requestId)return;
+   order=validRiddles(data)?data.slice(0,5).map(r=>({q:r.q.trim(),a:r.a.map(String),correct:Number(r.correct),hint:r.hint.trim()})):fallback;
+  }catch(e){console.warn("Fresh riddle generation failed; using shuffled backup set.",e);if(id!==requestId)return;order=fallback;}
+  if(id===requestId)draw();
+ }
+ stageHandlers["riddle-answer"]=b=>{if(!stage.querySelector(".quiz-option")||stage.querySelector(".quiz-option").disabled)return;const r=order[index],chosen=Number(b.dataset.answer),ok=chosen===r.correct;if(ok)score++;stage.querySelectorAll(".quiz-option").forEach((el,j)=>{el.disabled=true;if(j===r.correct)el.classList.add("answer-correct");else if(j===chosen)el.classList.add("answer-wrong");});$("riddleFeedback").textContent=ok?"Correct! 🧠":"Not quite — the answer is "+r.a[r.correct]+".";stage.querySelector('[data-action="riddle-next"]').disabled=false;};
+ stageHandlers["riddle-hint"]=()=>{if(!usedHint&&order[index]){$("riddleFeedback").textContent="Hint: "+order[index].hint;usedHint=true;}};
+ stageHandlers["riddle-next"]=()=>{if(!stage.querySelector(".quiz-option")?.disabled)return;index++;draw();};
+ stageHandlers["riddle-restart"]=start;start();
+}
 
 const wordBank=["APPLE","BRAVE","CLOUD","DREAM","FLAME","GRAPE","HOUSE","LASER","MOUSE","NIGHT","OCEAN","PIXEL","QUEST","ROBOT","SHARK","TIGER","WHALE","ZEBRA"];
 function playWord(){let answer="",guesses=[],over=false;function start(){answer=wordBank[Math.floor(Math.random()*wordBank.length)];guesses=[];over=false;draw();}function draw(){showStage("Word Guess",`<p class="game-subtitle">Guess the five-letter word in six tries. Green = right letter and place; gold = letter is elsewhere.</p><div class="word-grid">${Array.from({length:6},(_,r)=>Array.from({length:5},(_,c)=>`<div class="word-tile ${guesses[r]?.marks[c]||""}">${guesses[r]?.word[c]||""}</div>`).join("")).join("")}</div><form data-game-form="word-submit" class="word-form"><input id="wordInput" maxlength="5" minlength="5" pattern="[A-Za-z]{5}" autocomplete="off" placeholder="TYPE WORD" aria-label="Five-letter guess" ${over?"disabled":""} required><button class="axon-game-button" type="submit" ${over?"disabled":""}>Guess</button></form><div id="wordStatus" class="game-result">${over?(guesses.at(-1)?.word===answer?"Solved! 🏆":"The word was "+answer+"."):"Guess "+(guesses.length+1)+" of 6"}</div>${button("New word","word-restart","secondary")}`);if(!over)$("wordInput").focus();}stageHandlers["word-submit"]=form=>{if(over)return;const input=$("wordInput"),word=input.value.toUpperCase();if(!/^[A-Z]{5}$/.test(word)){input.setCustomValidity("Enter five letters.");input.reportValidity();return;}input.setCustomValidity("");const left=answer.split(""),marks=Array(5).fill("tile-gray");for(let i=0;i<5;i++)if(word[i]===left[i]){marks[i]="tile-green";left[i]="";}for(let i=0;i<5;i++)if(marks[i]!=="tile-green"){const p=left.indexOf(word[i]);if(p>=0){marks[i]="tile-gold";left[p]="";}}guesses.push({word,marks});if(word===answer||guesses.length>=6)over=true;draw();};stageHandlers["word-restart"]=start;start();}
