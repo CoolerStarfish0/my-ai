@@ -1,6 +1,8 @@
 import { getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
+import { playStickman } from "./stickman.js";
+
 const BACKEND_URL = "https://5158-ai-backendpriv.vercel.app";
 const $ = (id) => document.getElementById(id);
 const hub = $("gamesHub");
@@ -17,6 +19,7 @@ const games = [
   {id:"trivia", icon:"🧠", title:"Trivia Showdown", category:"Brain", desc:"Test your knowledge across a mix of topics."},
   {id:"riddle", icon:"🧩", title:"Riddle Master", category:"Brain", desc:"Crack the riddles. Hints are available."},
   {id:"word", icon:"🔤", title:"Word Guess", category:"Brain", desc:"Find the hidden five-letter word in six tries."},
+  {id:"stickman", icon:"🥊", title:"Stickman Showdown", category:"Arcade", desc:"2D weapon fighting with ragdoll knockback and AI opponents."},
   {id:"snake", icon:"🐍", title:"Snake", category:"Arcade", desc:"Eat, grow, and don't run into yourself."},
   {id:"shooter", icon:"🚀", title:"Space Shooter", category:"Arcade", desc:"Pilot your ship and blast the incoming targets."},
   {id:"adventure", icon:"🐉", title:"AI Adventure", category:"Adventure", desc:"Choose your path through a changing story."},
@@ -82,7 +85,7 @@ function launchGame(id) {
   gameCleanup = () => {};
   const game = games.find(g => g.id === id);
   if (!game) return;
-  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, adventure:playAdventure, mystery:playMystery})[id]?.();
+  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, stickman:()=>playStickman(showStage, fn=>{gameCleanup=fn;}), adventure:playAdventure, mystery:playMystery})[id]?.();
 }
 function resultBox(text, good=false) { return `<p class="game-result ${good?"is-good":""}" role="status">${text}</p>`; }
 
