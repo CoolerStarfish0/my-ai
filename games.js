@@ -2,7 +2,7 @@ import { getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 import { playStickman } from "./stickman.js";
-import { playAxonDash } from "./axon-dash.js";
+import { playAxonDash } from "./axon-dash.js?v=axon-dash-fix-1";
 
 const BACKEND_URL = "https://5158-ai-backendpriv.vercel.app";
 const $ = (id) => document.getElementById(id);
