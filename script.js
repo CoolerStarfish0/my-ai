@@ -4663,6 +4663,10 @@ function scheduleRankAnimation(callback, delay) {
 }
 
 function playRankAnimation(rankName) {
+    // Temporarily disabled at the user's request.
+    clearRankAnimationTimers();
+    if (rankAnimation) rankAnimation.classList.add("hidden");
+    return;
     if (!rankAnimation || !axonMascot || !rankAnimationTitle || !rankAnimationRank) return;
 
     clearRankAnimationTimers();
