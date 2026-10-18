@@ -2,6 +2,7 @@ import { getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 import { playStickman } from "./stickman.js";
+import { playAxonDash } from "./axon-dash.js";
 
 const BACKEND_URL = "https://5158-ai-backendpriv.vercel.app";
 const $ = (id) => document.getElementById(id);
@@ -19,6 +20,7 @@ const games = [
   {id:"trivia", icon:"🧠", title:"Trivia Showdown", category:"Brain", desc:"Test your knowledge across a mix of topics."},
   {id:"riddle", icon:"🧩", title:"Riddle Master", category:"Brain", desc:"Crack the riddles. Hints are available."},
   {id:"word", icon:"🔤", title:"Word Guess", category:"Brain", desc:"Find the hidden five-letter word in six tries."},
+  {id:"dash", icon:"🟨", title:"Axon Dash", category:"Arcade", desc:"Build cube levels, watch Axon create one, then race it."},
   {id:"stickman", icon:"🥊", title:"Stickman Showdown", category:"Arcade", desc:"2D weapon fighting with ragdoll knockback and AI opponents."},
   {id:"snake", icon:"🐍", title:"Snake", category:"Arcade", desc:"Eat, grow, and don't run into yourself."},
   {id:"shooter", icon:"🚀", title:"Space Shooter", category:"Arcade", desc:"Pilot your ship and blast the incoming targets."},
@@ -85,7 +87,7 @@ function launchGame(id) {
   gameCleanup = () => {};
   const game = games.find(g => g.id === id);
   if (!game) return;
-  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, stickman:()=>playStickman(showStage, fn=>{gameCleanup=fn;}), adventure:playAdventure, mystery:playMystery})[id]?.();
+  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, stickman:()=>playStickman(showStage, fn=>{gameCleanup=fn;}), dash:()=>playAxonDash(showStage,askAxon,fn=>{gameCleanup=fn;}), adventure:playAdventure, mystery:playMystery})[id]?.();
 }
 function resultBox(text, good=false) { return `<p class="game-result ${good?"is-good":""}" role="status">${text}</p>`; }
 
