@@ -2,11 +2,11 @@
 export function playAxonDash(showStage,askAxon,setCleanup){
  let items=[],history=[],future=[],tool="spike",mode="edit",camera=0,runner=null,bot=null,raf=0,last=0,timer=0,generation=0,building=false;
  const stage=document.getElementById("gameStage");
- showStage("Axon Dash",'<div id="dashApp"><div id="dashTopbar"><p>Cube mode • Tap tiles to edit • Tap / Space to jump</p><button type="button" class="axon-game-button" data-dash="fullscreen">⛶ Full screen + landscape</button></div><p id="dashRotateHint" hidden>↻ Rotate your device sideways for the best experience.</p><div id="dashTools"></div><canvas id="dashCanvas" width="900" height="360" style="width:100%;height:auto;max-height:48vh;touch-action:none;border:1px solid #8c7cff;border-radius:12px"></canvas><div id="dashActions"></div><p>Ask Axon to build a level:</p><input id="dashPrompt" maxlength="200" placeholder="A fun space level with spikes" style="padding:10px;max-width:520px;width:60%"><button class="axon-game-button" data-dash="generate">Watch Axon build</button><button class="axon-game-button" data-dash="stop">Stop</button><p id="dashStatus" role="status">Editor ready.</p></div>');
+ showStage("Axon Dash",'<div id="dashApp"><div id="dashTopbar"><p>Cube mode • Tap tiles to edit • Tap / Space to jump</p><button type="button" class="axon-game-button" data-dash="fullscreen">⛶ Full screen + landscape</button></div><p id="dashRotateHint" hidden>↻ Rotate your device sideways for the best experience.</p><div id="dashTools"></div><canvas id="dashCanvas" width="900" height="360" style="width:100%;height:auto;max-height:48vh;touch-action:none;border:1px solid #8c7cff;border-radius:12px"></canvas><div id="dashActions"></div><div id="dashMobileControls" aria-label="Mobile gameplay controls" style="display:none"><button type="button" class="axon-game-button" data-dash="jump" aria-label="Jump">⬆ JUMP</button></div><p>Ask Axon to build a level:</p><input id="dashPrompt" maxlength="200" placeholder="A fun space level with spikes" style="padding:10px;max-width:520px;width:60%"><button class="axon-game-button" data-dash="generate">Watch Axon build</button><button class="axon-game-button" data-dash="stop">Stop</button><p id="dashStatus" role="status">Editor ready.</p></div>');
  const app=stage.querySelector("#dashApp"),canvas=app.querySelector("canvas"),ctx=canvas.getContext("2d");
  const fullscreenStyle=document.createElement("style");
  fullscreenStyle.textContent=`
- #dashApp{box-sizing:border-box}
+ #dashApp{box-sizing:border-box;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none} #dashApp input{user-select:text;-webkit-user-select:text} #dashCanvas{touch-action:none;user-select:none;-webkit-user-select:none} #dashMobileControls{justify-content:center;margin:8px 0;touch-action:none} #dashMobileControls button{min-width:150px;min-height:58px;font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
  #dashTopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
  #dashApp:fullscreen,#dashApp.dash-fullscreen-fallback{position:fixed;inset:0;z-index:99999;box-sizing:border-box;width:100vw;height:100dvh;max-width:none;margin:0;padding:12px 18px;overflow:auto;background:#0c1224;color:#fff}
  #dashApp:fullscreen #dashCanvas,#dashApp.dash-fullscreen-fallback #dashCanvas{display:block;width:100%;height:calc(100dvh - 230px);max-height:none;min-height:180px;object-fit:contain}
@@ -89,7 +89,7 @@ export function playAxonDash(showStage,askAxon,setCleanup){
   if(!runner.alive&&(mode!=="race"||!bot.alive)){status("Crash! Playtest or race again.");return;}
   raf=requestAnimationFrame(frame);
  }
- function begin(m){stop();mode=m;camera=0;runner=makeRunner();bot=m==="race"?makeRunner():null;last=0;status(m==="edit"?"Editing":m==="race"?"Racing! Space or tap to jump.":"Playtest! Space or tap to jump.");draw();if(m!=="edit")raf=requestAnimationFrame(frame);}
+ function begin(m){stop();mode=m;camera=0;runner=makeRunner();bot=m==="race"?makeRunner():null;last=0;const mobileControls=app.querySelector("#dashMobileControls");if(mobileControls)mobileControls.style.display=m==="edit"?"none":"flex";status(m==="edit"?"Editing":m==="race"?"Racing! Tap JUMP or the playfield.":"Playtest! Tap JUMP or the playfield.");draw();if(m!=="edit")raf=requestAnimationFrame(frame);}
  function fallback(s){const hard=/hard|extreme|insane/i.test(s),easy=/easy|beginner/i.test(s),count=hard?20:easy?8:13,arr=[];for(let i=0;i<count;i++)arr.push({type:i%5===4?"pad":"spike",x:330+i*(hard?165:easy?300:240),y:0});return arr;}
  async function generate(){
   if(building)return;stop();mode="edit";building=true;const id=++generation,request=app.querySelector("#dashPrompt").value.trim()||"A fun cube level";
@@ -110,6 +110,7 @@ export function playAxonDash(showStage,askAxon,setCleanup){
  function buttons(e){
   const b=e.target.closest("[data-dash]");if(!b||!app.contains(b))return;const a=b.dataset.dash;
   if(a==="fullscreen"){toggleFullscreen();}
+  else if(a==="jump"){if(mode!=="edit")jump(runner);}
   else if(a==="tool"){tool=b.dataset.value;status("Selected "+tool);}
   else if(a==="scroll"){camera=Math.max(0,Math.min(11500,camera+Number(b.dataset.value)));draw();}
   else if(["edit","test","race"].includes(a))begin(a);
