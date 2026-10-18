@@ -68,7 +68,7 @@ export function playAxonDash(showStage,askAxon,setCleanup){
  function step(r,dt,ai){
   if(!r||!r.alive||r.won)return;
   if(ai&&r.y>=275&&items.some(o=>["spike","block","saw"].includes(o.type)&&o.y===0&&o.x>r.x+30&&o.x<r.x+100))jump(r);
-  if(!ai){for(const t of items.filter(o=>o.type==="trigger"&&!r.used.has(items.indexOf(o))&&o.x<=r.x+8)){const k=items.indexOf(t);r.used.add(k);const c=t.config||{};if(c.effect==="color")worldColor=/^#[0-9a-f]{6}$/i.test(c.value)?c.value:"#5d7cff";if(c.effect==="speed")speed=Math.max(80,Math.min(400,210*(Number(c.value)||1)));if(c.effect==="gravity")gravity=Math.max(500,Math.min(2500,1500*(Number(c.value)||1)));if(c.effect==="pulse")pulse=100;if(c.effect==="shake")shake=18;}}
+  if(!ai){for(const t of items.filter(o=>o.type==="trigger"&&!r.used.has(items.indexOf(o))&&o.x<=r.x+8)){const k=items.indexOf(t);r.used.add(k);const c=t.config||{};if(c.effect==="color")worldColor=/^#[0-9a-f]{6}$/i.test(c.value)?c.value:"#5d7cff";if(c.effect==="speed")speed=Math.max(80,Math.min(400,210*(Number(c.value)||1)));if(c.effect==="gravity")gravity=Math.max(500,Math.min(2500,1500*(Number(c.value)||1)));if(c.effect==="pulse")pulse=100;if(c.effect==="shake")shake=18;if(c.duration>0){const oldEffect=c.effect;setTimeout(()=>{if(oldEffect==="color")worldColor="#131b33";if(oldEffect==="speed")speed=210;if(oldEffect==="gravity")gravity=1500;},c.duration*1000);}}}
   const old=r.y;r.vy+=(gravity||1500)*dt;r.y+=r.vy*dt;r.x+=(speed||210)*dt;
   if(r.y>=276){r.y=276;r.vy=0;}
   for(let k=0;k<items.length;k++){const o=items[k],x=o.x,y=300-(o.y+1)*30;
@@ -104,7 +104,7 @@ export function playAxonDash(showStage,askAxon,setCleanup){
  function click(e){
   if(mode!=="edit"){jump(runner);return;}if(building)return;
   const b=canvas.getBoundingClientRect(),px=(e.clientX-b.left)*900/b.width+camera,py=(e.clientY-b.top)*360/b.height,x=Math.floor(px/30)*30,y=Math.floor((300-py)/30);
-  if(tool==="select"){const hit=[...items].reverse().find(o=>Math.abs(o.x+15-px)<19&&Math.abs(300-(o.y+1)*30+15-py)<19);selected=hit||null;inspector();draw();return;}
+  if(tool==="select"){if(selected&&Math.abs(selected.x-camera+35-px)<13&&Math.abs(300-(selected.y+1)*30-5-py)<13){snap();selected.rotation=((selected.rotation||0)+15)%360;save();inspector();draw();return;}const hit=[...items].reverse().find(o=>Math.abs(o.x+15-px)<19&&Math.abs(300-(o.y+1)*30+15-py)<19);selected=hit||null;inspector();draw();return;}
   if(x<180||x>12000||y<0||y>8)return;snap();const existing=items.findIndex(o=>o.x===x&&o.y===y&&o.type!=="deco");if(tool==="erase"){if(existing>=0)items.splice(existing,1);selected=null;}else{const obj={type:tool,x,y,rotation:0};if(tool==="trigger")obj.config={effect:"color",value:"#5d7cff",duration:1,target:"level"};if(existing>=0&&tool!=="deco")items.splice(existing,1);items.push(obj);selected=obj;}save();inspector();draw();
  }
  function buttons(e){
@@ -112,6 +112,10 @@ export function playAxonDash(showStage,askAxon,setCleanup){
   if(a==="fullscreen"){toggleFullscreen();}
   else if(a==="jump"){if(mode!=="edit")jump(runner);}
   else if(a==="tool"){tool=b.dataset.value;status("Selected "+tool+(tool==="trigger"?" — place one, select it, then configure the effect.":""));if(tool!=="select")selected=null;inspector();}
+  else if(a==="rotate"){const o=selectedItem();if(o){snap();o.rotation=((o.rotation||0)+Number(b.dataset.value)+3600)%360;save();inspector();draw();}}
+  else if(a==="duplicate"){const o=selectedItem();if(o){snap();const copy={...o,x:Math.min(12000,o.x+30),config:o.config?{...o.config}:undefined};items.push(copy);selected=copy;save();inspector();draw();}}
+  else if(a==="deleteSelected"){if(selectedItem()){snap();items=items.filter(o=>o!==selected);selected=null;save();inspector();draw();}}
+  else if(a==="applyTrigger"){const o=selectedItem();if(o?.type==="trigger"){snap();o.config={effect:app.querySelector("#dashTriggerEffect").value,value:app.querySelector("#dashTriggerValue").value,duration:Math.max(.1,Math.min(10,Number(app.querySelector("#dashTriggerDuration").value)||1)),target:"level"};save();status("Trigger configured: "+o.config.effect);inspector();draw();}}
   else if(a==="scroll"){camera=Math.max(0,Math.min(11500,camera+Number(b.dataset.value)));draw();}
   else if(["edit","test","race"].includes(a))begin(a);
   else if(a==="generate")generate();
@@ -119,7 +123,7 @@ export function playAxonDash(showStage,askAxon,setCleanup){
   else if(a==="undo"&&history.length){future.push(JSON.stringify(items));items=JSON.parse(history.pop());save();draw();}
   else if(a==="redo"&&future.length){history.push(JSON.stringify(items));items=JSON.parse(future.pop());save();draw();}
   else if(a==="save"){save();status("Saved in browser.");}
-  else if(a==="load"){try{items=normalize(JSON.parse(localStorage.getItem("axon_dash_v1")||"[]"));draw();status("Loaded.");}catch{status("Invalid save.");}}
+  else if(a==="load"){try{items=normalize(JSON.parse(localStorage.getItem("axon_dash_v1")||"[]"));selected=null;inspector();draw();status("Loaded.");}catch{status("Invalid save.");}}
   else if(a==="clear"&&confirm("Clear the level?")){stop();mode="edit";snap();items=[];selected=null;camera=0;worldColor="#131b33";speed=210;gravity=1500;save();inspector();draw();}
  }
  function key(e){if(!app.isConnected)return;if((e.code==="Space"||e.code==="ArrowUp")&&mode!=="edit"&&!e.repeat){e.preventDefault();jump(runner);}if(mode==="edit"&&selected&&["ArrowLeft","ArrowRight"].includes(e.code)){e.preventDefault();selected.rotation=((selected.rotation||0)+(e.code==="ArrowRight"?15:-15)+360)%360;inspector();save();draw();}}
