@@ -2,8 +2,43 @@
 export function playAxonDash(showStage,askAxon,setCleanup){
  let items=[],history=[],future=[],tool="spike",mode="edit",camera=0,runner=null,bot=null,raf=0,last=0,timer=0,generation=0,building=false;
  const stage=document.getElementById("gameStage");
- showStage("Axon Dash",'<div id="dashApp"><p>Cube mode prototype • Click tiles to edit • Space / tap to jump</p><div id="dashTools"></div><canvas id="dashCanvas" width="900" height="360" style="width:100%;touch-action:none;border:1px solid #8c7cff;border-radius:12px"></canvas><div id="dashActions"></div><p>Ask Axon to build a level:</p><input id="dashPrompt" maxlength="200" placeholder="A fun space level with spikes" style="padding:10px;max-width:520px;width:60%"><button class="axon-game-button" data-dash="generate">Watch Axon build</button><button class="axon-game-button" data-dash="stop">Stop</button><p id="dashStatus" role="status">Editor ready.</p></div>');
+ showStage("Axon Dash",'<div id="dashApp"><div id="dashTopbar"><p>Cube mode • Tap tiles to edit • Tap / Space to jump</p><button type="button" class="axon-game-button" data-dash="fullscreen">⛶ Full screen + landscape</button></div><p id="dashRotateHint" hidden>↻ Rotate your device sideways for the best experience.</p><div id="dashTools"></div><canvas id="dashCanvas" width="900" height="360" style="width:100%;height:auto;max-height:48vh;touch-action:none;border:1px solid #8c7cff;border-radius:12px"></canvas><div id="dashActions"></div><p>Ask Axon to build a level:</p><input id="dashPrompt" maxlength="200" placeholder="A fun space level with spikes" style="padding:10px;max-width:520px;width:60%"><button class="axon-game-button" data-dash="generate">Watch Axon build</button><button class="axon-game-button" data-dash="stop">Stop</button><p id="dashStatus" role="status">Editor ready.</p></div>');
  const app=stage.querySelector("#dashApp"),canvas=app.querySelector("canvas"),ctx=canvas.getContext("2d");
+ const fullscreenStyle=document.createElement("style");
+ fullscreenStyle.textContent=`
+ #dashApp{box-sizing:border-box}
+ #dashTopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+ #dashApp:fullscreen,#dashApp.dash-fullscreen-fallback{position:fixed;inset:0;z-index:99999;box-sizing:border-box;width:100vw;height:100dvh;max-width:none;margin:0;padding:12px 18px;overflow:auto;background:#0c1224;color:#fff}
+ #dashApp:fullscreen #dashCanvas,#dashApp.dash-fullscreen-fallback #dashCanvas{display:block;width:100%;height:calc(100dvh - 230px);max-height:none;min-height:180px;object-fit:contain}
+ #dashApp:fullscreen #dashTools,#dashApp:fullscreen #dashActions,#dashApp.dash-fullscreen-fallback #dashTools,#dashApp.dash-fullscreen-fallback #dashActions{display:flex;flex-wrap:wrap;gap:4px}
+ #dashApp:fullscreen button,#dashApp.dash-fullscreen-fallback button{min-height:40px}
+ #dashApp:fullscreen #dashRotateHint,#dashApp.dash-fullscreen-fallback #dashRotateHint{font-size:13px;opacity:.85}
+ @media(orientation:landscape) and (max-height:600px){#dashApp:fullscreen,#dashApp.dash-fullscreen-fallback{padding:5px 12px}#dashApp:fullscreen #dashTopbar p,#dashApp.dash-fullscreen-fallback #dashTopbar p{margin:2px 0}#dashApp:fullscreen #dashCanvas,#dashApp.dash-fullscreen-fallback #dashCanvas{height:calc(100dvh - 145px)}#dashApp:fullscreen #dashAppPrompt,#dashApp.dash-fullscreen-fallback #dashPrompt{max-width:35vw}}
+ @media(orientation:portrait) and (max-width:800px){#dashRotateHint:not([hidden]){display:block}}
+ `;
+ app.appendChild(fullscreenStyle);
+ const rotateHint=app.querySelector("#dashRotateHint");
+ function isFullscreen(){return document.fullscreenElement===app||app.classList.contains("dash-fullscreen-fallback");}
+ async function toggleFullscreen(){
+  if(isFullscreen()){
+   if(document.fullscreenElement===app){try{await document.exitFullscreen();}catch{}}
+   app.classList.remove("dash-fullscreen-fallback");
+   try{screen.orientation?.unlock?.();}catch{}
+   const b=app.querySelector('[data-dash="fullscreen"]');if(b)b.textContent="⛶ Full screen + landscape";
+   return;
+  }
+  try{
+   if(app.requestFullscreen)await app.requestFullscreen();
+   else app.classList.add("dash-fullscreen-fallback");
+  }catch{app.classList.add("dash-fullscreen-fallback");}
+  try{if(screen.orientation?.lock)await screen.orientation.lock("landscape");}catch{}
+  const b=app.querySelector('[data-dash="fullscreen"]');if(b)b.textContent="✕ Exit full screen";
+  if(rotateHint)rotateHint.hidden=!(window.matchMedia("(orientation: portrait)").matches);
+  setTimeout(()=>{if(rotateHint)rotateHint.hidden=!(isFullscreen()&&window.matchMedia("(orientation: portrait)").matches);},250);
+ }
+ function syncFullscreen(){if(!isFullscreen()){app.classList.remove("dash-fullscreen-fallback");const b=app.querySelector('[data-dash="fullscreen"]');if(b)b.textContent="⛶ Full screen + landscape";}else{const b=app.querySelector('[data-dash="fullscreen"]');if(b)b.textContent="✕ Exit full screen";}}
+ document.addEventListener("fullscreenchange",syncFullscreen);
+ window.addEventListener("orientationchange",()=>{if(rotateHint)rotateHint.hidden=!(isFullscreen()&&window.matchMedia("(orientation: portrait)").matches);});
  const btn=(s,a,v="")=>'<button class="axon-game-button" data-dash="'+a+'" data-value="'+v+'" style="margin:3px">'+s+'</button>';
  app.querySelector("#dashTools").innerHTML=["spike","block","pad","orb","erase"].map(t=>btn(t,"tool",t)).join("")+btn("Undo","undo")+btn("Redo","redo");
  app.querySelector("#dashActions").innerHTML=btn("← Scroll","scroll",-300)+btn("Scroll →","scroll",300)+btn("Edit","edit")+btn("Playtest","test")+btn("Race Axon","race")+btn("Save","save")+btn("Load","load")+btn("Clear","clear");
@@ -74,7 +109,8 @@ export function playAxonDash(showStage,askAxon,setCleanup){
  }
  function buttons(e){
   const b=e.target.closest("[data-dash]");if(!b||!app.contains(b))return;const a=b.dataset.dash;
-  if(a==="tool"){tool=b.dataset.value;status("Selected "+tool);}
+  if(a==="fullscreen"){toggleFullscreen();}
+  else if(a==="tool"){tool=b.dataset.value;status("Selected "+tool);}
   else if(a==="scroll"){camera=Math.max(0,Math.min(11500,camera+Number(b.dataset.value)));draw();}
   else if(["edit","test","race"].includes(a))begin(a);
   else if(a==="generate")generate();
@@ -86,6 +122,6 @@ export function playAxonDash(showStage,askAxon,setCleanup){
   else if(a==="clear"&&confirm("Clear the level?")){stop();mode="edit";snap();items=[];camera=0;save();draw();}
  }
  function key(e){if(!app.isConnected)return;if((e.code==="Space"||e.code==="ArrowUp")&&mode!=="edit"&&!e.repeat){e.preventDefault();jump(runner);}}
- function cleanup(){stop();stage.removeEventListener("click",buttons);canvas.removeEventListener("pointerdown",click);document.removeEventListener("keydown",key);}
+ function cleanup(){stop();if(document.fullscreenElement===app)document.exitFullscreen().catch(()=>{});app.classList.remove("dash-fullscreen-fallback");try{screen.orientation?.unlock?.();}catch{}document.removeEventListener("fullscreenchange",syncFullscreen);stage.removeEventListener("click",buttons);canvas.removeEventListener("pointerdown",click);document.removeEventListener("keydown",key);window.removeEventListener("orientationchange",()=>{});}
  stage.addEventListener("click",buttons);canvas.addEventListener("pointerdown",click);document.addEventListener("keydown",key);setCleanup(cleanup);draw();
 }
