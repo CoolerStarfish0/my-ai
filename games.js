@@ -3,6 +3,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-aut
 
 import { playStickman } from "./stickman.js";
 import { playAxonDash } from "./axon-dash.js?v=axon-dash-editor-rotation-deco-triggers-2";
+import { playMarketDay } from "./market-day.js?v=market-day-1";
 
 const BACKEND_URL = "https://5158-ai-backendpriv.vercel.app";
 const $ = (id) => document.getElementById(id);
@@ -25,7 +26,8 @@ const games = [
   {id:"snake", icon:"🐍", title:"Snake", category:"Arcade", desc:"Eat, grow, and don't run into yourself."},
   {id:"shooter", icon:"🚀", title:"Space Shooter", category:"Arcade", desc:"Pilot your ship and blast the incoming targets."},
   {id:"adventure", icon:"🐉", title:"AI Adventure", category:"Adventure", desc:"Choose your path through a changing story."},
-  {id:"mystery", icon:"🕵️", title:"Mystery Detective", category:"Adventure", desc:"Inspect clues and solve the case."}
+  {id:"mystery", icon:"🕵️", title:"Mystery Detective", category:"Adventure", desc:"Inspect clues and solve the case."},
+  {id:"market", icon:"📈", title:"Market Day", category:"Strategy", desc:"Trade fictional stocks, read Axon’s newspaper, manage bank accounts, and track your 30-day run."}
 ];
 
 function safeText(value) {
@@ -87,7 +89,7 @@ function launchGame(id) {
   gameCleanup = () => {};
   const game = games.find(g => g.id === id);
   if (!game) return;
-  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, stickman:()=>playStickman(showStage, fn=>{gameCleanup=fn;}), dash:()=>playAxonDash(showStage,askAxon,fn=>{gameCleanup=fn;}), adventure:playAdventure, mystery:playMystery})[id]?.();
+  ({tictactoe:playTicTacToe, superttt:playSuperTicTacToe, connect4:playConnect4, chess:playChess, trivia:playTrivia, riddle:playRiddle, word:playWord, snake:playSnake, shooter:playShooter, stickman:()=>playStickman(showStage, fn=>{gameCleanup=fn;}), dash:()=>playAxonDash(showStage,askAxon,fn=>{gameCleanup=fn;}), adventure:playAdventure, mystery:playMystery, market:()=>playMarketDay(showStage,askAxon,fn=>{gameCleanup=fn;})})[id]?.();
 }
 function resultBox(text, good=false) { return `<p class="game-result ${good?"is-good":""}" role="status">${text}</p>`; }
 
