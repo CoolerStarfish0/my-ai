@@ -3,7 +3,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-aut
 
 import { playStickman } from "./stickman.js";
 import { playAxonDash } from "./axon-dash.js?v=axon-dash-editor-rotation-deco-triggers-2";
-import { playMarketDay } from "./market-day.js?v=market-day-2";
+import { playMarketDay } from "./market-day.js?v=market-day-3";
 
 const BACKEND_URL = "https://5158-ai-backendpriv.vercel.app";
 const $ = (id) => document.getElementById(id);
