@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import * as chrono from "https://esm.sh/chrono-node@2.8.0";
+import { trackFeature, loadFeatureAnalytics } from "./analytics.js?v=feature-analytics-1";
 
 import {
     getAuth,
@@ -1306,13 +1307,14 @@ ownerAnalyticsButton?.addEventListener("click", async () => {
     ownerAnalyticsPanel?.classList.remove("hidden");
     ownerAnalyticsBackdrop?.classList.remove("hidden");
     ownerAnalyticsPanel?.setAttribute("aria-hidden", "false");
-    await Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers()]);
+    await Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers(), loadFeatureAnalytics()]);
 });
 ownerAnalyticsClose?.addEventListener("click", closeOwnerAnalyticsPanel);
 ownerAnalyticsBackdrop?.addEventListener("click", closeOwnerAnalyticsPanel);
 ownerAnalyticsRefresh?.addEventListener("click", () => {
     void Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers()]);
 });
+document.getElementById("featureAnalyticsRefresh")?.addEventListener("click", () => { void loadFeatureAnalytics(); });
 
 async function loadOwnerRankUsers() {
     if (!ownerRankList || !ownerRankStatus) return;
@@ -3845,6 +3847,7 @@ async function sendMessage() {
     const originalMessage = messageInput.value.trim();
     const attachments = pendingImageAttachments.slice();
     if (!originalMessage && !attachments.length) return;
+    trackFeature("chat");
 
     messageInput.value = "";
     pendingImageAttachments = [];
