@@ -3323,6 +3323,29 @@ Use information because it is relevant.
 Understand intent rather than matching isolated words.
 
 ==================================================
+AUTONOMOUS AGENT DIRECTIVE — DEFAULT BEHAVIOR
+
+Treat the user's message as a goal to accomplish, not merely a question to answer. Before saying that you do not know or cannot do something, identify what evidence or capability is missing and check the authorized tools and connected sources that could reasonably provide it.
+
+Use this practical loop:
+1. Understand the desired outcome and identify the minimum information needed.
+2. Make a short internal plan for multi-step tasks.
+3. Inspect available connected applications and tools for relevant evidence.
+4. Use tool results—not guesses—to decide the next step.
+5. Continue across multiple tool calls when needed, such as finding a class roster before building a form.
+6. Verify the result using the returned data.
+7. Report the actual result and any real limitation clearly.
+
+Do not ask the user to supply information that an authorized connected source can retrieve. Do not invent names, files, search results, class rosters, links, or successful actions. If one source fails, consider another relevant authorized source. Ask a focused clarification only when ambiguity materially changes the result or no authorized source resolves it.
+
+The autonomous agent is the default way to work through normal Axon chat; the user should not need to switch into a separate Work Mode to use supported application tools. Tool access still depends on the account, configured integrations, permissions, and available endpoints. Do not claim an integration exists until its tool is available and has returned a result.
+
+For Google tasks, use the Google tool protocol when the Google integration is connected. For a classmate roster request, first list Classroom courses, identify the intended course using its actual name/section, retrieve its roster, select only from returned students, and only then create the requested form. If multiple courses could match, ask which one. If Classroom access is denied or the roster is unavailable, explain the specific obstacle instead of fabricating names.
+
+For writes, show a clear confirmation with the target service and intended content before executing. Never send an email, publish/share a document, or perform another consequential action without the appropriate confirmation. A created draft is not a sent email. A created form is not automatically public or shared.
+
+Never claim that you searched, read, created, updated, or verified something unless a tool actually did it. Keep the user-facing status concise; do not reveal private internal reasoning traces. Explain the plan or important decisions briefly when useful.
+
 END OF AXON CORE SYSTEM
 ==================================================
 `;
@@ -3519,12 +3542,204 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
     return { answer: "I reached the GitHub agent's step limit. Review the actions and ask me to continue if needed.", credits: latestCredits, actionPerformed: true };
 }
 
+
+function looksLikeGoogleRequest(message) {
+    const text = String(message || "");
+    const hasService = /\\b(google\\s*(docs?|forms?|sheets?|drive|classroom|sites?|calendar|gmail)|classroom|gmail|google\\s*form|google\\s*doc|google\\s*sheet|spreadsheet|google\\s*sites)\\b/i.test(text);
+    const hasTask = /\\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website)\\b/i.test(text);
+    return hasService && hasTask || /\\b(design class|class roster|classmates)\\b/i.test(text) && /\\b(form|pick|choose|students?|names)\\b/i.test(text);
+}
+
+function extractAxonGoogleAction(text) {
+    const startMarker = "[[AXON_GOOGLE_ACTION]]";
+    const endMarker = "[[/AXON_GOOGLE_ACTION]]";
+    const start = text.indexOf(startMarker);
+    const end = text.indexOf(endMarker);
+    if (start < 0 || end <= start) return null;
+    try {
+        const action = JSON.parse(text.slice(start + startMarker.length, end).trim());
+        const allowed = new Set([
+            "drive_search", "classroom_list_courses", "classroom_list_students",
+            "google_create_doc", "google_create_sheet", "google_create_form",
+            "calendar_create_event", "gmail_create_draft"
+        ]);
+        if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
+        return { action, visibleText: (text.slice(0, start) + text.slice(end + endMarker.length)).trim() };
+    } catch (error) {
+        console.warn("Axon Google action JSON was invalid:", error);
+        return null;
+    }
+}
+
+async function getGoogleConnectionStatus(user) {
+    if (!user || user.isAnonymous) return { connected: false, reason: "Sign in with the owner Google account to connect Google services." };
+    const token = await user.getIdToken();
+    const response = await fetch(BACKEND_URL + "/api/google?action=status", {
+        headers: { Authorization: "Bearer " + token }, cache: "no-store"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not check Google connection.");
+    return data;
+}
+
+async function refreshGoogleConnectionStatus() {
+    const status = document.getElementById("axonGoogleStatus");
+    const button = document.getElementById("axonGoogleConnectButton");
+    const user = auth.currentUser;
+    if (!status) return;
+    if (!user || user.isAnonymous || user.uid !== OWNER_UID) {
+        status.textContent = "Sign in with the Axon owner account to connect Google.";
+        if (button) button.disabled = true;
+        return;
+    }
+    if (button) button.disabled = false;
+    status.textContent = "Checking Google connection…";
+    try {
+        const data = await getGoogleConnectionStatus(user);
+        status.textContent = data.connected
+            ? "Google connected" + (data.email ? " · " + data.email : "") + "."
+            : "Google not connected yet. Connect once to enable Google tools.";
+    } catch (error) {
+        status.textContent = error.message || "Google connection status unavailable.";
+    }
+}
+
+async function startGoogleConnection() {
+    const user = auth.currentUser;
+    const status = document.getElementById("axonGoogleStatus");
+    const button = document.getElementById("axonGoogleConnectButton");
+    if (!user || user.isAnonymous || user.uid !== OWNER_UID) {
+        if (status) status.textContent = "Sign in with the Axon owner account first.";
+        return;
+    }
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Preparing secure Google sign-in…";
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/google?action=start", {
+            headers: { Authorization: "Bearer " + token }, cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.url) throw new Error(data.error || "Could not start Google authorization.");
+        window.location.assign(data.url);
+    } catch (error) {
+        if (status) status.textContent = error.message || "Google connection could not start.";
+        if (button) button.disabled = false;
+    }
+}
+
+document.getElementById("axonGoogleConnectButton")?.addEventListener("click", startGoogleConnection);
+document.getElementById("axonGoogleRefreshButton")?.addEventListener("click", () => { void refreshGoogleConnectionStatus(); });
+window.addEventListener("load", () => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_connected") === "1";
+    const googleError = params.get("google_error");
+    if (connected || googleError) {
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, "", cleanUrl);
+        const status = document.getElementById("axonGoogleStatus");
+        if (status) status.textContent = connected ? "Google authorization finished. Verifying connection…" : "Google setup issue: " + String(googleError).replace(/_/g, " ");
+    }
+    void (async () => {
+        for (let attempt = 0; attempt < 12 && !auth.currentUser; attempt++) await new Promise(resolve => setTimeout(resolve, 250));
+        await refreshGoogleConnectionStatus();
+    })();
+});
+
+async function executeAxonGoogleTool(user, action, isOwner) {
+    if (!isOwner || !user || user.isAnonymous || user.uid !== OWNER_UID) throw new Error("Owner access is required for Google tools.");
+    const writeActions = new Set(["google_create_doc", "google_create_sheet", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
+    let confirmed = false;
+    if (writeActions.has(action.action)) {
+        const preview = [
+            "Axon wants to create or change content in Google.",
+            "",
+            "Action: " + action.action.replace(/_/g, " "),
+            "Title: " + String(action.title || action.summary || action.subject || "").slice(0, 200),
+            "Question: " + String(action.question || "").slice(0, 300),
+            "Options: " + (Array.isArray(action.options) ? action.options.join(", ") : ""),
+            "Recipient: " + String(action.to || ""),
+            "Details: " + String(action.text || action.description || "").slice(0, 700),
+            "",
+            action.action === "gmail_create_draft" ? "This creates a draft only; it will NOT send the email." : "Continue with this Google action?"
+        ].join("\\n");
+        if (!window.confirm(preview)) return { cancelled: true, message: "You declined the Google action. No change was made." };
+        confirmed = true;
+    }
+    const token = await user.getIdToken();
+    const response = await fetch(BACKEND_URL + "/api/google?action=tool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ ...action, confirmed })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Google action failed.");
+    return data;
+}
+
+async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
+    try {
+        const status = await getGoogleConnectionStatus(user);
+        if (!status.connected) return {
+            answer: "Google isn't connected yet, so I can't inspect your Classroom or create Google files. Click **Connect Google** in the Axon Agent panel, approve the requested access, then ask me again. I won't invent names or pretend I checked Classroom.",
+            actionPerformed: false
+        };
+    } catch (error) {
+        return { answer: "I couldn't check the Google connection: " + (error.message || "unknown error") + ". Check the Google setup instructions and try again.", actionPerformed: false };
+    }
+
+    let currentPrompt = originalMessage;
+    let latestCredits = null;
+    const seenActions = new Set();
+    const maxRounds = 8;
+    for (let round = 0; round < maxRounds; round++) {
+        const instructions = [
+            "AXON AUTONOMOUS GOOGLE AGENT: use tools in normal chat; no Work Mode toggle is required.",
+            "For a task requiring Google information or actions, emit exactly one valid JSON action between [[AXON_GOOGLE_ACTION]] and [[/AXON_GOOGLE_ACTION]]. Never invent tool results.",
+            "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design class\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }.",
+            "Write tools: google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }.",
+            "For class roster tasks, list courses first, use actual course name and section to identify the intended class, then retrieve that roster. If more than one course plausibly matches, ask the user which one. Select names only from actual roster results. Do not expose roster details unrelated to the task.",
+            "Ask for confirmation before every write. Gmail tool only creates a draft and never sends it. Google Sites editing is not supported by this API; be honest about that limitation.",
+            "Use one tool call per round, incorporate the actual result, and do not repeat a successful action. If a tool fails, explain the actual error.",
+            "Current step " + (round + 1) + " of " + maxRounds + "."
+        ].join("\\n");
+        const result = await callAxonBackend(user, systemPrompt + "\\n\\n" + instructions, currentPrompt, isOwner);
+        latestCredits = result.credits || latestCredits;
+        const raw = typeof result.answer === "string" ? result.answer.trim() : "";
+        const parsed = extractAxonGoogleAction(raw);
+        if (!parsed) return { answer: raw || "I couldn't produce a valid Google action. Try describing the task more specifically.", credits: latestCredits, actionPerformed: false };
+        if (parsed.visibleText) {
+            addConversationMessage("AXON", parsed.visibleText);
+            addMessage("AI", parsed.visibleText);
+        }
+        const signature = JSON.stringify(parsed.action);
+        if (seenActions.has(signature)) return { answer: "I stopped to prevent repeating the same Google action. No duplicate action was run.", credits: latestCredits, actionPerformed: true };
+        seenActions.add(signature);
+        let toolResult;
+        try {
+            toolResult = await executeAxonGoogleTool(user, parsed.action, isOwner);
+        } catch (error) {
+            return { answer: "⚠️ Google action failed: " + (error.message || "Unknown error") + ". I haven't claimed the task is complete.", credits: latestCredits, actionPerformed: true };
+        }
+        if (toolResult.cancelled) return { answer: toolResult.message, credits: latestCredits, actionPerformed: false };
+        currentPrompt = "Original user request:\\n" + originalMessage +
+            "\\n\\nPrevious Google action:\\n" + JSON.stringify(parsed.action) +
+            "\\n\\nActual tool result:\\n" + JSON.stringify(toolResult).slice(0, 30000) +
+            "\\n\\nContinue from the actual result. If another step is needed, emit one [[AXON_GOOGLE_ACTION]] block. If complete, respond normally with returned links. Never repeat a successful action.";
+    }
+    return { answer: "I reached the Google agent's step limit. I can continue from the results already gathered if you ask.", credits: latestCredits, actionPerformed: true };
+}
+
 async function runAxonWorkLoop(
     user,
     systemPrompt,
     originalMessage,
     isOwner
 ) {
+
+    if (!workModeEnabled && isOwner && looksLikeGoogleRequest(originalMessage)) {
+        return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
+    }
 
     if (!workModeEnabled && isOwner && looksLikeGithubRequest(originalMessage)) {
         return runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner);
