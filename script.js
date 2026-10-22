@@ -5005,3 +5005,121 @@ function clearRankAnimationTimers() {
     rankAnimationTimers.forEach(timer => window.clearTimeout(timer));
     rankAnimationTimers = [];
     if (rankAnimationCloseTimer !== null) {
+        window.clearTimeout(rankAnimationCloseTimer);
+        rankAnimationCloseTimer = null;
+    }
+    if (rankAnimationHideTimer !== null) {
+        window.clearTimeout(rankAnimationHideTimer);
+        rankAnimationHideTimer = null;
+    }
+}
+
+function scheduleRankAnimation(callback, delay) {
+    const timer = window.setTimeout(callback, delay);
+    rankAnimationTimers.push(timer);
+    return timer;
+}
+
+function playRankAnimation(rankName) {
+    // Temporarily disabled at the user's request.
+    clearRankAnimationTimers();
+    if (rankAnimation) rankAnimation.classList.add("hidden");
+    return;
+    if (!rankAnimation || !axonMascot || !rankAnimationTitle || !rankAnimationRank) return;
+
+    clearRankAnimationTimers();
+
+    const rank = String(rankName || "VISITOR").toUpperCase();
+    const supportedRanks = ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "ADMIN", "OWNER"];
+    const safeRank = supportedRanks.includes(rank) ? rank : "VISITOR";
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rankClasses = ["rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner"];
+    const sceneClasses = ["scene-door", "scene-command", "scene-shield", "scene-streak"];
+
+    rankAnimation.classList.add("hidden");
+    rankAnimation.classList.remove(
+        "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
+        "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
+        "streak-burst", "streak-celebration", "show-text", ...rankClasses, ...sceneClasses
+    );
+
+    // Restart the mascot animation cleanly on every rank-up.
+    axonMascot.style.animation = "none";
+    void axonMascot.offsetWidth;
+    axonMascot.style.animation = "";
+
+    rankAnimation.classList.add("rank-" + safeRank.toLowerCase());
+    const titles = {
+        VISITOR: "WELCOME",
+        RESIDENT: "WELCOME TO AXON",
+        PIONEER: "EARLY ACCESS",
+        WARDEN: "AXON SENTINEL",
+        ADMIN: "COMMAND AUTHORITY",
+        OWNER: "SYSTEM OWNER"
+    };
+    rankAnimationTitle.textContent = titles[safeRank];
+    rankAnimationRank.textContent = safeRank;
+
+    if (reducedMotion) {
+        rankAnimation.classList.remove("hidden");
+        rankAnimation.classList.add("show-text");
+        rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, 1600);
+        return;
+    }
+
+    rankAnimation.classList.remove("hidden");
+
+    const timings = {
+        VISITOR: { reveal: 350, close: 2600 },
+        RESIDENT: { door: 250, hello: 1150, reveal: 1550, close: 3900 },
+        PIONEER: { reveal: 650, close: 3400 },
+        WARDEN: { shield: 300, impact: 1150, reveal: 1500, close: 3900 },
+        ADMIN: { activate: 450, reveal: 1300, close: 3900 },
+        OWNER: { awaken: 450, wings: 900, fly: 1350, burst: 1850, reveal: 2200, spin: 2550, land: 4100, celebrate: 4350, close: 6800 }
+    }[safeRank];
+
+    if (safeRank === "RESIDENT") {
+        rankAnimation.classList.add("scene-door");
+        scheduleRankAnimation(() => rankAnimation.classList.add("door-open"), timings.door);
+        scheduleRankAnimation(() => rankAnimation.classList.add("toucan-wave"), timings.hello);
+    } else if (safeRank === "WARDEN") {
+        rankAnimation.classList.add("scene-shield");
+        scheduleRankAnimation(() => rankAnimation.classList.add("shield-drop"), timings.shield);
+        scheduleRankAnimation(() => rankAnimation.classList.add("shield-impact"), timings.impact);
+    } else if (safeRank === "ADMIN") {
+        rankAnimation.classList.add("scene-command");
+        scheduleRankAnimation(() => rankAnimation.classList.add("command-active"), timings.activate);
+    } else if (safeRank === "OWNER") {
+        rankAnimation.classList.add("scene-streak");
+        scheduleRankAnimation(() => rankAnimation.classList.add("ai-awakened"), timings.awaken);
+        scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timings.wings);
+        scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timings.fly);
+        scheduleRankAnimation(() => rankAnimation.classList.add("streak-burst"), timings.burst);
+        scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timings.spin);
+        scheduleRankAnimation(() => {
+            rankAnimation.classList.remove("spinning", "flying-up");
+            rankAnimation.classList.add("landed");
+        }, timings.land);
+        scheduleRankAnimation(() => rankAnimation.classList.add("streak-celebration"), timings.celebrate);
+    }
+
+    scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timings.reveal);
+    rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, timings.close);
+}
+
+function closeRankAnimation() {
+    if (!rankAnimation) return;
+    clearRankAnimationTimers();
+    rankAnimation.classList.add("closing");
+    rankAnimationHideTimer = window.setTimeout(() => {
+        rankAnimationHideTimer = null;
+        rankAnimation.classList.add("hidden");
+        rankAnimation.classList.remove(
+            "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
+            "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
+            "streak-burst", "streak-celebration", "show-text",
+            "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner",
+            "scene-door", "scene-command", "scene-shield", "scene-streak"
+        );
+    }, 500);
+}
