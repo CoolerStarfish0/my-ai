@@ -1811,11 +1811,13 @@ async function refreshCurrentRank(user = auth.currentUser) {
     currentRankName = "VISITOR";
     if (!user) {
         updateWorkModeUI();
+        void refreshGoogleConnectionStatus();
         return currentRankName;
     }
     if (!user.isAnonymous && user.uid === OWNER_UID) {
         currentRankName = "OWNER";
         updateWorkModeUI();
+        void refreshGoogleConnectionStatus();
         return currentRankName;
     }
     try {
@@ -1831,6 +1833,7 @@ async function refreshCurrentRank(user = auth.currentUser) {
         console.warn("Axon rank lookup unavailable:", error);
     }
     updateWorkModeUI();
+    void refreshGoogleConnectionStatus();
     return currentRankName;
 }
 
