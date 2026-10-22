@@ -8,7 +8,7 @@ const FEATURE_LABELS = {
     games: "Games Hub",
     "market-day": "Market Day",
     calendar: "Calendar",
-    "work-mode": "Work Mode",
+    "work-mode": "Autonomous Agent",
     "shared-chats": "Shared Chats"
 };
 const FEATURE_ICONS = {
@@ -16,7 +16,7 @@ const FEATURE_ICONS = {
     games: "🎮",
     "market-day": "📈",
     calendar: "📅",
-    "work-mode": "🛠️",
+    "work-mode": "🧠",
     "shared-chats": "👥"
 };
 
@@ -125,7 +125,7 @@ document.addEventListener("click", event => {
     if (!target) return;
     if (target.closest("#gamesButton")) trackFeature("games");
     if (target.closest("#calendarButton")) trackFeature("calendar");
-    if (target.closest("#workModeStartButton")) trackFeature("work-mode");
+    if (target.closest("#axonAgentPanel")) trackFeature("work-mode");
     if (target.closest("#inviteToChatButton, #sharedChatsButton")) trackFeature("shared-chats");
     const gameCard = target.closest("[data-game]");
     if (gameCard) {
