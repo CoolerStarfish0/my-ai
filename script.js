@@ -3709,7 +3709,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
             "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design class\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }.",
             "Write tools: google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }.",
             "For class roster tasks, list courses first, use actual course name and section to identify the intended class, then retrieve that roster. If more than one course plausibly matches, ask the user which one. Select names only from actual roster results. Do not expose roster details unrelated to the task.",
-            "Ask for confirmation before every write. Gmail tool only creates a draft and never sends it. Google Sites editing is not supported by this API; be honest about that limitation.",
+            "Ask for confirmation before every write. Gmail tool only creates a draft and never sends it. Google Sites editing is not supported by this API; when local computer access is enabled, let the computer-control agent handle a Sites task instead. Otherwise, explain that the user can enable local computer access to let Axon attempt the browser workflow.",
             "Use one tool call per round, incorporate the actual result, and do not repeat a successful action. If a tool fails, explain the actual error.",
             "Current step " + (round + 1) + " of " + maxRounds + "."
         ].join("\\n");
@@ -3747,7 +3747,7 @@ async function runAxonAgentLoop(
     isOwner
 ) {
 
-    if (isOwner && looksLikeGoogleRequest(originalMessage)) {
+    if (isOwner && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\\bgoogle\\s*sites?\\b/i.test(originalMessage))) {
         return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
