@@ -1571,23 +1571,29 @@ function saveGuestMemory(text) {
 // GOOGLE LOGIN
 // ==========================================
 
-// Use redirect sign-in instead of a popup, which can be closed or blocked by browsers.
+// Popup sign-in avoids the cross-site redirect/session restoration issue that can
+// affect Firebase redirect authentication on mobile Safari and GitHub Pages.
 loginButton.addEventListener("click", async () => {
     try {
         loginButton.disabled = true;
         loginButton.setAttribute("aria-busy", "true");
         provider.setCustomParameters({ prompt: "select_account" });
-        await signInWithRedirect(auth, provider);
+        await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Google login error:", error);
-        loginButton.disabled = false;
-        loginButton.removeAttribute("aria-busy");
         const message = error?.code === "auth/unauthorized-domain"
             ? "Google login is not enabled for this website domain in Firebase Authentication."
             : error?.code === "auth/operation-not-allowed"
                 ? "Google sign-in is disabled in Firebase Authentication."
-                : "Google sign-in couldn't start. Please try again.";
+                : error?.code === "auth/popup-blocked"
+                    ? "Your browser blocked the Google sign-in window. Allow pop-ups for Axon and try again."
+                    : error?.code === "auth/popup-closed-by-user"
+                        ? "Google sign-in was closed before it finished. Please try again."
+                        : "Google sign-in couldn't finish. Please try again.";
         addMessage("AI", message);
+    } finally {
+        loginButton.disabled = false;
+        loginButton.removeAttribute("aria-busy");
     }
 });
 
