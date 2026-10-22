@@ -199,7 +199,7 @@
             <div class="owner-analytics-heading">
                 <div>
                     <span class="owner-analytics-kicker">PRIVATE OWNER AREA</span>
-                    <h2>Visitor analytics</h2>
+                    <h2>Owner dashboard</h2>
                 </div>
                 <button id="ownerAnalyticsClose" type="button" aria-label="Close owner panel">✕</button>
             </div>
@@ -218,6 +218,21 @@
                 <input id="ownerRankSearch" type="search" placeholder="Search name, Gmail, or UID…" autocomplete="off">
                 <p id="ownerRankStatus" class="owner-rank-status" role="status">Open the panel to load accounts.</p>
                 <div id="ownerRankList" class="owner-rank-list"></div>
+            </section>
+
+            <section class="feature-analytics-section" aria-labelledby="featureAnalyticsHeading">
+                <div class="owner-rank-heading">
+                    <div>
+                        <span class="owner-analytics-kicker">SITE USAGE</span>
+                        <h3 id="featureAnalyticsHeading">Most-used features</h3>
+                    </div>
+                    <button id="featureAnalyticsRefresh" type="button">Refresh stats</button>
+                </div>
+                <p class="owner-analytics-note">Approximate feature launches from the last 30 days. Counts are deduplicated per feature in each browser tab session. No chat text or account identifiers are sent with these events.</p>
+                <p id="featureAnalyticsStatus" class="owner-rank-status" role="status">Open the panel to load feature stats.</p>
+                <div id="featureAnalyticsList" class="feature-analytics-list"></div>
+                <h4 class="feature-analytics-chart-title">Daily activity · recent 14 days</h4>
+                <div id="featureAnalyticsChart" class="feature-analytics-chart" role="img" aria-label="Bar chart of daily feature launches"></div>
             </section>
 
             <div class="owner-analytics-actions">
