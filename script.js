@@ -3408,7 +3408,7 @@ function extractAxonGithubAction(text) {
     if (start < 0 || end <= start) return null;
     try {
         const action = JSON.parse(text.slice(start + startMarker.length, end).trim());
-        const allowed = new Set(["list_files", "read_file", "search_code", "create_file", "update_file"]);
+        const allowed = new Set(["list_files", "read_file", "search_code", "patch_file", "create_file", "update_file"]);
         if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
         return {
             action,
@@ -3427,7 +3427,7 @@ async function executeAxonGithubTool(user, action, isOwner) {
     const repo = String(action.repo || "CoolerStarfish0/my-ai");
     const path = String(action.path || "");
     const message = String(action.message || "Axon update");
-    if (["create_file", "update_file"].includes(action.action)) {
+    if (["patch_file", "create_file", "update_file"].includes(action.action)) {
         const preview = [
             "Axon wants to commit a file change to GitHub.",
             "",
@@ -3435,7 +3435,8 @@ async function executeAxonGithubTool(user, action, isOwner) {
             "File: " + path,
             "Action: " + action.action.replace("_", " "),
             "Commit message: " + message,
-            "Preview: " + String(action.content || "").split("\n").slice(0, 8).join("\n").slice(0, 700),
+            "Find text: " + String(action.find || "").slice(0, 350),
+            "Replacement preview: " + String(action.replace || action.content || "").split("\n").slice(0, 8).join("\n").slice(0, 700),
             "",
             "This writes directly to the repository's default branch. Continue?"
         ].join("\n");
@@ -3448,7 +3449,7 @@ async function executeAxonGithubTool(user, action, isOwner) {
             "Content-Type": "application/json",
             Authorization: "Bearer " + token
         },
-        body: JSON.stringify({ ...action, repo, confirmed: ["create_file", "update_file"].includes(action.action) })
+        body: JSON.stringify({ ...action, repo, confirmed: ["patch_file", "create_file", "update_file"].includes(action.action) })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "GitHub action failed.");
@@ -3475,6 +3476,7 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
             "list_files: {\"action\":\"list_files\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"optional/folder\"}",
             "read_file: {\"action\":\"read_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"script.js\"}",
             "search_code: {\"action\":\"search_code\",\"repo\":\"CoolerStarfish0/my-ai\",\"query\":\"function name\"}",
+            "patch_file: {\"action\":\"patch_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"script.js\",\"sha\":\"40-character SHA from read_file\",\"find\":\"exact unique existing text\",\"replace\":\"replacement text\",\"message\":\"Describe change\"}",
             "create_file: {\"action\":\"create_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"new-file.js\",\"content\":\"complete file contents\",\"message\":\"Add new file\"}",
             "update_file: {\"action\":\"update_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"existing-file.js\",\"sha\":\"40-character SHA from recent read_file result\",\"content\":\"complete replacement file contents\",\"message\":\"Describe change\"}",
             "Inspect files before editing; never invent a SHA; make small focused changes.",
