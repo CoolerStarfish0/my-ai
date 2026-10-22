@@ -3584,7 +3584,7 @@ function extractAxonGoogleAction(text) {
 async function getGoogleConnectionStatus(user) {
     if (!user || user.isAnonymous) return { connected: false, reason: "Sign in with the owner Google account to connect Google services." };
     const token = await user.getIdToken();
-    const response = await fetch(BACKEND_URL + "/api/google?action=status", {
+    const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=status", {
         headers: { Authorization: "Bearer " + token }, cache: "no-store"
     });
     const data = await response.json().catch(() => ({}));
@@ -3626,7 +3626,7 @@ async function startGoogleConnection() {
     if (status) status.textContent = "Preparing secure Google sign-in…";
     try {
         const token = await user.getIdToken();
-        const response = await fetch(BACKEND_URL + "/api/google?action=start", {
+        const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=start", {
             headers: { Authorization: "Bearer " + token }, cache: "no-store"
         });
         const data = await response.json().catch(() => ({}));
@@ -3677,7 +3677,7 @@ async function executeAxonGoogleTool(user, action, isOwner) {
         confirmed = true;
     }
     const token = await user.getIdToken();
-    const response = await fetch(BACKEND_URL + "/api/google?action=tool", {
+    const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=tool", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ ...action, confirmed })
