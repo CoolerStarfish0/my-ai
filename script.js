@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import * as chrono from "https://esm.sh/chrono-node@2.8.0";
-import { trackFeature, loadFeatureAnalytics } from "./analytics.js?v=feature-analytics-1";
+import { trackFeature, loadFeatureAnalytics } from "./analytics.js?v=feature-analytics-2";
 
 import {
     getAuth,
