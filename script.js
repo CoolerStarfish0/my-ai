@@ -3397,7 +3397,7 @@ async function callAxonBackend(
 // ==========================================
 
 function looksLikeGithubRequest(message) {
-    return /\b(github|repository|repo|commit|pull request|branch|codebase|source code|\.js\b|\.html\b|\.css\b|add (?:a |an )?(?:feature|game|page|button)|edit (?:the )?file|fix (?:the )?code|change (?:the )?website|push (?:this|the|my) changes)\b/i.test(String(message || ""));
+    return /\b(github|repository|repo|commit|pull request|branch|codebase|source code|my-ai|script\.js|index\.html|style\.css|(?:add|create|build|implement|update|edit|fix|change|remove|modify)\s+(?:a |an |the )?(?:feature|game|page|button|website|site|file|function|component|tool|analytics|dashboard)|push (?:this|the|my) changes)\b/i.test(String(message || ""));
 }
 
 function extractAxonGithubAction(text) {
@@ -3435,6 +3435,7 @@ async function executeAxonGithubTool(user, action, isOwner) {
             "File: " + path,
             "Action: " + action.action.replace("_", " "),
             "Commit message: " + message,
+            "Preview: " + String(action.content || "").split("\n").slice(0, 8).join("\n").slice(0, 700),
             "",
             "This writes directly to the repository's default branch. Continue?"
         ].join("\n");
