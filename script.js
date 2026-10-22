@@ -3396,12 +3396,136 @@ async function callAxonBackend(
 // ACTION LOOP
 // ==========================================
 
+function looksLikeGithubRequest(message) {
+    return /\b(github|repository|repo|commit|pull request|branch|codebase|source code|\.js\b|\.html\b|\.css\b|add (?:a |an )?(?:feature|game|page|button)|edit (?:the )?file|fix (?:the )?code|change (?:the )?website|push (?:this|the|my) changes)\b/i.test(String(message || ""));
+}
+
+function extractAxonGithubAction(text) {
+    const startMarker = "[[AXON_GITHUB_ACTION]]";
+    const endMarker = "[[/AXON_GITHUB_ACTION]]";
+    const start = text.indexOf(startMarker);
+    const end = text.indexOf(endMarker);
+    if (start < 0 || end <= start) return null;
+    try {
+        const action = JSON.parse(text.slice(start + startMarker.length, end).trim());
+        const allowed = new Set(["list_files", "read_file", "search_code", "create_file", "update_file"]);
+        if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
+        return {
+            action,
+            visibleText: (text.slice(0, start) + text.slice(end + endMarker.length)).trim()
+        };
+    } catch (error) {
+        console.warn("Axon GitHub action JSON was invalid:", error);
+        return null;
+    }
+}
+
+async function executeAxonGithubTool(user, action, isOwner) {
+    if (!isOwner || !user || user.isAnonymous || user.uid !== OWNER_UID) {
+        throw new Error("Owner access is required for GitHub tools.");
+    }
+    const repo = String(action.repo || "CoolerStarfish0/my-ai");
+    const path = String(action.path || "");
+    const message = String(action.message || "Axon update");
+    if (["create_file", "update_file"].includes(action.action)) {
+        const preview = [
+            "Axon wants to commit a file change to GitHub.",
+            "",
+            "Repository: " + repo,
+            "File: " + path,
+            "Action: " + action.action.replace("_", " "),
+            "Commit message: " + message,
+            "",
+            "This writes directly to the repository's default branch. Continue?"
+        ].join("\n");
+        if (!window.confirm(preview)) return { cancelled: true, message: "The owner declined the GitHub change. No repository change was made." };
+    }
+    const token = await user.getIdToken();
+    const response = await fetch(BACKEND_URL + "/api/agent", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+        },
+        body: JSON.stringify({ ...action, repo, confirmed: ["create_file", "update_file"].includes(action.action) })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "GitHub action failed.");
+    if (typeof data.content === "string" && data.content.length > 45000) data.content = data.content.slice(0, 45000) + "\n[File truncated for the agent context.]";
+    return data;
+}
+
+async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
+    let currentPrompt = originalMessage;
+    let latestCredits = null;
+    const seenActions = new Set();
+    const maxRounds = 6;
+
+    for (let round = 0; round < maxRounds; round++) {
+        const githubInstructions = [
+            "AXON GITHUB AGENT MODE: this runs inside normal Axon chat, independently of Work Mode.",
+            "Use authenticated GitHub tools only for the owner's allowlisted repositories. Never claim an action succeeded without a tool result.",
+            "If the user asks a general question rather than repository work, answer normally without a tool block.",
+            "For repository work, emit exactly one tool action as valid JSON between [[AXON_GITHUB_ACTION]] and [[/AXON_GITHUB_ACTION]].",
+            "Example: [[AXON_GITHUB_ACTION]]",
+            "{\"action\":\"list_files\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"\"}",
+            "[[/AXON_GITHUB_ACTION]]",
+            "Supported actions:",
+            "list_files: {\"action\":\"list_files\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"optional/folder\"}",
+            "read_file: {\"action\":\"read_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"script.js\"}",
+            "search_code: {\"action\":\"search_code\",\"repo\":\"CoolerStarfish0/my-ai\",\"query\":\"function name\"}",
+            "create_file: {\"action\":\"create_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"new-file.js\",\"content\":\"complete file contents\",\"message\":\"Add new file\"}",
+            "update_file: {\"action\":\"update_file\",\"repo\":\"CoolerStarfish0/my-ai\",\"path\":\"existing-file.js\",\"sha\":\"40-character SHA from recent read_file result\",\"content\":\"complete replacement file contents\",\"message\":\"Describe change\"}",
+            "Inspect files before editing; never invent a SHA; make small focused changes.",
+            "Allowed repositories: CoolerStarfish0/my-ai and CoolerStarfish0/5158-ai-backend. Server blocks secret-like files and GitHub workflow files.",
+            "The owner must approve every write in a confirmation dialog. Never request tokens or secrets.",
+            "If a tool fails or GitHub is not configured, explain the actual error. Use at most one tool action per response.",
+            "This is round " + (round + 1) + " of " + maxRounds + "."
+        ].join("\n");
+
+        const result = await callAxonBackend(user, systemPrompt + "\n\n" + githubInstructions, currentPrompt, isOwner);
+        latestCredits = result.credits || latestCredits;
+        const raw = typeof result.answer === "string" ? result.answer.trim() : "";
+        const parsed = extractAxonGithubAction(raw);
+        if (!parsed) return { answer: raw || "I couldn't produce a valid GitHub action. Try describing the repository task more specifically.", credits: latestCredits, actionPerformed: false };
+
+        if (parsed.visibleText) {
+            addConversationMessage("AXON", parsed.visibleText);
+            addMessage("AI", parsed.visibleText);
+        }
+
+        const signature = JSON.stringify(parsed.action);
+        if (seenActions.has(signature)) {
+            return { answer: "I stopped to prevent repeating the same GitHub action. No duplicate action was run.", credits: latestCredits, actionPerformed: true };
+        }
+        seenActions.add(signature);
+
+        let toolResult;
+        try {
+            toolResult = await executeAxonGithubTool(user, parsed.action, isOwner);
+        } catch (error) {
+            return { answer: "⚠️ GitHub action failed: " + (error.message || "Unknown error") + ". I haven't claimed the task is complete.", credits: latestCredits, actionPerformed: true };
+        }
+        if (toolResult.cancelled) return { answer: toolResult.message, credits: latestCredits, actionPerformed: false };
+
+        currentPrompt = "The user's original request:\n" + originalMessage +
+            "\n\nYour last GitHub tool action:\n" + JSON.stringify(parsed.action) +
+            "\n\nActual tool result:\n" + JSON.stringify(toolResult).slice(0, 48000) +
+            "\n\nContinue using the actual result. If another action is needed, output one valid [[AXON_GITHUB_ACTION]] block. If done, explain what happened and cite any returned URL or commit SHA. Do not repeat a successful action.";
+    }
+    return { answer: "I reached the GitHub agent's step limit. Review the actions and ask me to continue if needed.", credits: latestCredits, actionPerformed: true };
+}
+
 async function runAxonWorkLoop(
     user,
     systemPrompt,
     originalMessage,
     isOwner
 ) {
+
+    if (!workModeEnabled && isOwner && looksLikeGithubRequest(originalMessage)) {
+        return runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner);
+    }
 
     let currentPrompt =
         originalMessage;
