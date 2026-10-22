@@ -118,3 +118,18 @@ export async function loadFeatureAnalytics() {
         status.textContent = error.message || "Feature analytics are currently unavailable.";
     }
 }
+
+
+document.addEventListener("click", event => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    if (target.closest("#gamesButton")) trackFeature("games");
+    if (target.closest("#calendarButton")) trackFeature("calendar");
+    if (target.closest("#workModeStartButton")) trackFeature("work-mode");
+    if (target.closest("#inviteToChatButton, #sharedChatsButton")) trackFeature("shared-chats");
+    const gameCard = target.closest("[data-game]");
+    if (gameCard) {
+        if (gameCard.dataset.game === "market") trackFeature("market-day");
+        else trackFeature("games");
+    }
+});
