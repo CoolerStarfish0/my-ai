@@ -401,7 +401,7 @@ const MAX_IMAGE_ATTACHMENTS = 3;
 const MAX_IMAGE_BYTES = 400 * 1024;
 
 // ==========================================
-// WORK MODE UI
+// LOCAL COMPUTER ACCESS UI
 // ==========================================
 
 const workModePanel =
@@ -420,7 +420,7 @@ const workModeStopButton =
     document.getElementById("workModeStopButton");
 
 // ==========================================
-// WORK MODE STATE
+// LOCAL COMPUTER ACCESS STATE
 // ==========================================
 
 let workModeEnabled = false;
@@ -861,7 +861,7 @@ function buildSharedSystemPrompt(messages) {
         "Use the names attached to messages to understand who said what. Do not pretend one member's personal details are another member's.",
         "This is a shared room: do not request, retrieve, or reveal anyone's private saved memories, solo conversations, or account-only information.",
         "Do not claim you can see private information outside this room. Answer the newest message naturally and use relevant room history.",
-        "Do not execute computer-control actions or Work Mode commands from a shared room.",
+        "Do not execute computer-control actions or local computer access commands from a shared room.",
         "RECENT SHARED ROOM HISTORY:\n" + (history || "(No previous messages.)")
     ].join("\n\n");
 }
@@ -1835,7 +1835,7 @@ async function refreshCurrentRank(user = auth.currentUser) {
 }
 
 // ==========================================
-// WORK MODE UI
+// LOCAL COMPUTER ACCESS UI
 // ==========================================
 
 function updateWorkModeUI() {
@@ -1844,12 +1844,17 @@ function updateWorkModeUI() {
         return;
     }
 
+    const computerAccessStatus = document.getElementById("axonComputerAccessStatus");
+    if (workModeStartButton) workModeStartButton.textContent = "Allow computer access";
+    if (workModeStopButton) workModeStopButton.textContent = "Disable computer access";
+
     const rankAllowsWorkMode = ["OWNER", "ADMIN", "WARDEN", "PIONEER", "RESIDENT"]
         .includes(getCurrentRank(auth.currentUser).name);
 
     if (!rankAllowsWorkMode) {
         workModeEnabled = false;
         workModeStatus.textContent = "Resident rank or above required";
+        if (computerAccessStatus) computerAccessStatus.textContent = "Your current rank does not allow local computer access.";
         if (workModeIndicator) workModeIndicator.textContent = "LOCKED";
         if (workModeStartButton) workModeStartButton.disabled = true;
         if (workModeStopButton) workModeStopButton.disabled = true;
@@ -1860,7 +1865,8 @@ function updateWorkModeUI() {
     if (workModeEnabled) {
 
         workModeStatus.textContent =
-            "Work Mode is ON";
+            "Local computer access is ON";
+        if (computerAccessStatus) computerAccessStatus.textContent = "Local computer access is enabled. Axon can use the authorized local bridge.";
 
         workModeIndicator.textContent =
             "ON";
@@ -1881,7 +1887,8 @@ function updateWorkModeUI() {
     } else {
 
         workModeStatus.textContent =
-            "Work Mode is OFF";
+            "Local computer access is OFF";
+        if (computerAccessStatus) computerAccessStatus.textContent = "Local computer access is off. Enable it only when you want Axon to interact with your computer.";
 
         workModeIndicator.textContent =
             "OFF";
@@ -1902,7 +1909,7 @@ function updateWorkModeUI() {
 }
 
 // ==========================================
-// WORK MODE STATUS
+// LOCAL COMPUTER ACCESS STATUS
 // ==========================================
 
 async function getWorkModeStatus() {
@@ -1944,7 +1951,7 @@ async function getWorkModeStatus() {
     } catch (error) {
 
         console.error(
-            "Work Mode status error:",
+            "local computer access status error:",
             error
         );
 
@@ -1953,7 +1960,7 @@ async function getWorkModeStatus() {
 }
 
 // ==========================================
-// START WORK MODE
+// START LOCAL COMPUTER ACCESS
 // ==========================================
 
 async function startWorkMode() {
@@ -1969,14 +1976,14 @@ async function startWorkMode() {
 
         addMessage(
             "AI",
-            "You need to sign in before enabling Work Mode."
+            "You need to sign in before enabling local computer access."
         );
 
         return;
     }
 
     if (!["OWNER", "ADMIN", "WARDEN", "PIONEER", "RESIDENT"].includes(getCurrentRank(user).name)) {
-        addMessage("AI", "Work Mode requires Resident rank or above.");
+        addMessage("AI", "local computer access requires Resident rank or above.");
         updateWorkModeUI();
         return;
     }
@@ -1987,7 +1994,7 @@ async function startWorkMode() {
         true;
 
     workModeStatus.textContent =
-        "Starting Work Mode...";
+        "Starting local computer access...";
 
     try {
 
@@ -2022,7 +2029,7 @@ async function startWorkMode() {
 
             throw new Error(
                 data.error ||
-                "Unable to start Work Mode."
+                "Unable to start local computer access."
             );
         }
 
@@ -2033,13 +2040,13 @@ async function startWorkMode() {
 
         addMessage(
             "AI",
-            "🖥️ Work Mode enabled.\n\nAxon can now use authorized computer-control capabilities."
+            "🖥️ local computer access enabled.\n\nAxon can now use authorized computer-control capabilities."
         );
 
     } catch (error) {
 
         console.error(
-            "Work Mode start error:",
+            "local computer access start error:",
             error
         );
 
@@ -2050,7 +2057,7 @@ async function startWorkMode() {
 
         addMessage(
             "AI",
-            "I couldn't enable Work Mode. The Work Mode backend may not be connected yet."
+            "I couldn't enable local computer access. The local computer access backend may not be connected yet."
         );
 
     } finally {
@@ -2063,7 +2070,7 @@ async function startWorkMode() {
 }
 
 // ==========================================
-// STOP WORK MODE
+// STOP LOCAL COMPUTER ACCESS
 // ==========================================
 
 async function stopWorkMode() {
@@ -2092,7 +2099,7 @@ async function stopWorkMode() {
         true;
 
     workModeStatus.textContent =
-        "Stopping Work Mode...";
+        "Stopping local computer access...";
 
     try {
 
@@ -2127,14 +2134,14 @@ async function stopWorkMode() {
 
             throw new Error(
                 data.error ||
-                "Unable to stop Work Mode."
+                "Unable to stop local computer access."
             );
         }
 
     } catch (error) {
 
         console.error(
-            "Work Mode stop error:",
+            "local computer access stop error:",
             error
         );
 
@@ -2150,13 +2157,13 @@ async function stopWorkMode() {
 
         addMessage(
             "AI",
-            "🛑 Work Mode disabled."
+            "🛑 local computer access disabled."
         );
     }
 }
 
 // ==========================================
-// WORK MODE BUTTONS
+// LOCAL COMPUTER ACCESS BUTTONS
 // ==========================================
 
 if (workModeStartButton) {
@@ -2178,7 +2185,7 @@ if (workModeStopButton) {
 updateWorkModeUI();
 
 // ==========================================
-// WORK MODE COMPUTER ACTIONS
+// LOCAL COMPUTER ACCESS COMPUTER ACTIONS
 // ==========================================
 
 async function getWorkToken() {
@@ -2204,7 +2211,7 @@ async function workRequest(
     if (!workModeEnabled) {
 
         throw new Error(
-            "Work Mode is disabled."
+            "local computer access is disabled."
         );
     }
 
@@ -2381,7 +2388,7 @@ async function executeAxonAction(
     if (!workModeEnabled) {
 
         throw new Error(
-            "Work Mode is disabled."
+            "local computer access is disabled."
         );
     }
 
@@ -2639,7 +2646,7 @@ async function executeAxonActions(
         if (!workModeEnabled) {
 
             throw new Error(
-                "Work Mode was disabled."
+                "local computer access was disabled."
             );
         }
 
@@ -2975,7 +2982,7 @@ Never invent tool results.
 14. TOOL AND ACTION AWARENESS
 ==================================================
 
-When tools or Work Mode capabilities are available, distinguish
+When tools or local computer access capabilities are available, distinguish
 between:
 
 - what you can reason about
@@ -2986,30 +2993,30 @@ Do not claim an external action happened until the corresponding
 tool reports success.
 
 ==================================================
-15. WORK MODE
+15. LOCAL COMPUTER ACCESS
 ==================================================
 
-Work Mode is a REAL computer-control capability provided by the
+local computer access is a REAL computer-control capability provided by the
 application.
 
-Current Work Mode state:
+Current local computer access state:
 
 ${workModeEnabled ? "ENABLED" : "DISABLED"}
 
-Never assume Work Mode is enabled.
+Never assume local computer access is enabled.
 
 Never assume permission to control the computer.
 
-Only perform computer actions when Work Mode is enabled.
+Only perform computer actions when local computer access is enabled.
 
-When Work Mode is disabled, do not pretend to control the
+When local computer access is disabled, do not pretend to control the
 computer.
 
 ==================================================
-15A. CRITICAL WORK MODE RULE
+15A. CRITICAL LOCAL COMPUTER ACCESS RULE
 ==================================================
 
-When Work Mode is ENABLED and the user asks you to interact with
+When local computer access is ENABLED and the user asks you to interact with
 the computer, browser, mouse, keyboard, screen, or applications:
 
 YOU MUST USE THE AXON ACTION PROTOCOL.
@@ -3028,7 +3035,7 @@ DO NOT say:
 
 "My capabilities are limited to conversation."
 
-Those statements are forbidden when Work Mode is enabled.
+Those statements are forbidden when local computer access is enabled.
 
 Instead, perform the requested action using the available
 computer actions.
@@ -3116,7 +3123,7 @@ command
 15C. COMPUTER ACTION REQUIREMENT
 ==================================================
 
-If Work Mode is ENABLED and the user's request requires
+If local computer access is ENABLED and the user's request requires
 computer interaction:
 
 1. Output AXON_ACTIONS.
@@ -3313,7 +3320,7 @@ Before answering, determine:
 7. Is the requested action authorized?
 8. What is the simplest useful response?
 
-If Work Mode is ENABLED and the request is a computer-control
+If local computer access is ENABLED and the request is a computer-control
 task, use the computer action protocol.
 
 Do not mention information merely because it exists.
@@ -3338,7 +3345,7 @@ Use this practical loop:
 
 Do not ask the user to supply information that an authorized connected source can retrieve. Do not invent names, files, search results, class rosters, links, or successful actions. If one source fails, consider another relevant authorized source. Ask a focused clarification only when ambiguity materially changes the result or no authorized source resolves it.
 
-The autonomous agent is the default way to work through normal Axon chat; the user should not need to switch into a separate Work Mode to use supported application tools. Tool access still depends on the account, configured integrations, permissions, and available endpoints. Do not claim an integration exists until its tool is available and has returned a result.
+The autonomous agent is the default way to work through normal Axon chat; the user should not need to switch into a separate local computer access to use supported application tools. Tool access still depends on the account, configured integrations, permissions, and available endpoints. Do not claim an integration exists until its tool is available and has returned a result.
 
 For Google tasks, use the Google tool protocol when the Google integration is connected. For a classmate roster request, first list Classroom courses, identify the intended course using its actual name/section, retrieve its roster, select only from returned students, and only then create the requested form. If multiple courses could match, ask which one. If Classroom access is denied or the roster is unavailable, explain the specific obstacle instead of fabricating names.
 
@@ -3488,7 +3495,7 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
 
     for (let round = 0; round < maxRounds; round++) {
         const githubInstructions = [
-            "AXON GITHUB AGENT MODE: this runs inside normal Axon chat, independently of Work Mode.",
+            "AXON GITHUB AGENT MODE: this runs inside normal Axon chat, independently of local computer access.",
             "Use authenticated GitHub tools only for the owner's allowlisted repositories. Never claim an action succeeded without a tool result.",
             "If the user asks a general question rather than repository work, answer normally without a tool block.",
             "For repository work, emit exactly one tool action as valid JSON between [[AXON_GITHUB_ACTION]] and [[/AXON_GITHUB_ACTION]].",
@@ -3694,7 +3701,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
     const maxRounds = 8;
     for (let round = 0; round < maxRounds; round++) {
         const instructions = [
-            "AXON AUTONOMOUS GOOGLE AGENT: use tools in normal chat; no Work Mode toggle is required.",
+            "AXON AUTONOMOUS GOOGLE AGENT: use tools in normal chat; no local computer access toggle is required.",
             "For a task requiring Google information or actions, emit exactly one valid JSON action between [[AXON_GOOGLE_ACTION]] and [[/AXON_GOOGLE_ACTION]]. Never invent tool results.",
             "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design class\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }.",
             "Write tools: google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }.",
@@ -3730,18 +3737,18 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
     return { answer: "I reached the Google agent's step limit. I can continue from the results already gathered if you ask.", credits: latestCredits, actionPerformed: true };
 }
 
-async function runAxonWorkLoop(
+async function runAxonAgentLoop(
     user,
     systemPrompt,
     originalMessage,
     isOwner
 ) {
 
-    if (!workModeEnabled && isOwner && looksLikeGoogleRequest(originalMessage)) {
+    if (isOwner && looksLikeGoogleRequest(originalMessage)) {
         return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
-    if (!workModeEnabled && isOwner && looksLikeGithubRequest(originalMessage)) {
+    if (isOwner && looksLikeGithubRequest(originalMessage)) {
         return runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
@@ -3769,13 +3776,13 @@ async function runAxonWorkLoop(
         }
 
         // ======================================
-        // WORK MODE INTENT SEPARATION
+        // LOCAL COMPUTER ACCESS INTENT SEPARATION
         // ======================================
 
         if (workModeEnabled) {
 
             currentPrompt = `
-WORK MODE IS ENABLED RIGHT NOW.
+LOCAL COMPUTER ACCESS IS ENABLED RIGHT NOW.
 
 The application has authorized computer-control capabilities.
 
@@ -3831,7 +3838,7 @@ ONLY for genuine COMPUTER ACTION requests:
 
 IMPORTANT:
 
-The mere fact that Work Mode is enabled does NOT mean every
+The mere fact that local computer access is enabled does NOT mean every
 message requires computer interaction.
 
 Never convert ordinary conversation into a computer action.
@@ -4337,7 +4344,7 @@ async function sendMessage() {
             }
             result = { answer: data.answer || "", credits: data.credits || null };
         } else {
-            result = await runAxonWorkLoop(user, systemPrompt, originalMessage, isOwner);
+            result = await runAxonAgentLoop(user, systemPrompt, originalMessage, isOwner);
         }
 
         removeThinkingBubble();
@@ -4998,121 +5005,3 @@ function clearRankAnimationTimers() {
     rankAnimationTimers.forEach(timer => window.clearTimeout(timer));
     rankAnimationTimers = [];
     if (rankAnimationCloseTimer !== null) {
-        window.clearTimeout(rankAnimationCloseTimer);
-        rankAnimationCloseTimer = null;
-    }
-    if (rankAnimationHideTimer !== null) {
-        window.clearTimeout(rankAnimationHideTimer);
-        rankAnimationHideTimer = null;
-    }
-}
-
-function scheduleRankAnimation(callback, delay) {
-    const timer = window.setTimeout(callback, delay);
-    rankAnimationTimers.push(timer);
-    return timer;
-}
-
-function playRankAnimation(rankName) {
-    // Temporarily disabled at the user's request.
-    clearRankAnimationTimers();
-    if (rankAnimation) rankAnimation.classList.add("hidden");
-    return;
-    if (!rankAnimation || !axonMascot || !rankAnimationTitle || !rankAnimationRank) return;
-
-    clearRankAnimationTimers();
-
-    const rank = String(rankName || "VISITOR").toUpperCase();
-    const supportedRanks = ["VISITOR", "RESIDENT", "PIONEER", "WARDEN", "ADMIN", "OWNER"];
-    const safeRank = supportedRanks.includes(rank) ? rank : "VISITOR";
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const rankClasses = ["rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner"];
-    const sceneClasses = ["scene-door", "scene-command", "scene-shield", "scene-streak"];
-
-    rankAnimation.classList.add("hidden");
-    rankAnimation.classList.remove(
-        "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
-        "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
-        "streak-burst", "streak-celebration", "show-text", ...rankClasses, ...sceneClasses
-    );
-
-    // Restart the mascot animation cleanly on every rank-up.
-    axonMascot.style.animation = "none";
-    void axonMascot.offsetWidth;
-    axonMascot.style.animation = "";
-
-    rankAnimation.classList.add("rank-" + safeRank.toLowerCase());
-    const titles = {
-        VISITOR: "WELCOME",
-        RESIDENT: "WELCOME TO AXON",
-        PIONEER: "EARLY ACCESS",
-        WARDEN: "AXON SENTINEL",
-        ADMIN: "COMMAND AUTHORITY",
-        OWNER: "SYSTEM OWNER"
-    };
-    rankAnimationTitle.textContent = titles[safeRank];
-    rankAnimationRank.textContent = safeRank;
-
-    if (reducedMotion) {
-        rankAnimation.classList.remove("hidden");
-        rankAnimation.classList.add("show-text");
-        rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, 1600);
-        return;
-    }
-
-    rankAnimation.classList.remove("hidden");
-
-    const timings = {
-        VISITOR: { reveal: 350, close: 2600 },
-        RESIDENT: { door: 250, hello: 1150, reveal: 1550, close: 3900 },
-        PIONEER: { reveal: 650, close: 3400 },
-        WARDEN: { shield: 300, impact: 1150, reveal: 1500, close: 3900 },
-        ADMIN: { activate: 450, reveal: 1300, close: 3900 },
-        OWNER: { awaken: 450, wings: 900, fly: 1350, burst: 1850, reveal: 2200, spin: 2550, land: 4100, celebrate: 4350, close: 6800 }
-    }[safeRank];
-
-    if (safeRank === "RESIDENT") {
-        rankAnimation.classList.add("scene-door");
-        scheduleRankAnimation(() => rankAnimation.classList.add("door-open"), timings.door);
-        scheduleRankAnimation(() => rankAnimation.classList.add("toucan-wave"), timings.hello);
-    } else if (safeRank === "WARDEN") {
-        rankAnimation.classList.add("scene-shield");
-        scheduleRankAnimation(() => rankAnimation.classList.add("shield-drop"), timings.shield);
-        scheduleRankAnimation(() => rankAnimation.classList.add("shield-impact"), timings.impact);
-    } else if (safeRank === "ADMIN") {
-        rankAnimation.classList.add("scene-command");
-        scheduleRankAnimation(() => rankAnimation.classList.add("command-active"), timings.activate);
-    } else if (safeRank === "OWNER") {
-        rankAnimation.classList.add("scene-streak");
-        scheduleRankAnimation(() => rankAnimation.classList.add("ai-awakened"), timings.awaken);
-        scheduleRankAnimation(() => rankAnimation.classList.add("wings-open"), timings.wings);
-        scheduleRankAnimation(() => rankAnimation.classList.add("flying-up"), timings.fly);
-        scheduleRankAnimation(() => rankAnimation.classList.add("streak-burst"), timings.burst);
-        scheduleRankAnimation(() => rankAnimation.classList.add("spinning"), timings.spin);
-        scheduleRankAnimation(() => {
-            rankAnimation.classList.remove("spinning", "flying-up");
-            rankAnimation.classList.add("landed");
-        }, timings.land);
-        scheduleRankAnimation(() => rankAnimation.classList.add("streak-celebration"), timings.celebrate);
-    }
-
-    scheduleRankAnimation(() => rankAnimation.classList.add("show-text"), timings.reveal);
-    rankAnimationCloseTimer = window.setTimeout(closeRankAnimation, timings.close);
-}
-
-function closeRankAnimation() {
-    if (!rankAnimation) return;
-    clearRankAnimationTimers();
-    rankAnimation.classList.add("closing");
-    rankAnimationHideTimer = window.setTimeout(() => {
-        rankAnimationHideTimer = null;
-        rankAnimation.classList.add("hidden");
-        rankAnimation.classList.remove(
-            "closing", "ai-awakened", "wings-open", "flying-up", "spinning", "landed",
-            "door-open", "toucan-wave", "shield-drop", "shield-impact", "command-active",
-            "streak-burst", "streak-celebration", "show-text",
-            "rank-visitor", "rank-resident", "rank-pioneer", "rank-warden", "rank-admin", "rank-owner",
-            "scene-door", "scene-command", "scene-shield", "scene-streak"
-        );
-    }, 500);
-}
