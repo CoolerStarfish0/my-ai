@@ -7,8 +7,9 @@
     <title>Axon</title>
 
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="agent.css?v=axon-agent-1">
     <link rel="stylesheet" href="games.css">
-    <script type="module" src="script.js?v=axon-agent-2-20261022"></script>
+    <script type="module" src="script.js?v=axon-autonomous-agent-1-20261022"></script>
     <script type="module" src="games.js?v=market-day-2"></script>
 </head>
 
@@ -311,76 +312,42 @@
             </div>
 
             <!-- ======================================
-                 WORK MODE
+                 AXON AUTONOMOUS AGENT
                  ====================================== -->
-
-            <div
-                id="workModePanel"
-                class="work-mode-panel"
-            >
-
-                <div class="work-mode-header">
-
+            <section id="axonAgentPanel" class="axon-agent-panel" aria-labelledby="axonAgentHeading">
+                <div class="axon-agent-heading">
                     <div>
+                        <h2 id="axonAgentHeading">🧠 Axon Autonomous Agent</h2>
+                        <p>Plan, investigate, use connected apps, and verify results directly from normal chat. No separate Work Mode switch.</p>
+                    </div>
+                    <span class="axon-agent-status">Agent ready</span>
+                </div>
+                <p id="axonGoogleStatus" class="axon-agent-note" role="status">Google connection status will appear here. Google tools require the one-time setup documented in the backend repository.</p>
+                <div class="axon-agent-actions">
+                    <button id="axonGoogleConnectButton" type="button">🔗 Connect Google</button>
+                    <button id="axonGoogleRefreshButton" type="button">Check connection</button>
+                </div>
+                <p class="axon-agent-note">GitHub tools run in normal chat for the owner account. Google tools can search Drive and Classroom, create Docs, Sheets and Forms, schedule Calendar events, and save Gmail drafts once configured. Axon confirms writes and verifies tool results. Google Sites editing needs a separate browser-automation integration.</p>
+            </section>
 
-                        <strong>
-                            <span class="work-mode-icon">⌁</span>
-                            Axon Work Mode
-                        </strong>
-
-                        <div
-                            id="workModeStatus"
-                            class="work-mode-status"
-                        >
-                            Work Mode is OFF
+            <!-- Legacy local-computer controls remain hidden while the unified agent replaces the old Work Mode UI. -->
+            <div class="hidden" aria-hidden="true">
+                <div id="workModePanel" class="work-mode-panel">
+                    <div class="work-mode-header">
+                        <div>
+                            <strong><span class="work-mode-icon">⌁</span> Legacy local computer control</strong>
+                            <div id="workModeStatus" class="work-mode-status">Work Mode is OFF</div>
                         </div>
-
+                        <div class="work-mode-indicator" id="workModeIndicator">OFF</div>
                     </div>
-
-                    <div
-                        class="work-mode-indicator"
-                        id="workModeIndicator"
-                    >
-                        OFF
+                    <div class="work-mode-description">Legacy local computer-control integration.</div>
+                    <div class="work-mode-warning">Computer-control actions require a separately authorized local bridge.</div>
+                    <div class="work-mode-buttons">
+                        <button id="workModeStartButton" type="button">Enable legacy computer control</button>
+                        <button id="workModeStopButton" type="button" disabled>Stop legacy computer control</button>
                     </div>
-
                 </div>
-
-                <div class="work-mode-description">
-
-                    When enabled, Axon can interact with your
-                    computer through the local Axon bridge.
-
-                </div>
-
-                <div class="work-mode-warning">
-
-                    ⚠️ Computer-control actions only run while
-                    Work Mode is explicitly enabled.
-
-                </div>
-
-                <div class="work-mode-buttons">
-
-                    <button
-                        id="workModeStartButton"
-                        type="button"
-                    >
-                        Enable Work Mode
-                    </button>
-
-                    <button
-                        id="workModeStopButton"
-                        type="button"
-                        disabled
-                    >
-                        Stop Work Mode
-                    </button>
-
-                </div>
-
             </div>
-
 
             <!-- ======================================
                  CHAT
