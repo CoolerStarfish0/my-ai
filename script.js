@@ -3555,9 +3555,9 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
 
 function looksLikeGoogleRequest(message) {
     const text = String(message || "");
-    const hasService = /\\b(google\\s*(docs?|forms?|sheets?|drive|classroom|sites?|calendar|gmail)|classroom|gmail|google\\s*form|google\\s*doc|google\\s*sheet|spreadsheet|google\\s*sites)\\b/i.test(text);
-    const hasTask = /\\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website)\\b/i.test(text);
-    return hasService && hasTask || /\\b(design class|class roster|classmates)\\b/i.test(text) && /\\b(form|pick|choose|students?|names)\\b/i.test(text);
+    const hasService = /\b(google\s*(docs?|forms?|sheets?|drive|classroom|sites?|calendar|gmail)|classroom|gmail|google\s*form|google\s*doc|google\s*sheet|spreadsheet|google\s*sites)\b/i.test(text);
+    const hasTask = /\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar)\b/i.test(text);
+    return (hasService && hasTask) || (/\b(design class|class roster|classmates)\b/i.test(text) && /\b(form|pick|choose|students?|names)\b/i.test(text));
 }
 
 function extractAxonGoogleAction(text) {
@@ -3570,8 +3570,10 @@ function extractAxonGoogleAction(text) {
         const action = JSON.parse(text.slice(start + startMarker.length, end).trim());
         const allowed = new Set([
             "drive_search", "classroom_list_courses", "classroom_list_students",
-            "google_create_doc", "google_create_sheet", "google_create_form",
-            "calendar_create_event", "gmail_create_draft"
+            "google_read_doc", "google_append_doc", "google_replace_doc_text", "google_create_doc",
+            "google_read_sheet", "google_update_sheet", "google_create_sheet",
+            "google_read_form", "google_add_form_question", "google_create_form",
+            "calendar_list_events", "calendar_create_event", "gmail_create_draft"
         ]);
         if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
         return { action, visibleText: (text.slice(0, start) + text.slice(end + endMarker.length)).trim() };
@@ -3658,7 +3660,7 @@ window.addEventListener("load", () => {
 
 async function executeAxonGoogleTool(user, action, isOwner) {
     if (!isOwner || !user || user.isAnonymous || user.uid !== OWNER_UID) throw new Error("Owner access is required for Google tools.");
-    const writeActions = new Set(["google_create_doc", "google_create_sheet", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
+    const writeActions = new Set(["google_create_doc", "google_append_doc", "google_replace_doc_text", "google_update_sheet", "google_create_sheet", "google_add_form_question", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
     let confirmed = false;
     if (writeActions.has(action.action)) {
         const preview = [
@@ -3666,8 +3668,12 @@ async function executeAxonGoogleTool(user, action, isOwner) {
             "",
             "Action: " + action.action.replace(/_/g, " "),
             "Title: " + String(action.title || action.summary || action.subject || "").slice(0, 200),
+            "Target ID: " + String(action.documentId || action.spreadsheetId || action.formId || ""),
+            "Range: " + String(action.range || ""),
             "Question: " + String(action.question || "").slice(0, 300),
             "Options: " + (Array.isArray(action.options) ? action.options.join(", ") : ""),
+            "Find text: " + String(action.findText || "").slice(0, 250),
+            "Replacement: " + String(action.replaceText || "").slice(0, 250),
             "Recipient: " + String(action.to || ""),
             "Details: " + String(action.text || action.description || "").slice(0, 700),
             "",
@@ -3706,8 +3712,8 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
         const instructions = [
             "AXON AUTONOMOUS GOOGLE AGENT: use tools in normal chat; no local computer access toggle is required.",
             "For a task requiring Google information or actions, emit exactly one valid JSON action between [[AXON_GOOGLE_ACTION]] and [[/AXON_GOOGLE_ACTION]]. Never invent tool results.",
-            "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design class\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }.",
-            "Write tools: google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }.",
+            "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }; google_read_doc { \"action\":\"google_read_doc\", \"documentId\":\"ID from Drive search\" }; google_read_sheet { \"action\":\"google_read_sheet\", \"spreadsheetId\":\"ID from Drive search\", \"range\":\"A1:Z100\" }; google_read_form { \"action\":\"google_read_form\", \"formId\":\"ID from Drive search\" }; calendar_list_events { \"action\":\"calendar_list_events\" }.",
+            "Write tools (confirmation required): google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_append_doc { \"action\":\"google_append_doc\", \"documentId\":\"ID\", \"text\":\"Append text\" }; google_replace_doc_text { \"action\":\"google_replace_doc_text\", \"documentId\":\"ID\", \"findText\":\"unique exact text\", \"replaceText\":\"replacement\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_update_sheet { \"action\":\"google_update_sheet\", \"spreadsheetId\":\"ID\", \"range\":\"A1:B2\", \"values\":[[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; google_add_form_question { \"action\":\"google_add_form_question\", \"formId\":\"ID\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }.",
             "For class roster tasks, list courses first, use actual course name and section to identify the intended class, then retrieve that roster. If more than one course plausibly matches, ask the user which one. Select names only from actual roster results. Do not expose roster details unrelated to the task.",
             "Ask for confirmation before every write. Gmail tool only creates a draft and never sends it. Google Sites editing is not supported by this API; when local computer access is enabled, let the computer-control agent handle a Sites task instead. Otherwise, explain that the user can enable local computer access to let Axon attempt the browser workflow.",
             "Use one tool call per round, incorporate the actual result, and do not repeat a successful action. If a tool fails, explain the actual error.",
