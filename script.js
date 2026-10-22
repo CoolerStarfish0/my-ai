@@ -3747,7 +3747,7 @@ async function runAxonAgentLoop(
     isOwner
 ) {
 
-    if (isOwner && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\\bgoogle\\s*sites?\\b/i.test(originalMessage))) {
+    if (isOwner && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\bgoogle\s*sites?\b/i.test(originalMessage))) {
         return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
