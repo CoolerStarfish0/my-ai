@@ -1,0 +1,54 @@
+/* Axon unified autonomous agent panel */
+.axon-agent-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(125, 151, 255, .28);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(24, 32, 64, .92), rgba(17, 22, 40, .92));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .16);
+}
+.axon-agent-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.axon-agent-heading h2 { margin: 0; font-size: 1.08rem; }
+.axon-agent-heading p { margin: 5px 0 0; opacity: .78; font-size: .9rem; line-height: 1.45; }
+.axon-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(98, 220, 166, .12);
+  color: #8af0c3;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.axon-agent-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+}
+.axon-agent-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.axon-agent-actions button {
+  border: 1px solid rgba(143, 166, 255, .38);
+  border-radius: 11px;
+  padding: 10px 13px;
+  background: rgba(105, 127, 240, .16);
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.axon-agent-actions button:hover { background: rgba(105, 127, 240, .27); }
+.axon-agent-actions button:disabled { opacity: .55; cursor: wait; }
+.axon-agent-note { margin: 0; font-size: .82rem; line-height: 1.45; opacity: .7; }
