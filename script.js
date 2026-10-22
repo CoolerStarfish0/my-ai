@@ -3459,7 +3459,7 @@ async function executeAxonGithubTool(user, action, isOwner) {
 async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
     let currentPrompt = originalMessage;
     let latestCredits = null;
-    const seenActions = new Set();
+    let lastActionSignature = null;
     const maxRounds = 6;
 
     for (let round = 0; round < maxRounds; round++) {
@@ -3496,10 +3496,10 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
         }
 
         const signature = JSON.stringify(parsed.action);
-        if (seenActions.has(signature)) {
+        if (lastActionSignature === signature) {
             return { answer: "I stopped to prevent repeating the same GitHub action. No duplicate action was run.", credits: latestCredits, actionPerformed: true };
         }
-        seenActions.add(signature);
+        lastActionSignature = signature;
 
         let toolResult;
         try {
