@@ -4778,17 +4778,60 @@ function renderPendingImageAttachments() {
     });
     if (attachImageButton) attachImageButton.disabled = pendingImageAttachments.length >= MAX_IMAGE_ATTACHMENTS;
 }
+// Images can be attached using the + button, pasted from the clipboard,
+// or dropped onto the message composer.
+let imageImportBusy = false;
+async function importImageFiles(files) {
+    if (imageImportBusy) return;
+    imageImportBusy = true;
+    try {
+        const incoming = Array.from(files || []).filter(file =>
+            file && typeof file.type === "string" && file.type.startsWith("image/")
+        );
+        const room = Math.max(0, MAX_IMAGE_ATTACHMENTS - pendingImageAttachments.length);
+        if (incoming.length > room) {
+            addMessage("AI", "You can attach up to " + MAX_IMAGE_ATTACHMENTS + " images per message.");
+        }
+        for (const file of incoming.slice(0, room)) {
+            try {
+                pendingImageAttachments.push(await readImageFile(file));
+            } catch (error) {
+                addMessage("AI", error.message || "Could not attach that image.");
+            }
+        }
+    } finally {
+        imageImportBusy = false;
+        renderPendingImageAttachments();
+    }
+}
 attachImageButton?.addEventListener("click", () => imageUploadInput?.click());
 imageUploadInput?.addEventListener("change", async () => {
     const files = Array.from(imageUploadInput.files || []);
     imageUploadInput.value = "";
-    const room = MAX_IMAGE_ATTACHMENTS - pendingImageAttachments.length;
-    if (files.length > room) addMessage("AI", "You can attach up to " + MAX_IMAGE_ATTACHMENTS + " images per message.");
-    for (const file of files.slice(0, room)) {
-        try { pendingImageAttachments.push(await readImageFile(file)); }
-        catch (error) { addMessage("AI", error.message || "Could not attach that image."); }
+    await importImageFiles(files);
+});
+messageInput?.addEventListener("paste", event => {
+    const imageFiles = Array.from(event.clipboardData?.items || [])
+        .filter(item => item.kind === "file" && item.type.startsWith("image/"))
+        .map(item => item.getAsFile())
+        .filter(Boolean);
+    if (imageFiles.length) {
+        event.preventDefault();
+        void importImageFiles(imageFiles);
     }
-    renderPendingImageAttachments();
+});
+const imageDropArea = document.querySelector(".input-area");
+imageDropArea?.addEventListener("dragover", event => {
+    if (Array.from(event.dataTransfer?.types || []).includes("Files")) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+    }
+});
+imageDropArea?.addEventListener("drop", event => {
+    const files = Array.from(event.dataTransfer?.files || []);
+    if (!files.some(file => file.type.startsWith("image/"))) return;
+    event.preventDefault();
+    void importImageFiles(files);
 });
 
 // ==========================================
