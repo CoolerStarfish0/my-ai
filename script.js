@@ -432,7 +432,7 @@ let workActionBusy = false;
 // ==========================================
 
 const conversationHistory = [];
-const MAX_CONTEXT_MESSAGES = 16;
+const MAX_CONTEXT_MESSAGES = 24;
 
 
 // ==========================================
@@ -2732,9 +2732,6 @@ function buildSystemPrompt(
     const currentRank =
         getCurrentRank(user);
 
-    const recentConversation =
-        buildConversationContext();
-
     const locationPromptContext = approximateLocation
         ? [approximateLocation.city, approximateLocation.region, approximateLocation.country].filter(Boolean).join(", ")
         : "Unavailable; do not guess the user's location.";
@@ -2865,9 +2862,7 @@ message.
 Recent conversational context should generally take priority
 over unrelated older information.
 
-RECENT CONVERSATION:
-
-${recentConversation || "(No previous conversation.)"}
+Conversation history is supplied separately with each request and is kept bounded to preserve relevant recent context.
 
 ==================================================
 6. PERSONAL USER MEMORY
@@ -3393,6 +3388,8 @@ async function callAxonBackend(
                 body: JSON.stringify({
 
                     prompt: originalMessage,
+
+                    context: buildConversationContext(originalMessage),
 
                     system: systemPrompt,
 
@@ -4356,6 +4353,7 @@ async function sendMessage() {
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                 body: JSON.stringify({
                     prompt: originalMessage || "Please inspect the attached image(s) and describe what you see.",
+                    context: buildConversationContext(userMessage),
                     images: attachments.map(image => ({ mimeType: image.mimeType, data: image.data })),
                     system: systemPrompt,
                     workMode: false,
@@ -4814,14 +4812,35 @@ function addConversationMessage(role, content, attachments = []) {
     }
 }
 
-function buildConversationContext() {
+function buildConversationContext(excludeLatestPrompt = "") {
+    let messages = conversationHistory.slice();
 
-    return conversationHistory
-        .map(
-            message =>
-                `${message.role}: ${message.content}`
-        )
-        .join("\n");
+    // The current user prompt is sent separately as the request prompt.
+    // Avoid duplicating it on the first model call.
+    const last = messages[messages.length - 1];
+    if (excludeLatestPrompt && last?.role === "USER" && last.content === excludeLatestPrompt) {
+        messages = messages.slice(0, -1);
+    }
+
+    messages = messages.slice(-MAX_CONTEXT_MESSAGES);
+    const maxContextChars = 14000;
+    const maxMessageChars = 3500;
+    const formatted = [];
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (!message || !["USER", "AXON"].includes(message.role) || typeof message.content !== "string") continue;
+        let content = message.content;
+        if (content.length > maxMessageChars) {
+            content = content.slice(0, maxMessageChars) + "\n[Earlier part of this message was trimmed to preserve recent context.]";
+        }
+        const entry = `${message.role}: ${content}`;
+        const used = formatted.reduce((total, item) => total + item.length + 1, 0);
+        if (used + entry.length > maxContextChars) break;
+        formatted.unshift(entry);
+    }
+
+    return formatted.join("\n");
 }
 
 // ==========================================
