@@ -3727,6 +3727,8 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
         const raw = typeof result.answer === "string" ? result.answer.trim() : "";
         const parsed = extractAxonGoogleAction(raw);
         if (!parsed) return { answer: raw || "I couldn't produce a valid Google action. Try describing the task more specifically.", credits: latestCredits, actionPerformed: false };
+        const explicitShortRequest = /\b(short|brief|concise|one paragraph|one sentence|under\s+\d+\s+words)\b/i.test(originalMessage);
+        if (parsed.action.action === "google_create_doc" && explicitShortRequest) parsed.action.allowShort = true;
         if (parsed.visibleText) {
             addConversationMessage("AXON", parsed.visibleText);
             addMessage("AI", parsed.visibleText);
@@ -3741,7 +3743,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
                 /\b(about|on|talk(?:ing)?|overview|profile|research|explain)\b/i.test(originalMessage);
             const wordCount = documentText.trim().split(/\s+/).filter(Boolean).length;
             if (placeholderPattern.test(documentText) || !documentText.trim() ||
-                (companyOverviewRequest && wordCount < 120)) {
+                (companyOverviewRequest && !explicitShortRequest && wordCount < 120)) {
                 currentPrompt = "Original user request:\n" + originalMessage +
                     "\n\nYour proposed Google Docs action was rejected before any Google API write because its content is unfinished, contains placeholders, or is far too short for the requested company overview. No document was created. Generate a new google_create_doc action with complete finished text in the text field. Remove all placeholders. For a company overview, aim for at least 250 words of useful factual content, with sections and a conclusion, unless the user asked for a short version. Use established facts and do not invent precise figures or details. Output exactly one [[AXON_GOOGLE_ACTION]] JSON block.";
                 continue;
