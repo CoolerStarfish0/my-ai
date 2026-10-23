@@ -2780,3 +2780,15 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .feature-analytics-day-bar { width: min(100%, 20px); min-height: 3px; border-radius: 5px 5px 0 0; background: var(--purple-bright); }
 .feature-analytics-day span { color: var(--muted); font-size: 9px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .feature-analytics-bar { transition: none; } }
+
+/* Keep the image removal cross visually centered in its circular button. */
+.image-attachment-item button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    font-family: Arial, sans-serif;
+    flex-shrink: 0;
+}
