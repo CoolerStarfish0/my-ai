@@ -3581,7 +3581,7 @@ function extractAxonGoogleAction(text) {
 }
 
 async function getGoogleConnectionStatus(user) {
-    if (!user || user.isAnonymous) return { connected: false, reason: "Sign in with the owner Google account to connect Google services." };
+    if (!user || user.isAnonymous) return { connected: false, reason: "Sign in with an approved Google account to connect Google services." };
     const token = await user.getIdToken();
     const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=status", {
         headers: { Authorization: "Bearer " + token }, cache: "no-store"
@@ -3596,8 +3596,8 @@ async function refreshGoogleConnectionStatus() {
     const button = document.getElementById("axonGoogleConnectButton");
     const user = auth.currentUser;
     if (!status) return;
-    if (!user || user.isAnonymous || user.uid !== OWNER_UID) {
-        status.textContent = "Sign in with the Axon owner account to connect Google.";
+    if (!user || user.isAnonymous) {
+        status.textContent = "Sign in with an approved Google account to connect Google.";
         if (button) button.disabled = true;
         return;
     }
@@ -3617,8 +3617,8 @@ async function startGoogleConnection() {
     const user = auth.currentUser;
     const status = document.getElementById("axonGoogleStatus");
     const button = document.getElementById("axonGoogleConnectButton");
-    if (!user || user.isAnonymous || user.uid !== OWNER_UID) {
-        if (status) status.textContent = "Sign in with the Axon owner account first.";
+    if (!user || user.isAnonymous) {
+        if (status) status.textContent = "Sign in with an approved Google account first.";
         return;
     }
     if (button) button.disabled = true;
