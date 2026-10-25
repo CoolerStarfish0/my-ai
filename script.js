@@ -3759,7 +3759,7 @@ async function executeAxonGoogleTool(user, action, isOwner) {
     return data;
 }
 
-async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
+async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, initialAnswer = null) {
     try {
         const status = await getGoogleConnectionStatus(user);
         if (!status.connected) return {
@@ -3787,11 +3787,22 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner) {
             "Use one tool call per round, incorporate the actual result, and do not repeat a successful action. If a tool fails, explain the actual error.",
             "Current step " + (round + 1) + " of " + maxRounds + "."
         ].join("\\n");
-        const result = await callAxonBackend(user, systemPrompt + "\\n\\n" + instructions, currentPrompt, isOwner);
+        const result = round === 0 && typeof initialAnswer === "string" && initialAnswer.trim()
+            ? { answer: initialAnswer, credits: latestCredits }
+            : await callAxonBackend(user, systemPrompt + "\\n\\n" + instructions, currentPrompt, isOwner);
         latestCredits = result.credits || latestCredits;
         const raw = typeof result.answer === "string" ? result.answer.trim() : "";
         const parsed = extractAxonGoogleAction(raw);
-        if (!parsed) return { answer: raw || "I couldn't produce a valid Google action. Try describing the task more specifically.", credits: latestCredits, actionPerformed: false };
+        if (!parsed) {
+            const containsInternalMarker = raw.includes("[[AXON_GOOGLE_ACTION]]");
+            return {
+                answer: containsInternalMarker
+                    ? "I couldn't safely interpret the Google action returned by the model, so I did not run it. Please try the request again."
+                    : (raw || "I couldn't produce a valid Google action. Try describing the task more specifically."),
+                credits: latestCredits,
+                actionPerformed: false
+            };
+        }
         const explicitShortRequest = /\b(short|brief|concise|one paragraph|one sentence|under\s+\d+\s+words)\b/i.test(originalMessage);
         if (parsed.action.action === "google_create_doc" && explicitShortRequest) parsed.action.allowShort = true;
         if (parsed.visibleText) {
@@ -4439,6 +4450,19 @@ async function sendMessage() {
             result = { answer: data.answer || "", credits: data.credits || null };
         } else {
             result = await runAxonAgentLoop(user, systemPrompt, originalMessage, isOwner);
+
+            // Recovery path: execute an already-generated Google command if the
+            // intent router missed it, rather than showing its raw marker.
+            if (
+                !result.actionPerformed &&
+                typeof result.answer === "string" &&
+                result.answer.includes("[[AXON_GOOGLE_ACTION]]") &&
+                !user.isAnonymous
+            ) {
+                result = await runAxonGoogleLoop(
+                    user, systemPrompt, originalMessage, isOwner, result.answer
+                );
+            }
         }
 
         removeThinkingBubble();
