@@ -3814,7 +3814,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
                         ? "You have ONLY searched Drive; the task is NOT complete. Pick the best matching editable document from the returned files and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_read_doc with that file's exact id. Do not summarize search results to the user."
                         : "You have read the document; the task is NOT complete. Inspect the actual text. If the unfinished portion is clear, draft only the missing continuation and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_append_doc with the exact documentId from the result. If it is genuinely unclear what remains unfinished, ask one focused question instead of guessing.",
                     "Do not claim to remember this request. Do not answer with a generic capability disclaimer."
-                ].join("\\n");
+                ].join("\n");
                 continue;
             }
             const containsInternalMarker = raw.includes("[[AXON_GOOGLE_ACTION]]");
