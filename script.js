@@ -3581,7 +3581,7 @@ function extractAxonGoogleAction(text) {
             "drive_search", "classroom_list_courses", "classroom_list_students",
             "google_read_doc", "google_append_doc", "google_replace_doc_text", "google_create_doc",
             "google_read_sheet", "google_update_sheet", "google_create_sheet",
-            "google_read_form", "google_add_form_question", "google_create_form",
+            "google_read_form", "google_add_form_question", "google_add_form_questions", "google_create_form",
             "calendar_list_events", "calendar_create_event", "gmail_create_draft"
         ]);
         if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
@@ -3671,7 +3671,7 @@ async function executeAxonGoogleTool(user, action, isOwner) {
     // The backend validates the owner/approved-tester allowlist from the verified Firebase token.
     // Keep this frontend guard to signed-in accounts only; don't block approved testers by UID.
     if (!user || user.isAnonymous) throw new Error("Sign in with an approved Google account to use Google tools.");
-    const writeActions = new Set(["google_create_doc", "google_append_doc", "google_replace_doc_text", "google_update_sheet", "google_create_sheet", "google_add_form_question", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
+    const writeActions = new Set(["google_create_doc", "google_append_doc", "google_replace_doc_text", "google_update_sheet", "google_create_sheet", "google_add_form_question", "google_add_form_questions", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
     let confirmed = false;
     if (writeActions.has(action.action)) {
         const preview = [
