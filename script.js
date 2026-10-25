@@ -3573,10 +3573,63 @@ function extractAxonGoogleAction(text) {
     const startMarker = "[[AXON_GOOGLE_ACTION]]";
     const endMarker = "[[/AXON_GOOGLE_ACTION]]";
     const start = text.indexOf(startMarker);
-    const end = text.indexOf(endMarker);
-    if (start < 0 || end <= start) return null;
+    if (start < 0) return null;
+
+    const payloadStart = start + startMarker.length;
+    const explicitEnd = text.indexOf(endMarker, payloadStart);
+    let payload = "";
+    let actionEnd = -1;
+
+    // Accept the documented closed marker pair, but also tolerate the common
+    // model output that emits the opening marker followed by one JSON object
+    // and forgets the closing marker.
+    if (explicitEnd >= 0) {
+        payload = text.slice(payloadStart, explicitEnd).trim();
+        actionEnd = explicitEnd + endMarker.length;
+    } else {
+        let cursor = payloadStart;
+        while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+        if (text.slice(cursor, cursor + 7).toLowerCase() === "```json") {
+            cursor += 7;
+            while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+        } else if (text.slice(cursor, cursor + 3) === "```") {
+            cursor += 3;
+            while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+        }
+
+        if (text[cursor] !== "{") return null;
+        const objectStart = cursor;
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+        for (; cursor < text.length; cursor++) {
+            const char = text[cursor];
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (char === "\\") escaped = true;
+                else if (char === '"') inString = false;
+                continue;
+            }
+            if (char === '"') inString = true;
+            else if (char === "{") depth++;
+            else if (char === "}") {
+                depth--;
+                if (depth === 0) {
+                    cursor++;
+                    payload = text.slice(objectStart, cursor);
+                    actionEnd = cursor;
+                    break;
+                }
+            }
+        }
+        if (actionEnd < 0) return null;
+        while (actionEnd < text.length && /\s/.test(text[actionEnd])) actionEnd++;
+        if (text.slice(actionEnd, actionEnd + 3) === "```") actionEnd += 3;
+    }
+
     try {
-        const action = JSON.parse(text.slice(start + startMarker.length, end).trim());
+        payload = payload.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+        const action = JSON.parse(payload);
         const allowed = new Set([
             "drive_search", "classroom_list_courses", "classroom_list_students",
             "google_read_doc", "google_append_doc", "google_replace_doc_text", "google_create_doc",
@@ -3585,7 +3638,7 @@ function extractAxonGoogleAction(text) {
             "calendar_list_events", "calendar_create_event", "gmail_create_draft"
         ]);
         if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
-        return { action, visibleText: (text.slice(0, start) + text.slice(end + endMarker.length)).trim() };
+        return { action, visibleText: (text.slice(0, start) + text.slice(actionEnd)).trim() };
     } catch (error) {
         console.warn("Axon Google action JSON was invalid:", error);
         return null;
