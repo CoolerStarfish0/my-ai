@@ -8,9 +8,17 @@
 :root{color-scheme:dark;--bg:#080d18;--panel:#101a2b;--text:#edf4ff;--muted:#aab8cf;--accent:#65d7ff;--line:#26354c}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#102746 0,var(--bg) 52%);color:var(--text);font:16px/1.7 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:900px;margin:0 auto;padding:48px 22px 80px}.brand{color:var(--accent);font-weight:800;letter-spacing:.22em;font-size:.9rem}h1{font-size:clamp(2rem,6vw,3.2rem);line-height:1.1;margin:.5rem 0}h2{margin-top:2rem;font-size:1.35rem}p,li{color:var(--muted)}a{color:var(--accent)}.card{background:rgba(16,26,43,.88);border:1px solid var(--line);border-radius:18px;padding:22px;margin:18px 0}footer{margin-top:44px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);font-size:.9rem}
-</style></head>
+.language-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:22px 0;padding:14px 16px;background:rgba(16,26,43,.88);border:1px solid var(--line);border-radius:14px}.language-bar label{font-weight:650;color:var(--text)}#axon-language{max-width:100%;min-width:210px;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:#080d18;color:var(--text);font:inherit}.language-note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+.goog-te-banner-frame,.goog-te-banner-frame.skiptranslate{display:none!important}body{top:0!important}.goog-te-gadget{color:transparent!important;font-size:0!important}.goog-te-gadget .goog-te-combo{font:inherit!important;color:var(--text)!important;background:#080d18!important;border:1px solid var(--line)!important;border-radius:9px!important;padding:10px!important;max-width:100%}.goog-logo-link,.goog-te-gadget span{display:none!important}#google_translate_element{min-width:0}html[lang="ar"] body{direction:rtl;text-align:right}html[lang="ar"] .language-bar{flex-direction:row-reverse}html[lang="ar"] footer{direction:rtl}
+</style>
+</head>
 <body><main>
 <div class="brand">AXON AI</div><h1>Terms of Service</h1><p>Effective date: October 25, 2026</p>
+<div class="language-bar">
+<label for="axon-language">🌐 Language / Idioma / 语言</label>
+<div id="google_translate_element" aria-label="Choose page language"></div>
+</div>
+<p class="language-note">Translations are provided for convenience. If a translation differs from the original English text, the English text is the reference version.</p>
 <div class="card"><strong>Please use Axon responsibly.</strong><p>Axon is an evolving AI project. Its responses can be wrong, incomplete, or out of date. Review important information and actions independently.</p></div>
 <h2>1. Acceptance</h2><p>By accessing or using Axon AI, you agree to these terms. If you do not agree, do not use the service. If you are under the age of majority where you live, use Axon with a parent or guardian's permission and guidance.</p>
 <h2>2. The service</h2><p>Axon provides AI chat and may provide memory, games, shared chats, and optional integrations with third-party services such as Google. Features may change, be unavailable, or be discontinued. We do not guarantee continuous availability, accuracy, or suitability for a particular purpose.</p>
@@ -24,4 +32,28 @@ main{max-width:900px;margin:0 auto;padding:48px 22px 80px}.brand{color:var(--acc
 <h2>10. Suspension and changes</h2><p>Access may be restricted or suspended to protect the service, users, or security, or to address misuse. These terms may change as Axon develops. The effective date will be updated when material changes are made.</p>
 <h2>11. Contact</h2><p>Questions about these terms: <a href="mailto:yuvrajchoksey92@gmail.com">yuvrajchoksey92@gmail.com</a>.</p>
 <footer><a href="./">Back to Axon AI</a> · <a href="./privacy.html">Privacy Policy</a></footer>
-</main></body></html>
+</main>
+<script>
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({
+    pageLanguage:'en',
+    includedLanguages:'en,es,zh-CN,zh-TW,fr,de,ja,pt,ar,hi,ru,ko,it,nl,tr',
+    autoDisplay:false
+  },'google_translate_element');
+}
+(function(){
+  const langCodes={'en':'en','es':'es','zh-CN':'zh-CN','zh-TW':'zh-TW','fr':'fr','de':'de','ja':'ja','pt':'pt','ar':'ar','hi':'hi','ru':'ru','ko':'ko','it':'it','nl':'nl','tr':'tr'};
+  function syncLanguage(){
+    const cookie=(document.cookie.match(/(?:^|; )googtrans=([^;]+)/)||[])[1]||'';
+    const lang=decodeURIComponent(cookie).split('/').pop();
+    if(langCodes[lang]){
+      document.documentElement.lang=lang;
+      document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+    }
+  }
+  new MutationObserver(syncLanguage).observe(document.documentElement,{attributes:true,attributeFilter:['lang','dir']});
+  window.addEventListener('load',syncLanguage);
+})();
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body></html>
