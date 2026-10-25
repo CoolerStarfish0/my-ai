@@ -3553,7 +3553,9 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
 function looksLikeGoogleRequest(message) {
     const text = String(message || "");
     const hasService = /\b(google\s*(?:docs?|documents?|forms?|sheets?|drive|classroom|sites?|calendar|gmail)|classroom|gmail|spreadsheet|google\s*sites)\b/i.test(text);
-    const hasTask = /\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar)\b/i.test(text);
+    // Include continuation verbs: otherwise "open the Google Doc and complete it"
+    // misses the Google agent because "complete" was not considered a task verb.
+    const hasTask = /\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|complete|finish|continue|resume|carry on|pick\s+up|from\s+where|where\s+i\s+stopped|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar)\b/i.test(text);
     const directGoogleRequest = (hasService && hasTask) || (/\b(design class|class roster|classmates)\b/i.test(text) && /\b(form|pick|choose|students?|names)\b/i.test(text));
 
     // Follow-up requests often omit "Google" because the user is continuing the
