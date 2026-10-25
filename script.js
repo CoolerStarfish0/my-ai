@@ -3774,6 +3774,10 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
 
     let currentPrompt = originalMessage;
     let latestCredits = null;
+    let lastGoogleToolResult = null;
+    let forcedContinuationRetries = 0;
+    const isDocumentContinuation = /\b(open|go on|go to|finish|complete|continue|resume|pick up)\b/i.test(originalMessage) &&
+        /\b(google\s*(?:docs?|documents?)|document)\b/i.test(originalMessage);
     const seenActions = new Set();
     const maxRounds = 8;
     for (let round = 0; round < maxRounds; round++) {
@@ -3797,6 +3801,22 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
         const raw = typeof result.answer === "string" ? result.answer.trim() : "";
         const parsed = extractAxonGoogleAction(raw);
         if (!parsed) {
+            // Local models sometimes narrate Drive search results and stop instead
+            // of continuing the mandatory read -> draft -> append workflow. Retry
+            // with the actual tool result before showing that premature response.
+            if (isDocumentContinuation && forcedContinuationRetries < 2 &&
+                lastGoogleToolResult && ["drive_search", "google_read_doc"].includes(lastGoogleToolResult.action)) {
+                forcedContinuationRetries++;
+                currentPrompt = [
+                    "Original user request: " + originalMessage,
+                    "Actual previous Google tool result (authoritative): " + JSON.stringify(lastGoogleToolResult).slice(0, 24000),
+                    lastGoogleToolResult.action === "drive_search"
+                        ? "You have ONLY searched Drive; the task is NOT complete. Pick the best matching editable document from the returned files and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_read_doc with that file's exact id. Do not summarize search results to the user."
+                        : "You have read the document; the task is NOT complete. Inspect the actual text. If the unfinished portion is clear, draft only the missing continuation and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_append_doc with the exact documentId from the result. If it is genuinely unclear what remains unfinished, ask one focused question instead of guessing.",
+                    "Do not claim to remember this request. Do not answer with a generic capability disclaimer."
+                ].join("\\n");
+                continue;
+            }
             const containsInternalMarker = raw.includes("[[AXON_GOOGLE_ACTION]]");
             return {
                 answer: containsInternalMarker
@@ -3835,6 +3855,8 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
             return { answer: "⚠️ Google action failed: " + (error.message || "Unknown error") + ". I haven't claimed the task is complete.", credits: latestCredits, actionPerformed: true };
         }
         if (toolResult.cancelled) return { answer: toolResult.message, credits: latestCredits, actionPerformed: false };
+        lastGoogleToolResult = toolResult;
+        forcedContinuationRetries = 0;
         currentPrompt = "Original user request:\\n" + originalMessage +
             "\\n\\nPrevious Google action:\\n" + JSON.stringify(parsed.action) +
             "\\n\\nActual tool result:\\n" + JSON.stringify(toolResult).slice(0, 30000) +
@@ -4559,6 +4581,14 @@ function shouldLearnMessage(
                 pattern.test(text)
         )
     ) {
+        return false;
+    }
+
+    // Do not store an action request as a personal memory just because it
+    // contains phrases such as "I have" (e.g. "finish the part I have left").
+    const actionRequest = /\b(open|go on|go to|finish|complete|continue|resume|pick up|edit|update|write|read|search|find|create|make|add|append|replace|delete|remove|look up|check)\b/i.test(text);
+    const toolTarget = /\b(google\s*(?:docs?|documents?|drive|sheets?|forms?)|document|spreadsheet|form|file|website|repository|github|calendar|email)\b/i.test(text);
+    if (actionRequest && toolTarget) {
         return false;
     }
 
