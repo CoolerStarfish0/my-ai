@@ -3656,7 +3656,9 @@ window.addEventListener("load", () => {
 });
 
 async function executeAxonGoogleTool(user, action, isOwner) {
-    if (!isOwner || !user || user.isAnonymous || user.uid !== OWNER_UID) throw new Error("Owner access is required for Google tools.");
+    // The backend validates the owner/approved-tester allowlist from the verified Firebase token.
+    // Keep this frontend guard to signed-in accounts only; don't block approved testers by UID.
+    if (!user || user.isAnonymous) throw new Error("Sign in with an approved Google account to use Google tools.");
     const writeActions = new Set(["google_create_doc", "google_append_doc", "google_replace_doc_text", "google_update_sheet", "google_create_sheet", "google_add_form_question", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
     let confirmed = false;
     if (writeActions.has(action.action)) {
@@ -3768,7 +3770,8 @@ async function runAxonAgentLoop(
     isOwner
 ) {
 
-    if (isOwner && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\bgoogle\s*sites?\b/i.test(originalMessage))) {
+    // Route Google requests for signed-in users; the Google backend enforces the owner/tester allowlist.
+    if (user && !user.isAnonymous && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\bgoogle\s*sites?\b/i.test(originalMessage))) {
         return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
