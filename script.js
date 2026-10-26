@@ -4696,10 +4696,16 @@ async function performCanvaChatAction(prompt, action) {
         }
         const title = inferCanvaTitle(prompt);
         const designType = inferCanvaDesignType(prompt);
-        const data = await canvaApi("create-design", "POST", { title, designType });
+        const isPresentation = designType === "presentation";
+        const data = isPresentation
+            ? await canvaApi("create-presentation", "POST", { title, prompt })
+            : await canvaApi("create-design", "POST", { title, designType });
         const design = data.design || {};
         const url = design.urls?.edit_url || design.urls?.view_url || design.url;
-        return { handled: true, answer: "Created " + String(design.title || title) + " in Canva." + (typeof url === "string" && /^https:\/\//i.test(url) ? "\nOpen your design: " + url : "") };
+        const description = isPresentation
+            ? "Created a presentation with " + Number(data.slideCount || 6) + " populated slides and visual callouts in Canva."
+            : "Created " + String(design.title || title) + " in Canva.";
+        return { handled: true, answer: description + (typeof url === "string" && /^https:\/\//i.test(url) ? "\nOpen your design: " + url : "") };
     } catch (error) {
         return { handled: true, answer: "I couldn't complete that Canva action: " + (error.message || "Canva request failed.") };
     }
