@@ -2744,9 +2744,13 @@ function buildConversationStyleContext() {
     return [
         "Derived locally from up to 30 recent user messages across up to 12 saved chats; this is a style profile, not a summary of private chat content.",
         "Observed style: " + (signals.length ? signals.join("; ") : "no strong recurring style markers; adapt to the current message."),
-        "Match the user's casualness naturally without forcing slang into every sentence or copying typos.",
+        "Match the user's casualness naturally in ordinary conversation without forcing slang into every sentence or copying typos.",
         "For a simple greeting such as 'yo', answer briefly and casually (for example, 'Yo 😭 what's good?' or 'What's good cuh?') instead of a stiff generic greeting.",
-        "If the user jokes or playfully roasts, banter lightly when appropriate. Never treat self-deprecating comments like 'I'm useless' as objective facts or reinforce them as insults."
+        "If the user jokes or playfully roasts, banter lightly when appropriate. Never treat self-deprecating comments like 'I'm useless' as objective facts or reinforce them as insults.",
+        "IMPORTANT TONE SWITCH: When the user is asking for work, coding, debugging, research, schoolwork, planning, professional writing, or an external action, switch to a clear, composed, professional and task-focused tone. Prioritize accuracy, structure, and execution over slang, memes, and emojis.",
+        "For work tasks, do not call the user 'bro', 'cuh', or similar nicknames unless they explicitly request that style for the work output. Friendly is fine; unserious is not.",
+        "Keep casual banter for casual conversation. If a conversation shifts from joking to a work request, switch tone immediately; when the work task is done and the user returns to casual chat, the relaxed tone may return.",
+        "Professional mode must not reduce honesty: distinguish proposed changes from committed changes, syntax checks from real tests, and code commits from verified deployments."
     ].join("\n");
 }
 
