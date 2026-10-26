@@ -2732,6 +2732,13 @@ function buildSystemPrompt(
     const currentRank =
         getCurrentRank(user);
 
+    const now = new Date();
+    const currentDateTime = now.toLocaleString("en-IN", {
+        dateStyle: "full",
+        timeStyle: "long"
+    });
+    const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local device timezone";
+
     const locationPromptContext = approximateLocation
         ? [approximateLocation.city, approximateLocation.region, approximateLocation.country].filter(Boolean).join(", ")
         : "Unavailable; do not guess the user's location.";
@@ -2744,6 +2751,10 @@ function buildSystemPrompt(
     return `
 
 # AXON — CORE SYSTEM
+
+Current date and time (from the user's device clock): ${currentDateTime}
+User timezone: ${currentTimeZone}
+For questions about the current time or date, answer directly from these values. Do not claim you lack access to a clock. The device clock must be correctly set for this information to be accurate.
 
 Approximate IP-based location (may reflect a VPN/proxy server; never treat it as exact):
 ${locationPromptContext}
@@ -2816,6 +2827,8 @@ ${userDisplayName}
 
 Email:
 ${userEmail}
+
+When drafting an email on behalf of the user, sign with the current user's display name: ${userDisplayName}. Do not leave placeholders such as [Your Name] unless the user explicitly asks for a placeholder.
 
 Current rank:
 ${currentRank.name}
@@ -3785,6 +3798,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
             "AXON AUTONOMOUS GOOGLE AGENT: use tools in normal chat; no local computer access toggle is required.",
             "For a task requiring Google information or actions, emit exactly one valid JSON action between [[AXON_GOOGLE_ACTION]] and [[/AXON_GOOGLE_ACTION]]. Never invent tool results. Treat follow-up messages as continuations of the active task when recent conversation identifies the target file. Do not merely explain how the user can make a change themselves; use the available Google action to make it, after the normal confirmation prompt.",
             "Read-only tools: drive_search { \"action\":\"drive_search\", \"query\":\"design\" }; classroom_list_courses { \"action\":\"classroom_list_courses\" }; classroom_list_students { \"action\":\"classroom_list_students\", \"courseId\":\"ID returned by course listing\" }; google_read_doc { \"action\":\"google_read_doc\", \"documentId\":\"ID from Drive search\" }; google_read_sheet { \"action\":\"google_read_sheet\", \"spreadsheetId\":\"ID from Drive search\", \"range\":\"A1:Z100\" }; google_read_form { \"action\":\"google_read_form\", \"formId\":\"ID from Drive search\" }; calendar_list_events { \"action\":\"calendar_list_events\" }.",
+            "For gmail_create_draft, use the current user's display name from the system prompt in the sign-off; never leave placeholders like [Your Name]. Include the complete email body in the action's text field and use **bold** Markdown when useful; the backend converts supported formatting to HTML.",
             "Write tools (confirmation required): google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_append_doc { \"action\":\"google_append_doc\", \"documentId\":\"ID\", \"text\":\"Append text\" }; google_replace_doc_text { \"action\":\"google_replace_doc_text\", \"documentId\":\"ID\", \"findText\":\"unique exact text\", \"replaceText\":\"replacement\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_update_sheet { \"action\":\"google_update_sheet\", \"spreadsheetId\":\"ID\", \"range\":\"A1:B2\", \"values\":[[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"description\":\"Optional description\", \"quiz\":true, \"questions\":[{\"question\":\"Question\",\"options\":[\"Option 1\",\"Option 2\"],\"correct_answer\":\"2\",\"required\":true}] }; google_add_form_question { \"action\":\"google_add_form_question\", \"formId\":\"ID\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; google_add_form_questions { \"action\":\"google_add_form_questions\", \"formId\":\"ID from this conversation's existing form\", \"questions\":[{\"question\":\"Question 1\",\"options\":[\"Option 1\",\"Option 2\"]},{\"question\":\"Question 2\",\"options\":[\"Option 1\",\"Option 2\"]}] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }. For a form with multiple questions, put every question in the questions array in one google_create_form call, with 2–100 non-empty options per question. correct_answer can be the 1-based option number or exact option text. If creating a form with questions, do not omit any options. The backend verifies the saved form; only say it is complete if verified is true. If verified is false, report the warnings and use the returned formId to recover without creating duplicates.",
             "FOLLOW-UP GOOGLE FORM EDITS: If the user asks to add or change questions and recent conversation identifies an existing Google Form, extract and reuse that formId from the conversation's edit/view URL. Use google_add_form_questions to add all requested questions to that existing form in one batch. Do not create a second form and do not merely give manual instructions. If the form ID is not visible in recent context, search Drive for the form title before asking the user to provide it. After the write, report completion only if the tool's verified field is true; include the existing form's edit and responder links from the actual result.",
             "DOCUMENT QUALITY RULES: For google_create_doc, write the actual finished document in action.text before calling the tool. Never use templates, fill-in-the-blank text, bracketed placeholders such as [year], [insert core focus], [Service 1], or generic filler. For a broad request to write about a company, produce a polished, informative overview with real, established facts, usually at least 250 words unless the user requests a short version. Include useful sections such as overview, history/background, products and brands, business/market, and conclusion when relevant. Do not invent exact figures, dates, contacts, or claims you are unsure about; phrase uncertainty honestly. If content is incomplete, regenerate it before creating any file. After creation, only claim success if the backend returns verified: true; if false, explain the warning and repair the existing document rather than creating a duplicate.",
@@ -3857,6 +3871,22 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
         if (toolResult.cancelled) return { answer: toolResult.message, credits: latestCredits, actionPerformed: false };
         lastGoogleToolResult = toolResult;
         forcedContinuationRetries = 0;
+        if (parsed.action.action === "gmail_create_draft") {
+            const draftUrl = toolResult.draftUrl || (toolResult.draftId
+                ? "https://mail.google.com/mail/u/0/#drafts/" + encodeURIComponent(toolResult.draftId)
+                : "https://mail.google.com/mail/u/0/#drafts");
+            const emailPreview = [
+                "📧 **Gmail draft saved — not sent**",
+                "",
+                "**To:** " + String(toolResult.to || parsed.action.to || ""),
+                "**Subject:** " + String(toolResult.subject || parsed.action.subject || ""),
+                "",
+                String(toolResult.text || parsed.action.text || ""),
+                "",
+                "[Open this draft in Gmail](" + draftUrl + ")"
+            ].join("\\n");
+            return { answer: emailPreview, credits: latestCredits, actionPerformed: true };
+        }
         currentPrompt = "Original user request:\\n" + originalMessage +
             "\\n\\nPrevious Google action:\\n" + JSON.stringify(parsed.action) +
             "\\n\\nActual tool result:\\n" + JSON.stringify(toolResult).slice(0, 30000) +
@@ -5018,6 +5048,25 @@ function buildConversationContext(excludeLatestPrompt = "") {
 
 // Render fenced code blocks safely, with a one-click copy button.
 // All generated content is inserted with textContent (never interpreted as HTML).
+function appendFormattedMessageText(container, text) {
+    // Render a small safe Markdown subset using DOM APIs; never inject model-generated HTML.
+    const lines = String(text || "").split("\n");
+    lines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) container.appendChild(document.createElement("br"));
+        const boldPattern = /\*\*(.+?)\*\*/g;
+        let last = 0;
+        let match;
+        while ((match = boldPattern.exec(line)) !== null) {
+            if (match.index > last) container.appendChild(document.createTextNode(line.slice(last, match.index)));
+            const strong = document.createElement("strong");
+            strong.textContent = match[1];
+            container.appendChild(strong);
+            last = boldPattern.lastIndex;
+        }
+        if (last < line.length) container.appendChild(document.createTextNode(line.slice(last)));
+    });
+}
+
 function renderMessageContent(container, messageText) {
     const codeFence = /```([^\n`]*)\n([\s\S]*?)```/g;
     let lastIndex = 0;
@@ -5030,7 +5079,7 @@ function renderMessageContent(container, messageText) {
         if (before) {
             const paragraph = document.createElement("div");
             paragraph.className = "message-text";
-            paragraph.textContent = before;
+            appendFormattedMessageText(paragraph, before);
             container.appendChild(paragraph);
         }
 
@@ -5097,7 +5146,7 @@ function renderMessageContent(container, messageText) {
     if (remaining || !foundCode) {
         const paragraph = document.createElement("div");
         paragraph.className = "message-text";
-        paragraph.textContent = remaining;
+        appendFormattedMessageText(paragraph, remaining);
         container.appendChild(paragraph);
     }
 }
