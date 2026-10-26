@@ -3816,7 +3816,7 @@ async function refreshCanvaConnectionStatus() {
     status.textContent = "Checking Canva connection…";
     try {
         const data = await getCanvaStatus();
-        status.textContent = data.connected ? "Canva is connected to Axon. Create or load designs below." : "Canva is not connected yet. Connect once to authorize Axon.";
+        status.textContent = data.connected ? "Canva is connected to Axon. Describe what you want to create in chat." : "Canva is not connected yet. Connect once to authorize Axon.";
         updateCanvaToolButtons(Boolean(data.connected));
     } catch (error) {
         status.textContent = error.message || "Canva status unavailable.";
