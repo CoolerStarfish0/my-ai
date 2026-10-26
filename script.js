@@ -4570,6 +4570,90 @@ confirmation, or other human verification appears, STOP.
 // SEND MESSAGE
 // ==========================================
 
+
+// Canva actions are inferred from ordinary chat prompts instead of a separate form.
+let pendingCanvaPrompt = null;
+
+function inferCanvaDesignType(prompt) {
+    const t = String(prompt || "").toLowerCase();
+    if (/\b(presentation|slides|slide deck|pitch deck)\b/.test(t)) return "presentation";
+    if (/\b(whiteboard|brainstorm|mind map)\b/.test(t)) return "whiteboard";
+    if (/\b(video|reel|short)\b/.test(t)) return "video";
+    if (/\b(website|web page|landing page)\b/.test(t)) return "website";
+    if (/\b(email|newsletter)\b/.test(t)) return "email";
+    if (/\b(print|brochure|flyer|poster|business card|invitation|resume|résumé|cv)\b/.test(t)) return "print";
+    if (/\b(instagram|social media|thumbnail|youtube|tiktok|banner|post)\b/.test(t)) return "social_media";
+    return "doc";
+}
+
+function inferCanvaTitle(prompt) {
+    let title = String(prompt || "").trim()
+        .replace(/^(please\s+)?(can you\s+|could you\s+|help me\s+)?(make|create|design|build|generate|produce)\s+(me\s+)?/i, "")
+        .replace(/\b(on|using|with|in)\s+canva\b/ig, "")
+        .replace(/[.!?]+$/, "").trim().replace(/^(a|an|the)\s+/i, "");
+    return (title || "My Canva design").slice(0, 100);
+}
+
+function detectCanvaIntent(prompt) {
+    const t = String(prompt || "").toLowerCase();
+    const hasCanva = /\bcanva\b/.test(t);
+    const make = /\b(make|create|design|build|generate|produce)\b/.test(t);
+    const browse = /\b(show|find|list|open|search|load)\b/.test(t);
+    const object = /\b(poster|presentation|slides|slide deck|thumbnail|logo|flyer|brochure|banner|invitation|resume|cv|website|landing page|whiteboard|video|social media|instagram post|design|graphic|newsletter|business card)\b/.test(t);
+    const list = browse && /\b(my\s+)?(canva\s+)?designs\b/.test(t);
+    return { hasCanva, create: make && (object || hasCanva), list: list || (hasCanva && browse), designLike: make && object && !hasCanva };
+}
+
+async function handleCanvaChatIntent(prompt) {
+    const text = String(prompt || "").trim();
+    if (pendingCanvaPrompt) {
+        if (/^(yes|yeah|yep|sure|ok|okay|do it|canva)$/i.test(text)) {
+            const original = pendingCanvaPrompt;
+            pendingCanvaPrompt = null;
+            return performCanvaChatAction(original, "create");
+        }
+        if (/^(no|nope|not canva|different platform)$/i.test(text)) {
+            pendingCanvaPrompt = null;
+            return { handled: true, answer: "No problem — which platform would you like to use instead?" };
+        }
+        pendingCanvaPrompt = null;
+    }
+    const intent = detectCanvaIntent(prompt);
+    if (intent.designLike) {
+        pendingCanvaPrompt = prompt;
+        return { handled: true, answer: "I can help make that. Build it on Canva? Reply Yes or No." };
+    }
+    if (intent.create) return performCanvaChatAction(prompt, "create");
+    if (intent.list) return performCanvaChatAction(prompt, "list");
+    return { handled: false };
+}
+
+async function performCanvaChatAction(prompt, action) {
+    try {
+        const user = auth.currentUser;
+        if (!user || user.isAnonymous) return { handled: true, answer: "Sign in with Google, then click Connect Canva above the chat to authorize Axon." };
+        const status = await getCanvaStatus();
+        if (!status.connected) return { handled: true, answer: "Canva isn't connected yet. Click Connect Canva above the chat, authorize Axon, then send your request again." };
+        if (action === "list") {
+            const data = await canvaApi("designs", "GET", null, "&limit=20");
+            const items = Array.isArray(data.items) ? data.items : [];
+            if (!items.length) return { handled: true, answer: "I couldn't find any Canva designs in your account." };
+            return { handled: true, answer: "Your Canva designs:\n" + items.slice(0, 20).map((item, i) => {
+                const url = item.urls?.edit_url || item.urls?.view_url || item.url;
+                return (i + 1) + ". " + String(item.title || "Untitled design") + (typeof url === "string" && /^https:\/\//i.test(url) ? " — " + url : "");
+            }).join("\n") };
+        }
+        const title = inferCanvaTitle(prompt);
+        const designType = inferCanvaDesignType(prompt);
+        const data = await canvaApi("create-design", "POST", { title, designType });
+        const design = data.design || {};
+        const url = design.urls?.edit_url || design.urls?.view_url || design.url;
+        return { handled: true, answer: "Created " + String(design.title || title) + " in Canva." + (typeof url === "string" && /^https:\/\//i.test(url) ? "\nOpen your design: " + url : "") };
+    } catch (error) {
+        return { handled: true, answer: "I couldn't complete that Canva action: " + (error.message || "Canva request failed.") };
+    }
+}
+
 async function sendMessage() {
 
     const user =
@@ -4603,6 +4687,15 @@ async function sendMessage() {
     if (activeSharedChatId) {
         await sendSharedChatMessage(userMessage, attachments);
         return;
+    }
+
+    if (!attachments.length) {
+        const canvaIntent = await handleCanvaChatIntent(originalMessage);
+        if (canvaIntent.handled) {
+            addConversationMessage("AXON", canvaIntent.answer);
+            addMessage("AI", canvaIntent.answer);
+            return;
+        }
     }
 
     // Calendar actions are handled locally so Axon only confirms events
