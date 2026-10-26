@@ -3688,6 +3688,8 @@ async function refreshGoogleConnectionStatus() {
         status.textContent = data.connected
             ? "Google connected" + (data.email ? " · " + data.email : "") + "."
             : "Google not connected yet. Connect once to enable Google tools.";
+        const permissionSelect = document.getElementById("axonGooglePermissionMode");
+        if (permissionSelect) permissionSelect.value = data.googlePolicy || "ask";
     } catch (error) {
         status.textContent = error.message || "Google connection status unavailable.";
     }
@@ -3719,6 +3721,39 @@ async function startGoogleConnection() {
 
 document.getElementById("axonGoogleConnectButton")?.addEventListener("click", startGoogleConnection);
 document.getElementById("axonGoogleRefreshButton")?.addEventListener("click", () => { void refreshGoogleConnectionStatus(); });
+document.getElementById("axonGoogleSavePermissionsButton")?.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    const status = document.getElementById("axonGoogleStatus");
+    const select = document.getElementById("axonGooglePermissionMode");
+    const saveButton = document.getElementById("axonGoogleSavePermissionsButton");
+    if (!user || user.isAnonymous) {
+        if (status) status.textContent = "Sign in before changing agent permissions.";
+        return;
+    }
+    const policy = select?.value || "ask";
+    const warning = policy === "full"
+        ? "Full Access allows supported Google write actions without individual confirmations, including edits to existing content. Continue?"
+        : policy === "trusted"
+            ? "Trusted Actions allows creating new drafts, files, forms, sheets, and calendar events without individual confirmations. Continue?"
+            : "Switch to asking for confirmation before every Google write action?";
+    if (!window.confirm(warning)) return;
+    if (saveButton) saveButton.disabled = true;
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=permissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ googlePolicy: policy })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not save permissions.");
+        if (status) status.textContent = "Google permissions saved: " + ({ ask: "Ask every time", trusted: "Trusted Actions", full: "Full Access" }[data.googlePolicy] || data.googlePolicy) + ".";
+    } catch (error) {
+        if (status) status.textContent = error.message || "Could not save permissions.";
+    } finally {
+        if (saveButton) saveButton.disabled = false;
+    }
+});
 window.addEventListener("load", () => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("google_connected") === "1";
@@ -3741,7 +3776,14 @@ async function executeAxonGoogleTool(user, action, isOwner) {
     if (!user || user.isAnonymous) throw new Error("Sign in with an approved Google account to use Google tools.");
     const writeActions = new Set(["google_create_doc", "google_append_doc", "google_replace_doc_text", "google_update_sheet", "google_create_sheet", "google_add_form_question", "google_add_form_questions", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
     let confirmed = false;
+    let policy = "ask";
     if (writeActions.has(action.action)) {
+        try {
+            const currentPermissions = await getGoogleConnectionStatus(user);
+            policy = currentPermissions.googlePolicy || "ask";
+        } catch {}
+        const trustedActions = new Set(["google_create_doc", "google_create_sheet", "google_create_form", "calendar_create_event", "gmail_create_draft"]);
+        const canSkipConfirmation = policy === "full" || (policy === "trusted" && trustedActions.has(action.action));
         const preview = [
             "Axon wants to create or change content in Google.",
             "",
@@ -3760,8 +3802,8 @@ async function executeAxonGoogleTool(user, action, isOwner) {
             "",
             action.action === "gmail_create_draft" ? "This creates a draft only; it will NOT send the email." : "Continue with this Google action?"
         ].join("\\n");
-        if (!window.confirm(preview)) return { cancelled: true, message: "You declined the Google action. No change was made." };
-        confirmed = true;
+        if (!canSkipConfirmation && !window.confirm(preview)) return { cancelled: true, message: "You declined the Google action. No change was made." };
+        confirmed = canSkipConfirmation;
     }
     const token = await user.getIdToken();
     const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=tool", {
