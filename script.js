@@ -3884,7 +3884,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
                 String(toolResult.text || parsed.action.text || ""),
                 "",
                 "[Open this draft in Gmail](" + draftUrl + ")"
-            ].join("\\n");
+            ].join("\n");
             return { answer: emailPreview, credits: latestCredits, actionPerformed: true };
         }
         currentPrompt = "Original user request:\\n" + originalMessage +
@@ -5049,19 +5049,28 @@ function buildConversationContext(excludeLatestPrompt = "") {
 // Render fenced code blocks safely, with a one-click copy button.
 // All generated content is inserted with textContent (never interpreted as HTML).
 function appendFormattedMessageText(container, text) {
-    // Render a small safe Markdown subset using DOM APIs; never inject model-generated HTML.
+    // Render a safe Markdown subset using DOM APIs; never inject model-generated HTML.
     const lines = String(text || "").split("\n");
     lines.forEach((line, lineIndex) => {
         if (lineIndex > 0) container.appendChild(document.createElement("br"));
-        const boldPattern = /\*\*(.+?)\*\*/g;
+        const tokenPattern = /\*\*(.+?)\*\*|\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g;
         let last = 0;
         let match;
-        while ((match = boldPattern.exec(line)) !== null) {
+        while ((match = tokenPattern.exec(line)) !== null) {
             if (match.index > last) container.appendChild(document.createTextNode(line.slice(last, match.index)));
-            const strong = document.createElement("strong");
-            strong.textContent = match[1];
-            container.appendChild(strong);
-            last = boldPattern.lastIndex;
+            if (match[1] !== undefined) {
+                const strong = document.createElement("strong");
+                strong.textContent = match[1];
+                container.appendChild(strong);
+            } else {
+                const link = document.createElement("a");
+                link.href = match[3];
+                link.textContent = match[2];
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                container.appendChild(link);
+            }
+            last = tokenPattern.lastIndex;
         }
         if (last < line.length) container.appendChild(document.createTextNode(line.slice(last)));
     });
