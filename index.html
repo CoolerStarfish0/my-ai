@@ -329,6 +329,16 @@
                     <button id="workModeStartButton" type="button">Allow computer access</button>
                     <button id="workModeStopButton" type="button" disabled>Disable computer access</button>
                 </div>
+                <div class="axon-agent-actions" aria-label="Google agent permissions">
+                    <label for="axonGooglePermissionMode">Google action permissions</label>
+                    <select id="axonGooglePermissionMode">
+                        <option value="ask">Ask every time</option>
+                        <option value="trusted">Trusted actions (new drafts/files/events)</option>
+                        <option value="full">Full access (skip per-action confirmations)</option>
+                    </select>
+                    <button id="axonGoogleSavePermissionsButton" type="button">Save permissions</button>
+                </div>
+                <p class="axon-agent-note">Trusted Actions can create new drafts, documents, sheets, forms, and calendar events without asking each time. Full Access also allows supported edits without per-action confirmation. You can change this setting here at any time. Google, Canva, and GitHub authorization remain separate.</p>
                 <p id="axonComputerAccessStatus" class="axon-agent-note" role="status">Local computer access is off. Enable it only when you want Axon to interact with your computer.</p>
                 <p class="axon-agent-note">GitHub tools run in normal chat for the owner account. Once connected, Google tools can search Drive and Classroom, read and edit Docs, read and update Sheets, inspect and create Forms, read and schedule Calendar events, and save Gmail drafts. Axon confirms writes and verifies tool results. Google Sites editing uses the optional local browser-control capability.</p>
                 <p class="axon-agent-note"><a href="https://github.com/CoolerStarfish0/5158-ai-backend/blob/main/GOOGLE_AGENT_SETUP.md" target="_blank" rel="noopener noreferrer">Open the one-time Google setup guide ↗</a></p>
