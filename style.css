@@ -2803,3 +2803,75 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .axon-canva-design-results{display:grid;gap:8px}
 .axon-canva-design-item{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--input-bg,rgba(128,128,128,.08))}
 .axon-canva-design-item a{overflow-wrap:anywhere}
+
+
+
+/* Google action permissions — match Axon's dark glass / purple UI */
+.axon-agent-actions[aria-label="Google agent permissions"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-hover);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .10), rgba(10, 6, 17, .72));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 10px 28px rgba(0,0,0,.18);
+}
+.axon-agent-actions[aria-label="Google agent permissions"] label {
+    grid-column: 1 / -1;
+    color: var(--text);
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+#axonGooglePermissionMode {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 10px 38px 10px 12px;
+    border: 1px solid rgba(168, 85, 247, .34);
+    border-radius: 10px;
+    outline: none;
+    background-color: rgba(5, 3, 10, .88);
+    color: var(--text);
+    font: inherit;
+    font-size: .86rem;
+    color-scheme: dark;
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+#axonGooglePermissionMode:hover { border-color: rgba(168, 85, 247, .65); }
+#axonGooglePermissionMode:focus-visible {
+    border-color: var(--purple-bright);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, .18);
+}
+#axonGoogleSavePermissionsButton {
+    min-height: 42px;
+    padding: 10px 15px;
+    border: 1px solid rgba(168, 85, 247, .52);
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, .42), rgba(88, 28, 135, .40));
+    color: #f7f0ff;
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+#axonGoogleSavePermissionsButton:hover {
+    border-color: rgba(192, 132, 252, .85);
+    background: linear-gradient(135deg, rgba(124, 58, 237, .58), rgba(88, 28, 135, .56));
+    transform: translateY(-1px);
+}
+#axonGoogleSavePermissionsButton:focus-visible {
+    outline: 2px solid var(--purple-soft);
+    outline-offset: 3px;
+}
+@media (max-width: 560px) {
+    .axon-agent-actions[aria-label="Google agent permissions"] {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 12px;
+    }
+    .axon-agent-actions[aria-label="Google agent permissions"] label { grid-column: auto; }
+    #axonGoogleSavePermissionsButton { width: 100%; }
+}
