@@ -2700,6 +2700,56 @@ messageInput.addEventListener(
     }
 );
 
+// Build a tiny style profile from saved chats locally. This does not call an AI model
+// or send the full archive; it only injects derived style signals into the prompt.
+function buildConversationStyleContext() {
+    const recentUserMessages = [];
+    const chats = Array.isArray(savedChats) ? savedChats.slice(0, 12) : [];
+
+    for (const chat of chats) {
+        if (!Array.isArray(chat?.messages)) continue;
+        for (let i = chat.messages.length - 1; i >= 0; i--) {
+            const message = chat.messages[i];
+            if (message?.role === "USER" && typeof message.content === "string" && message.content.trim()) {
+                recentUserMessages.push(message.content.trim().slice(0, 240));
+                if (recentUserMessages.length >= 30) break;
+            }
+        }
+        if (recentUserMessages.length >= 30) break;
+    }
+
+    if (!recentUserMessages.length && Array.isArray(conversationHistory)) {
+        for (let i = conversationHistory.length - 1; i >= 0 && recentUserMessages.length < 20; i--) {
+            const message = conversationHistory[i];
+            if (message?.role === "USER" && typeof message.content === "string" && message.content.trim()) {
+                recentUserMessages.push(message.content.trim().slice(0, 240));
+            }
+        }
+    }
+
+    if (!recentUserMessages.length) {
+        return "No previous-chat style signals are available yet; respond naturally and adapt to the user's current tone.";
+    }
+
+    const sample = recentUserMessages.join(" ");
+    const casualSlang = (sample.match(/\b(yo|bro|bruh|cuh|gang|dude|nah|fr|ngl|lmao|lowkey|yooo|dih)\b/gi) || []).length;
+    const playfulMarkers = (sample.match(/[😭💀😂🤣🙏🔥🗣️]/gu) || []).length;
+    const shortMessages = recentUserMessages.filter(message => message.length <= 45).length;
+    const signals = [];
+    if (casualSlang >= 2) signals.push("very casual, slang-heavy wording");
+    else if (casualSlang === 1) signals.push("some casual slang");
+    if (playfulMarkers >= 2) signals.push("playful banter and emojis");
+    if (shortMessages / recentUserMessages.length >= 0.45) signals.push("often brief, conversational messages");
+
+    return [
+        "Derived locally from up to 30 recent user messages across up to 12 saved chats; this is a style profile, not a summary of private chat content.",
+        "Observed style: " + (signals.length ? signals.join("; ") : "no strong recurring style markers; adapt to the current message."),
+        "Match the user's casualness naturally without forcing slang into every sentence or copying typos.",
+        "For a simple greeting such as 'yo', answer briefly and casually (for example, 'Yo 😭 what's good?' or 'What's good cuh?') instead of a stiff generic greeting.",
+        "If the user jokes or playfully roasts, banter lightly when appropriate. Never treat self-deprecating comments like 'I'm useless' as objective facts or reinforce them as insults."
+    ].join("\n");
+}
+
 // ==========================================
 // BUILD SYSTEM PROMPT
 // ==========================================
@@ -2747,6 +2797,7 @@ function buildSystemPrompt(
         .slice(0, 40)
         .map(event => `- ${event.title}: ${event.allDay ? "all day" : new Date(event.start).toLocaleString()}`)
         .join("\n") || "(No saved calendar events.)";
+    const conversationStyleContext = buildConversationStyleContext();
 
     return `
 
@@ -2763,6 +2814,9 @@ The user's saved Axon Calendar events (these are browser-local events; do not cl
 ${calendarPromptContext}
 
 You are Axon.
+
+USER CONVERSATIONAL STYLE
+${conversationStyleContext}
 
 Axon is an AI assistant designed to communicate naturally with
 the current human user, maintain useful conversational context,
