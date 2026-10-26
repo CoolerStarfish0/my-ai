@@ -3884,10 +3884,30 @@ async function createCanvaDesign() {
 async function startCanvaConnection() {
     const user = auth.currentUser, status = document.getElementById("axonCanvaStatus"), button = document.getElementById("axonCanvaConnectButton");
     if (!user || user.isAnonymous) { if (status) status.textContent = "Sign in with a verified Google account before connecting Canva."; return; }
+
+    // Open the authorization flow in a separate tab immediately from the click,
+    // before awaiting the network, so popup blockers are less likely to block it.
+    const authTab = window.open("about:blank", "_blank");
+    if (authTab) {
+        authTab.document.title = "Connecting Axon to Canva…";
+        authTab.document.body.innerHTML = "<p style='font:16px system-ui;padding:24px;background:#10091b;color:#fff'>Preparing secure Canva authorization…</p>";
+    }
     if (button) button.disabled = true;
-    if (status) status.textContent = "Preparing secure Canva authorization…";
-    try { const data = await canvaApi("start"); if (!data.url) throw new Error("Could not start Canva authorization."); window.location.assign(data.url); }
-    catch (error) { if (status) status.textContent = error.message || "Canva connection could not start."; if (button) button.disabled = false; }
+    if (status) status.textContent = "Opening Canva authorization in a new tab… Keep Axon open here.";
+    try {
+        const data = await canvaApi("start");
+        if (!data.url) throw new Error("Could not start Canva authorization.");
+        if (authTab && !authTab.closed) {
+            authTab.location.replace(data.url);
+        } else {
+            // If the browser blocked the new tab, fall back to the current tab.
+            window.location.assign(data.url);
+        }
+    } catch (error) {
+        if (authTab && !authTab.closed) authTab.close();
+        if (status) status.textContent = error.message || "Canva connection could not start.";
+        if (button) button.disabled = false;
+    }
 }
 async function disconnectCanva() {
     const status = document.getElementById("axonCanvaStatus");
