@@ -3885,38 +3885,33 @@ async function startCanvaConnection() {
     const user = auth.currentUser, status = document.getElementById("axonCanvaStatus"), button = document.getElementById("axonCanvaConnectButton");
     if (!user || user.isAnonymous) { if (status) status.textContent = "Sign in with a verified Google account before connecting Canva."; return; }
 
-    // Open the authorization flow in a separate tab immediately from the click,
-    // before awaiting the network, so popup blockers are less likely to block it.
-    const authTab = window.open("about:blank", "_blank");
-    if (authTab) {
-        authTab.document.title = "Connecting Axon to Canva…";
-        authTab.document.body.innerHTML = "<p style='font:16px system-ui;padding:24px;background:#10091b;color:#fff'>Preparing secure Canva authorization…</p>";
-    }
+    // Reserve a tab synchronously from the click, but do not touch its document:
+    // some browsers expose about:blank before its body exists.
+    let authTab = null;
+    try { authTab = window.open("about:blank", "_blank"); } catch (_) {}
     if (button) button.disabled = true;
-    if (status) status.textContent = "Opening Canva authorization in a new tab… Keep Axon open here.";
+    if (status) status.textContent = authTab
+        ? "Preparing Canva authorization in the new tab… Keep Axon open here."
+        : "Your browser blocked the new tab; opening Canva authorization in this tab…";
     try {
         const data = await canvaApi("start");
-        if (!data.url) throw new Error("Could not start Canva authorization.");
+        if (!data.url) throw new Error("Canva did not return an authorization URL.");
         if (authTab && !authTab.closed) {
-            authTab.location.replace(data.url);
+            authTab.location.href = data.url;
         } else {
-            // If the browser blocked the new tab, fall back to the current tab.
             window.location.assign(data.url);
         }
     } catch (error) {
         const message = error.message || "Canva connection could not start.";
-        // Keep the popup open so the user can read the actual failure instead
-        // of having the tab flash and disappear before the error is visible.
         if (authTab && !authTab.closed) {
             try {
+                authTab.location.href = "about:blank";
                 authTab.document.open();
-                authTab.document.write("<!doctype html><html><head><title>Axon Canva connection error</title></head><body style='font:16px system-ui;padding:28px;background:#10091b;color:#fff'><h2>Canva connection couldn't start</h2><p id='error'></p><p>You can close this tab after reading the error. Return to Axon and try again.</p></body></html>");
+                authTab.document.write("<!doctype html><html><head><title>Axon Canva connection error</title></head><body style='font:16px system-ui;padding:28px;background:#10091b;color:#fff'><h2>Canva connection couldn't start</h2><p id='error'></p><p>Return to Axon and try again after fixing this error.</p></body></html>");
                 authTab.document.close();
                 const errorNode = authTab.document.getElementById("error");
                 if (errorNode) errorNode.textContent = message;
-            } catch (_) {
-                // The browser may prevent writing into the temporary popup.
-            }
+            } catch (_) {}
         }
         if (status) status.textContent = message;
         if (button) button.disabled = false;
