@@ -325,6 +325,22 @@
                 <p id="axonGoogleStatus" class="axon-agent-note" role="status">Google connection status will appear here. Google tools require the one-time setup documented in the backend repository.</p>
                 <p id="axonCanvaStatus" class="axon-agent-note" role="status">Canva is not connected yet.</p>
                 <div class="axon-agent-actions" aria-label="Canva integration"><button id="axonCanvaConnectButton" type="button">🎨 Connect Canva</button><button id="axonCanvaRefreshButton" type="button">Check Canva connection</button><button id="axonCanvaDisconnectButton" type="button">Disconnect Canva</button></div>
+                <section class="axon-canva-tools" aria-label="Canva design tools">
+                    <h3>Canva design tools</h3>
+                    <div class="axon-canva-create-row">
+                        <label class="sr-only" for="axonCanvaDesignTitle">New design title</label>
+                        <input id="axonCanvaDesignTitle" type="text" maxlength="100" placeholder="New design title">
+                        <label class="sr-only" for="axonCanvaDesignType">Design type</label>
+                        <select id="axonCanvaDesignType"><option value="doc">Document</option><option value="presentation">Presentation</option><option value="whiteboard">Whiteboard</option><option value="video">Video</option><option value="poster">Poster</option><option value="flyer">Flyer</option><option value="logo">Logo</option><option value="instagram_post">Instagram post</option></select>
+                        <button id="axonCanvaCreateDesignButton" type="button">＋ Create design</button>
+                    </div>
+                    <div class="axon-canva-search-row">
+                        <label class="sr-only" for="axonCanvaDesignSearch">Search Canva designs</label>
+                        <input id="axonCanvaDesignSearch" type="search" maxlength="160" placeholder="Search your Canva designs">
+                        <button id="axonCanvaListDesignsButton" type="button">Load designs</button>
+                    </div>
+                    <div id="axonCanvaDesignResults" class="axon-canva-design-results" aria-live="polite"></div>
+                </section>
                 <div class="axon-agent-actions">
                     <button id="axonGoogleConnectButton" type="button">🔗 Connect Google</button>
                     <button id="axonGoogleRefreshButton" type="button">Check connection</button>
