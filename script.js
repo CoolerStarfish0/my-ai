@@ -1699,6 +1699,7 @@ onAuthStateChanged(
         workModeEnabled = false;
         updateWorkModeUI();
         loadSavedChats();
+        void refreshCanvaConnectionStatus();
 
         if (user) {
 
@@ -3783,15 +3784,136 @@ async function startGoogleConnection() {
 }
 
 
-async function getCanvaStatus(){const u=auth.currentUser;if(!u||u.isAnonymous)return{connected:false};const t=await u.getIdToken(),r=await fetch(BACKEND_URL+"/api/canva?action=status",{headers:{Authorization:"Bearer "+t},cache:"no-store"}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not check Canva connection.");return d;}
-async function refreshCanvaConnectionStatus(){const s=document.getElementById("axonCanvaStatus"),b=document.getElementById("axonCanvaConnectButton"),x=document.getElementById("axonCanvaDisconnectButton"),u=auth.currentUser;if(!s)return;if(!u||u.isAnonymous){s.textContent="Sign in with a verified email to connect Canva.";if(b)b.disabled=true;if(x)x.disabled=true;return;}if(b)b.disabled=false;if(x)x.disabled=false;s.textContent="Checking Canva connection…";try{const d=await getCanvaStatus();s.textContent=d.connected?"Canva is connected to Axon.":"Canva is not connected yet. Connect once to authorize Axon."; }catch(e){s.textContent=e.message||"Canva status unavailable.";}}
-async function startCanvaConnection(){const u=auth.currentUser,s=document.getElementById("axonCanvaStatus"),b=document.getElementById("axonCanvaConnectButton");if(!u||u.isAnonymous){if(s)s.textContent="Sign in with a verified email before connecting Canva.";return;}if(b)b.disabled=true;if(s)s.textContent="Preparing secure Canva authorization…";try{const t=await u.getIdToken(),r=await fetch(BACKEND_URL+"/api/canva?action=start",{headers:{Authorization:"Bearer "+t},cache:"no-store"}),d=await r.json().catch(()=>({}));if(!r.ok||!d.url)throw Error(d.error||"Could not start Canva authorization.");window.location.assign(d.url);}catch(e){if(s)s.textContent=e.message||"Canva connection could not start.";if(b)b.disabled=false;}}
-async function disconnectCanva(){const u=auth.currentUser,s=document.getElementById("axonCanvaStatus");if(!u||u.isAnonymous){if(s)s.textContent="Sign in before disconnecting Canva.";return;}if(!confirm("Disconnect Canva from Axon?"))return;try{const t=await u.getIdToken(),r=await fetch(BACKEND_URL+"/api/canva?action=disconnect",{method:"POST",headers:{Authorization:"Bearer "+t},cache:"no-store"}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not disconnect Canva.");if(s)s.textContent="Canva disconnected.";}catch(e){if(s)s.textContent=e.message||"Could not disconnect Canva.";}}
-document.getElementById("axonCanvaConnectButton")?.addEventListener("click",startCanvaConnection);
-document.getElementById("axonCanvaRefreshButton")?.addEventListener("click",()=>void refreshCanvaConnectionStatus());
-document.getElementById("axonCanvaDisconnectButton")?.addEventListener("click",disconnectCanva);
-(function(){const p=new URLSearchParams(location.search),s=document.getElementById("axonCanvaStatus");if(p.get("canva_connected")==="1"&&s)s.textContent="Canva authorization completed. Checking connection…";else if(p.has("canva_error")&&s)s.textContent="Canva connection failed: "+String(p.get("canva_error")).replace(/[^a-zA-Z0-9_-]/g,"");if(p.has("canva_connected")||p.has("canva_error")){p.delete("canva_connected");p.delete("canva_error");history.replaceState({}, "",location.pathname+(p.toString()?"?"+p:"")+location.hash);}})();
-
+async function canvaApi(action, method = "GET", body = null, query = "") {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) throw new Error("Sign in with Google to use Canva tools.");
+    const token = await user.getIdToken();
+    const response = await fetch(BACKEND_URL + "/api/canva?action=" + encodeURIComponent(action) + query, {
+        method, headers: { Authorization: "Bearer " + token, ...(body ? { "Content-Type": "application/json" } : {}) },
+        ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Canva request failed.");
+    return data;
+}
+async function getCanvaStatus() {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return { connected: false };
+    return canvaApi("status");
+}
+async function refreshCanvaConnectionStatus() {
+    const status = document.getElementById("axonCanvaStatus"), connect = document.getElementById("axonCanvaConnectButton"), disconnect = document.getElementById("axonCanvaDisconnectButton"), user = auth.currentUser;
+    if (!status) return;
+    if (!user || user.isAnonymous) {
+        status.textContent = "Sign in with a verified Google account to connect Canva.";
+        if (connect) connect.disabled = true;
+        if (disconnect) disconnect.disabled = true;
+        updateCanvaToolButtons(false);
+        return;
+    }
+    if (connect) connect.disabled = false;
+    if (disconnect) disconnect.disabled = false;
+    status.textContent = "Checking Canva connection…";
+    try {
+        const data = await getCanvaStatus();
+        status.textContent = data.connected ? "Canva is connected to Axon. Create or load designs below." : "Canva is not connected yet. Connect once to authorize Axon.";
+        updateCanvaToolButtons(Boolean(data.connected));
+    } catch (error) {
+        status.textContent = error.message || "Canva status unavailable.";
+        updateCanvaToolButtons(false);
+    }
+}
+function updateCanvaToolButtons(connected) {
+    ["axonCanvaCreateDesignButton", "axonCanvaListDesignsButton"].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) button.disabled = !connected;
+    });
+}
+function renderCanvaDesigns(items) {
+    const results = document.getElementById("axonCanvaDesignResults");
+    if (!results) return;
+    results.replaceChildren();
+    if (!items.length) {
+        const empty = document.createElement("p"); empty.textContent = "No Canva designs found."; results.appendChild(empty); return;
+    }
+    for (const item of items) {
+        const row = document.createElement("div"); row.className = "axon-canva-design-item";
+        const title = document.createElement("span"); title.textContent = String(item.title || "Untitled design"); row.appendChild(title);
+        const url = item.urls?.edit_url || item.urls?.view_url || item.url;
+        if (typeof url === "string" && /^https:\/\//i.test(url)) {
+            const link = document.createElement("a"); link.href = url; link.textContent = item.urls?.edit_url ? "Open to edit ↗" : "Open ↗";
+            link.target = "_blank"; link.rel = "noopener noreferrer"; row.appendChild(link);
+        }
+        results.appendChild(row);
+    }
+}
+async function loadCanvaDesigns() {
+    const status = document.getElementById("axonCanvaStatus"), button = document.getElementById("axonCanvaListDesignsButton");
+    const query = document.getElementById("axonCanvaDesignSearch")?.value.trim() || "";
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Loading designs from Canva…";
+    try {
+        const data = await canvaApi("designs", "GET", null, "&limit=20" + (query ? "&query=" + encodeURIComponent(query) : ""));
+        renderCanvaDesigns(Array.isArray(data.items) ? data.items : []);
+        if (status) status.textContent = "Loaded " + (data.items?.length || 0) + " Canva design(s).";
+    } catch (error) { if (status) status.textContent = error.message || "Could not load Canva designs."; }
+    finally { if (button) button.disabled = false; void refreshCanvaConnectionStatus(); }
+}
+async function createCanvaDesign() {
+    const status = document.getElementById("axonCanvaStatus"), button = document.getElementById("axonCanvaCreateDesignButton");
+    const titleInput = document.getElementById("axonCanvaDesignTitle"), title = titleInput?.value.trim() || "";
+    const designType = document.getElementById("axonCanvaDesignType")?.value || "doc";
+    if (!title) { if (status) status.textContent = "Enter a title before creating a Canva design."; titleInput?.focus(); return; }
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Creating your Canva design…";
+    try {
+        const data = await canvaApi("create-design", "POST", { title, designType });
+        const design = data.design || {}, url = design.urls?.edit_url || design.urls?.view_url || design.url;
+        if (status) status.textContent = "Design created in Canva: " + String(design.title || title) + (url ? " — open it below." : ".");
+        if (url && /^https:\/\//i.test(url)) {
+            const results = document.getElementById("axonCanvaDesignResults"), row = document.createElement("div");
+            row.className = "axon-canva-design-item";
+            const label = document.createElement("span"); label.textContent = String(design.title || title);
+            const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = "Open to edit ↗";
+            row.append(label, link); results?.prepend(row);
+        }
+        if (titleInput) titleInput.value = "";
+    } catch (error) { if (status) status.textContent = error.message || "Could not create the Canva design."; }
+    finally { if (button) button.disabled = false; void refreshCanvaConnectionStatus(); }
+}
+async function startCanvaConnection() {
+    const user = auth.currentUser, status = document.getElementById("axonCanvaStatus"), button = document.getElementById("axonCanvaConnectButton");
+    if (!user || user.isAnonymous) { if (status) status.textContent = "Sign in with a verified Google account before connecting Canva."; return; }
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Preparing secure Canva authorization…";
+    try { const data = await canvaApi("start"); if (!data.url) throw new Error("Could not start Canva authorization."); window.location.assign(data.url); }
+    catch (error) { if (status) status.textContent = error.message || "Canva connection could not start."; if (button) button.disabled = false; }
+}
+async function disconnectCanva() {
+    const status = document.getElementById("axonCanvaStatus");
+    if (!auth.currentUser || auth.currentUser.isAnonymous) { if (status) status.textContent = "Sign in before disconnecting Canva."; return; }
+    if (!confirm("Disconnect Canva from Axon?")) return;
+    try { await canvaApi("disconnect", "POST"); if (status) status.textContent = "Canva disconnected."; renderCanvaDesigns([]); updateCanvaToolButtons(false); }
+    catch (error) { if (status) status.textContent = error.message || "Could not disconnect Canva."; }
+    finally { void refreshCanvaConnectionStatus(); }
+}
+document.getElementById("axonCanvaConnectButton")?.addEventListener("click", startCanvaConnection);
+document.getElementById("axonCanvaRefreshButton")?.addEventListener("click", () => void refreshCanvaConnectionStatus());
+document.getElementById("axonCanvaDisconnectButton")?.addEventListener("click", disconnectCanva);
+document.getElementById("axonCanvaListDesignsButton")?.addEventListener("click", () => void loadCanvaDesigns());
+document.getElementById("axonCanvaCreateDesignButton")?.addEventListener("click", () => void createCanvaDesign());
+document.getElementById("axonCanvaDesignSearch")?.addEventListener("keydown", event => {
+    if (event.key === "Enter") { event.preventDefault(); void loadCanvaDesigns(); }
+});
+(function () {
+    const params = new URLSearchParams(location.search), status = document.getElementById("axonCanvaStatus");
+    if (params.get("canva_connected") === "1" && status) status.textContent = "Canva authorization completed. Verifying connection…";
+    else if (params.has("canva_error") && status) status.textContent = "Canva connection failed: " + String(params.get("canva_error")).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (params.has("canva_connected") || params.has("canva_error")) {
+        params.delete("canva_connected"); params.delete("canva_error");
+        history.replaceState({}, "", location.pathname + (params.toString() ? "?" + params : "") + location.hash);
+    }
+})();
 document.getElementById("axonGoogleConnectButton")?.addEventListener("click", startGoogleConnection);
 document.getElementById("axonGoogleRefreshButton")?.addEventListener("click", () => { void refreshGoogleConnectionStatus(); });
 document.getElementById("axonGoogleSavePermissionsButton")?.addEventListener("click", async () => {
