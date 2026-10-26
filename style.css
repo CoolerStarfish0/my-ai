@@ -2792,3 +2792,14 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
     font-family: Arial, sans-serif;
     flex-shrink: 0;
 }
+
+
+/* Canva tools inside the Axon agent panel */
+.axon-canva-tools{display:grid;gap:10px;margin:12px 0 18px;padding:14px;border:1px solid var(--border-color,rgba(128,128,128,.25));border-radius:14px;background:var(--panel-bg,rgba(128,128,128,.06))}
+.axon-canva-tools h3{margin:0;font-size:1rem}
+.axon-canva-create-row,.axon-canva-search-row{display:flex;flex-wrap:wrap;gap:8px}
+.axon-canva-tools input,.axon-canva-tools select{min-width:140px;flex:1 1 160px;max-width:100%}
+.axon-canva-tools button{min-height:38px}
+.axon-canva-design-results{display:grid;gap:8px}
+.axon-canva-design-item{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--input-bg,rgba(128,128,128,.08))}
+.axon-canva-design-item a{overflow-wrap:anywhere}
