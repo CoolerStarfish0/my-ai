@@ -3940,11 +3940,27 @@ document.getElementById("axonCanvaCreateDesignButton")?.addEventListener("click"
 document.getElementById("axonCanvaDesignSearch")?.addEventListener("keydown", event => {
     if (event.key === "Enter") { event.preventDefault(); void loadCanvaDesigns(); }
 });
+// The Canva OAuth callback lands on Axon inside the authorization popup.
+window.addEventListener("message", event => {
+    if (event.origin !== location.origin || !event.data || event.data.type !== "axon-canva-oauth-complete") return;
+    void refreshCanvaConnectionStatus();
+});
 (function () {
     const params = new URLSearchParams(location.search), status = document.getElementById("axonCanvaStatus");
-    if (params.get("canva_connected") === "1" && status) status.textContent = "Canva authorization completed. Verifying connection…";
-    else if (params.has("canva_error") && status) status.textContent = "Canva connection failed: " + String(params.get("canva_error")).replace(/[^a-zA-Z0-9_-]/g, "");
-    if (params.has("canva_connected") || params.has("canva_error")) {
+    const connected = params.get("canva_connected") === "1";
+    const failed = params.has("canva_error");
+    if (connected && status) status.textContent = "Canva authorization completed. Verifying connection…";
+    else if (failed && status) status.textContent = "Canva connection failed: " + String(params.get("canva_error")).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (connected || failed) {
+        // Tell the original Axon tab to refresh its connection state, then close this popup.
+        if (window.opener && !window.opener.closed) {
+            try {
+                window.opener.postMessage({ type: "axon-canva-oauth-complete", connected }, location.origin);
+                window.setTimeout(() => window.close(), 350);
+            } catch (_) {}
+        } else if (connected) {
+            void refreshCanvaConnectionStatus();
+        }
         params.delete("canva_connected"); params.delete("canva_error");
         history.replaceState({}, "", location.pathname + (params.toString() ? "?" + params : "") + location.hash);
     }
