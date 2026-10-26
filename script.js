@@ -3904,8 +3904,21 @@ async function startCanvaConnection() {
             window.location.assign(data.url);
         }
     } catch (error) {
-        if (authTab && !authTab.closed) authTab.close();
-        if (status) status.textContent = error.message || "Canva connection could not start.";
+        const message = error.message || "Canva connection could not start.";
+        // Keep the popup open so the user can read the actual failure instead
+        // of having the tab flash and disappear before the error is visible.
+        if (authTab && !authTab.closed) {
+            try {
+                authTab.document.open();
+                authTab.document.write("<!doctype html><html><head><title>Axon Canva connection error</title></head><body style='font:16px system-ui;padding:28px;background:#10091b;color:#fff'><h2>Canva connection couldn't start</h2><p id='error'></p><p>You can close this tab after reading the error. Return to Axon and try again.</p></body></html>");
+                authTab.document.close();
+                const errorNode = authTab.document.getElementById("error");
+                if (errorNode) errorNode.textContent = message;
+            } catch (_) {
+                // The browser may prevent writing into the temporary popup.
+            }
+        }
+        if (status) status.textContent = message;
         if (button) button.disabled = false;
     }
 }
