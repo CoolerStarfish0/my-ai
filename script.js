@@ -4648,9 +4648,10 @@ function inferCanvaTitle(prompt) {
 
 function inferBirthdayRecipient(prompt) {
     const text = String(prompt || "");
-    const match = text.match(/\\b(?:for|to|for my brother|for my sister)\\s+[“"']?([A-Z][A-Za-z'-]{1,30})/i);
-    if (match && match[1] && !/^(my|the|a|an|him|her|them)$/i.test(match[1])) return match[1];
-    return "Kavish";
+    const matches = [...text.matchAll(/\b(?:for|to)\s+[“"']?([A-Z][A-Za-z'-]{1,30})/gi)];
+    const ignored = /^(my|the|a|an|him|her|them|give|make|create|design|birthday|card)$/i;
+    const valid = matches.map(match => match[1]).filter(name => !ignored.test(name));
+    return valid.length ? valid[valid.length - 1] : "Kavish";
 }
 
 function detectCanvaIntent(prompt) {
@@ -4658,7 +4659,7 @@ function detectCanvaIntent(prompt) {
     const hasCanva = /\bcanva\b/.test(t);
     const make = /\b(make|create|design|build|generate|produce)\b/.test(t);
     const browse = /\b(show|find|list|open|search|load)\b/.test(t);
-    const object = /\b(poster|presentation|slides|slide deck|thumbnail|logo|flyer|brochure|banner|invitation|resume|cv|website|landing page|whiteboard|video|social media|instagram post|design|graphic|newsletter|business card)\b/.test(t);
+    const object = /\b(birthday card|greeting card|card|poster|presentation|slides|slide deck|thumbnail|logo|flyer|brochure|banner|invitation|resume|cv|website|landing page|whiteboard|video|social media|instagram post|design|graphic|newsletter|business card)\b/.test(t);
     const list = browse && /\b(my\s+)?(canva\s+)?designs\b/.test(t);
     return { hasCanva, create: make && (object || hasCanva), list: list || (hasCanva && browse), designLike: make && object && !hasCanva };
 }
@@ -4702,7 +4703,7 @@ async function performCanvaChatAction(prompt, action) {
                 return (i + 1) + ". " + String(item.title || "Untitled design") + (typeof url === "string" && /^https:\/\//i.test(url) ? " — " + url : "");
             }).join("\n") };
         }
-        const isBirthdayCard = /\\b(birthday|bday)\\b/i.test(prompt) && /\\b(card|greeting)\\b/i.test(prompt);
+        const isBirthdayCard = /\b(birthday|bday)\b/i.test(prompt) && /\b(card|greeting)\b/i.test(prompt);
         const recipientName = isBirthdayCard ? inferBirthdayRecipient(prompt) : "";
         const title = isBirthdayCard ? "Birthday Card for " + recipientName : inferCanvaTitle(prompt);
         const designType = inferCanvaDesignType(prompt);
