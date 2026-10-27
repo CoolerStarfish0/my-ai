@@ -6,10 +6,10 @@
 
     <title>Axon</title>
 
-    <link rel="stylesheet" href="style.css?v=axon-modes-20261027">
+    <link rel="stylesheet" href="style.css?v=axon-modes-20261027b">
     <link rel="stylesheet" href="agent.css?v=axon-agent-1">
     <link rel="stylesheet" href="games.css">
-    <script type="module" src="script.js?v=axon-modes-20261027"></script>
+    <script type="module" src="script.js?v=axon-modes-20261027b"></script>
     <script type="module" src="games.js?v=market-day-2"></script>
 </head>
 
@@ -179,7 +179,6 @@
             </div>
 
             <div class="auth-buttons">
-                <button id="axonModesButton" class="axon-modes-launch-button" type="button" title="Open AI Humaniser and Note-Taking modes">✨ Modes</button>
                 <button id="gamesButton" class="games-launch-button" type="button" title="Open Axon Games">🎮 Games</button>
 
                 <button id="calendarButton" class="calendar-launch-button" type="button" title="Open your calendar">📅 Calendar</button>
@@ -458,6 +457,39 @@
                 <textarea id="messageInput" placeholder="Talk to Axon..." rows="1"></textarea>
                 <button id="sendButton" type="button"><span>Send</span><span class="send-arrow">↗</span></button>
             </div>
+            <nav id="axonModePicker" class="axon-mode-picker" aria-label="Axon modes">
+                <span class="axon-mode-picker-label">MODES</span>
+                <button type="button" data-axon-mode="humaniser">✍️ AI Humaniser</button>
+                <button type="button" data-axon-mode="notes">🎙️ Note-Taking</button>
+            </nav>
+            <section id="axonModeWorkspace" class="axon-mode-workspace hidden" aria-label="Axon mode workspace" aria-modal="true" role="dialog">
+                <div class="axon-mode-workspace-inner">
+                    <header class="axon-mode-workspace-header">
+                        <div><p class="axon-modes-eyebrow">AXON MODES</p><h2 id="axonModeWorkspaceTitle">✍️ AI Humaniser</h2></div>
+                        <button id="axonModeWorkspaceBack" class="axon-modes-close" type="button">← Back to chat</button>
+                    </header>
+                    <section id="axonHumaniserPage" class="axon-mode-card" aria-labelledby="axonHumaniserHeading">
+                        <div class="axon-mode-title-row"><h3 id="axonHumaniserHeading">✍️ Make Axon write like you</h3><label class="axon-mode-toggle"><input id="axonHumaniserEnabled" type="checkbox"><span>Humaniser on</span></label></div>
+                        <p>Upload samples of your own writing. Axon uses them as one writing-style profile for vocabulary, tone, and sentence rhythm.</p>
+                        <label for="axonHumaniserSamples">Your writing samples (.txt or .md)</label>
+                        <input id="axonHumaniserSamples" type="file" accept=".txt,.md,text/plain,text/markdown" multiple>
+                        <div id="axonHumaniserSampleList" class="axon-humaniser-sample-list" aria-live="polite">No samples added yet.</div>
+                        <div class="axon-mode-actions"><button id="axonHumaniserClear" type="button" class="axon-mode-secondary">Clear writing samples</button></div>
+                        <p class="axon-mode-footnote">Samples are saved in this browser and included with chat requests only when Humaniser is on. Upload writing you’re allowed to use; avoid private or sensitive text.</p>
+                        <p id="axonHumaniserStatus" class="axon-mode-status" role="status" aria-live="polite"></p>
+                    </section>
+                    <section id="axonNotesPage" class="axon-mode-card hidden" aria-labelledby="axonNotesHeading">
+                        <div class="axon-mode-title-row"><h3 id="axonNotesHeading">🎙️ Class Note-Taking</h3><span id="axonNotesMicStatus" class="axon-notes-mic-status">MIC OFF</span></div>
+                        <p>Start listening, then stop when you’re done. Axon turns the recognised transcript into organised study notes.</p>
+                        <label for="axonNotesLanguage">Recognition language</label>
+                        <select id="axonNotesLanguage"><option value="en-IN">English (India)</option><option value="en-US">English (US)</option><option value="hi-IN">Hindi</option><option value="mr-IN">Marathi</option></select>
+                        <div class="axon-mode-actions"><button id="axonNotesStart" type="button">▶ Start listening</button><button id="axonNotesStop" type="button" disabled>■ Stop &amp; make notes</button></div>
+                        <p id="axonNotesStatus" class="axon-mode-status" role="status" aria-live="polite">Microphone is off. Browser speech recognition may process audio through its provider; support varies by browser.</p>
+                        <label for="axonNotesTranscript">Live transcript</label><textarea id="axonNotesTranscript" rows="7" placeholder="Recognised speech will appear here…" readonly></textarea>
+                        <p class="axon-mode-footnote">Use this only where class transcription is permitted and respect classmates’ privacy.</p>
+                    </section>
+                </div>
+            </section>
 
     <!-- AXON GAMES HUB -->
     <section id="gamesHub" class="games-hub hidden" aria-label="Axon Games" aria-modal="true" role="dialog">
@@ -520,14 +552,6 @@
         <p class="calendar-storage-note">Events are saved in this browser for the current Axon account or guest session.</p>
     </dialog>
 
-<dialog id="axonModesDialog" class="axon-modes-dialog" aria-labelledby="axonModesHeading">
-<div class="axon-modes-header"><div><p class="axon-modes-eyebrow">AXON TOOLS</p><h2 id="axonModesHeading">✨ Modes</h2></div><button id="axonModesClose" class="axon-modes-close" type="button" aria-label="Close modes">✕</button></div>
-<section class="axon-mode-card" aria-labelledby="axonHumaniserHeading"><div class="axon-mode-title-row"><h3 id="axonHumaniserHeading">✍️ AI Humaniser</h3><label class="axon-mode-toggle"><input id="axonHumaniserEnabled" type="checkbox"><span>On</span></label></div>
-<p>Upload examples of your own writing. When enabled, Axon uses them as style references for vocabulary, tone, and sentence rhythm—not as instructions to copy.</p><label for="axonHumaniserSamples">Add writing samples (.txt or .md)</label><input id="axonHumaniserSamples" type="file" accept=".txt,.md,text/plain,text/markdown" multiple><div id="axonHumaniserSampleList" class="axon-humaniser-sample-list" aria-live="polite">No samples added yet.</div>
-<div class="axon-mode-actions"><button id="axonHumaniserClear" type="button" class="axon-mode-secondary">Clear samples</button></div><p class="axon-mode-footnote">Samples are stored in this browser. When Humaniser is on, sample text is included with your AI request so Axon can learn the style. Don’t upload private or sensitive writing.</p><p id="axonHumaniserStatus" class="axon-mode-status" role="status" aria-live="polite"></p></section>
-<section class="axon-mode-card" aria-labelledby="axonNotesHeading"><div class="axon-mode-title-row"><h3 id="axonNotesHeading">🎙️ Note-Taking Mode</h3><span id="axonNotesMicStatus" class="axon-notes-mic-status">MIC OFF</span></div>
-<p>Start speech recognition during class. Stop it to send the transcript to Axon for organised notes, key concepts, and a summary.</p><label for="axonNotesLanguage">Recognition language</label><select id="axonNotesLanguage"><option value="en-IN">English (India)</option><option value="en-US">English (US)</option><option value="hi-IN">Hindi</option><option value="mr-IN">Marathi</option></select>
-<label class="axon-notes-consent"><input id="axonNotesConsent" type="checkbox"> I have permission to transcribe this class and will follow my school’s rules.</label><div class="axon-mode-actions"><button id="axonNotesStart" type="button">▶ Start listening</button><button id="axonNotesStop" type="button" disabled>■ Stop &amp; make notes</button></div>
-<p id="axonNotesStatus" class="axon-mode-status" role="status" aria-live="polite">Microphone is off. Audio is processed by the browser’s speech-recognition service; support varies by browser.</p><label for="axonNotesTranscript">Live transcript</label><textarea id="axonNotesTranscript" rows="5" placeholder="Recognised speech will appear here…" readonly></textarea></section></dialog>
+
 </body>
 </html>
