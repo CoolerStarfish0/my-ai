@@ -4645,6 +4645,14 @@ function inferCanvaTitle(prompt) {
     return (title || "My Canva design").slice(0, 100);
 }
 
+
+function inferBirthdayRecipient(prompt) {
+    const text = String(prompt || "");
+    const match = text.match(/\\b(?:for|to|for my brother|for my sister)\\s+[“"']?([A-Z][A-Za-z'-]{1,30})/i);
+    if (match && match[1] && !/^(my|the|a|an|him|her|them)$/i.test(match[1])) return match[1];
+    return "Kavish";
+}
+
 function detectCanvaIntent(prompt) {
     const t = String(prompt || "").toLowerCase();
     const hasCanva = /\bcanva\b/.test(t);
@@ -4694,17 +4702,27 @@ async function performCanvaChatAction(prompt, action) {
                 return (i + 1) + ". " + String(item.title || "Untitled design") + (typeof url === "string" && /^https:\/\//i.test(url) ? " — " + url : "");
             }).join("\n") };
         }
-        const title = inferCanvaTitle(prompt);
+        const isBirthdayCard = /\\b(birthday|bday)\\b/i.test(prompt) && /\\b(card|greeting)\\b/i.test(prompt);
+        const recipientName = isBirthdayCard ? inferBirthdayRecipient(prompt) : "";
+        const title = isBirthdayCard ? "Birthday Card for " + recipientName : inferCanvaTitle(prompt);
         const designType = inferCanvaDesignType(prompt);
         const isPresentation = designType === "presentation";
-        const data = isPresentation
-            ? await canvaApi("create-presentation", "POST", { title, prompt })
-            : await canvaApi("create-design", "POST", { title, designType });
+        const data = isBirthdayCard
+            ? await canvaApi("create-birthday-card", "POST", {
+                title,
+                recipientName,
+                message: "Wishing you a day full of laughter, legendary moments, and everything you love!"
+            })
+            : isPresentation
+                ? await canvaApi("create-presentation", "POST", { title, prompt })
+                : await canvaApi("create-design", "POST", { title, designType });
         const design = data.design || {};
         const url = design.urls?.edit_url || design.urls?.view_url || design.url;
-        const description = isPresentation
-            ? "Created a presentation with " + Number(data.slideCount || 6) + " populated slides and visual callouts in Canva."
-            : "Created " + String(design.title || title) + " in Canva.";
+        const description = isBirthdayCard
+            ? "Created a fully populated birthday card for " + recipientName + " with editable text, balloons, confetti, and a birthday cake in Canva."
+            : isPresentation
+                ? "Created a presentation with " + Number(data.slideCount || 6) + " populated slides and visual callouts in Canva."
+                : "Created " + String(design.title || title) + " in Canva.";
         return { handled: true, answer: description + (typeof url === "string" && /^https:\/\//i.test(url) ? "\nOpen your design: " + url : "") };
     } catch (error) {
         return { handled: true, answer: "I couldn't complete that Canva action: " + (error.message || "Canva request failed.") };
