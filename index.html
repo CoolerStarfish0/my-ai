@@ -6,10 +6,10 @@
 
     <title>Axon</title>
 
-    <link rel="stylesheet" href="style.css?v=axon-modes-20261027b">
+    <link rel="stylesheet" href="style.css?v=axon-modes-20261028c">
     <link rel="stylesheet" href="agent.css?v=axon-agent-1">
     <link rel="stylesheet" href="games.css">
-    <script type="module" src="script.js?v=axon-modes-20261027b"></script>
+    <script type="module" src="script.js?v=axon-modes-20261028c"></script>
     <script type="module" src="games.js?v=market-day-2"></script>
 </head>
 
@@ -460,6 +460,7 @@
             <nav id="axonModePicker" class="axon-mode-picker" aria-label="Axon modes">
                 <span class="axon-mode-picker-label">MODES</span>
                 <button type="button" data-axon-mode="humaniser">✍️ AI Humaniser</button>
+                <button type="button" data-axon-mode="writing-samples">🧬 Writing Samples</button>
                 <button type="button" data-axon-mode="notes">🎙️ Note-Taking</button>
             </nav>
             <section id="axonModeWorkspace" class="axon-mode-workspace hidden" aria-label="Axon mode workspace" aria-modal="true" role="dialog">
@@ -469,15 +470,25 @@
                         <button id="axonModeWorkspaceBack" class="axon-modes-close" type="button">← Back to chat</button>
                     </header>
                     <section id="axonHumaniserPage" class="axon-mode-card" aria-labelledby="axonHumaniserHeading">
-                        <div class="axon-mode-title-row"><h3 id="axonHumaniserHeading">✍️ Make Axon write like you</h3><label class="axon-mode-toggle"><input id="axonHumaniserEnabled" type="checkbox"><span>Humaniser on</span></label></div>
-                        <p>Upload samples of your own writing. Axon uses them as one writing-style profile for vocabulary, tone, and sentence rhythm.</p>
-                        <label for="axonHumaniserSamples">Your writing samples (.txt or .md)</label>
-                        <input id="axonHumaniserSamples" type="file" accept=".txt,.md,text/plain,text/markdown" multiple>
-                        <div id="axonHumaniserSampleList" class="axon-humaniser-sample-list" aria-live="polite">No samples added yet.</div>
-                        <div class="axon-mode-actions"><button id="axonHumaniserClear" type="button" class="axon-mode-secondary">Clear writing samples</button></div>
-                        <p class="axon-mode-footnote">Samples are saved in this browser and included with chat requests only when Humaniser is on. Upload writing you’re allowed to use; avoid private or sensitive text.</p>
-                        <p id="axonHumaniserStatus" class="axon-mode-status" role="status" aria-live="polite"></p>
-                    </section>
+<div class="axon-mode-title-row"><h3 id="axonHumaniserHeading">✍️ AI Humaniser</h3></div>
+<p>Rewrite pasted text to sound more natural while preserving its meaning. This is separate from Writing Samples.</p>
+<label for="axonHumaniserInput">Text to humanise</label><textarea id="axonHumaniserInput" rows="8" placeholder="Paste text here…"></textarea>
+<div class="axon-mode-actions"><button id="axonHumaniserRun" type="button">✨ Humanise text</button><button id="axonHumaniserClearText" type="button" class="axon-mode-secondary">Clear</button></div>
+<label for="axonHumaniserOutput">Result</label><textarea id="axonHumaniserOutput" rows="8" placeholder="Humanised text appears here…" readonly></textarea>
+<div class="axon-mode-actions"><button id="axonHumaniserCopy" type="button" class="axon-mode-secondary">Copy result</button></div>
+<p id="axonHumaniserStatus" class="axon-mode-status" role="status" aria-live="polite"></p>
+</section>
+<section id="axonWritingSamplesPage" class="axon-mode-card hidden" aria-labelledby="axonWritingSamplesHeading">
+<div class="axon-mode-title-row"><h3 id="axonWritingSamplesHeading">🧬 Writing Samples</h3><label class="axon-mode-toggle"><input id="axonWritingSamplesEnabled" type="checkbox"><span>Writing Samples on</span></label></div>
+<p>Paste examples of your writing and/or upload .txt or .md files. When enabled, Axon adapts its replies across chats to your writing style without copying sample passages.</p>
+<label for="axonWritingSampleName">Sample name (optional)</label><input id="axonWritingSampleName" type="text" maxlength="100" placeholder="e.g. Casual messages">
+<label for="axonWritingSampleText">Paste a writing sample</label><textarea id="axonWritingSampleText" rows="6" maxlength="12000" placeholder="Paste something you wrote…"></textarea>
+<div class="axon-mode-actions"><button id="axonWritingSampleAdd" type="button">＋ Add pasted sample</button></div>
+<label for="axonWritingSamplesFiles">Upload files (maximum 8 samples total)</label><input id="axonWritingSamplesFiles" type="file" accept=".txt,.md,text/plain,text/markdown" multiple>
+<div id="axonWritingSampleList" class="axon-humaniser-sample-list" aria-live="polite">No samples added yet.</div>
+<div class="axon-mode-actions"><button id="axonWritingSamplesClear" type="button" class="axon-mode-secondary">Clear writing samples</button></div>
+<p class="axon-mode-footnote">Saved in this browser. Avoid adding private or sensitive text.</p><p id="axonWritingSamplesStatus" class="axon-mode-status" role="status" aria-live="polite"></p>
+</section>
                     <section id="axonNotesPage" class="axon-mode-card hidden" aria-labelledby="axonNotesHeading">
                         <div class="axon-mode-title-row"><h3 id="axonNotesHeading">🎙️ Class Note-Taking</h3><span id="axonNotesMicStatus" class="axon-notes-mic-status">MIC OFF</span></div>
                         <p>Start listening, then stop when you’re done. Axon turns the recognised transcript into organised study notes.</p>
