@@ -5801,7 +5801,7 @@ function closeRankAnimation() {
     }, 500);
 }
 
-// AXON_MODES_HUMANISER_NOTES_V2
+// AXON_MODES_HUMANISER_NOTES_V3
 const AXON_LEGACY_SAMPLES_KEY="axon_humaniser_samples_v1",AXON_LEGACY_ENABLED_KEY="axon_humaniser_enabled_v1",AXON_WRITING_SAMPLES_KEY="axon_writing_samples_v1",AXON_WRITING_ENABLED_KEY="axon_writing_samples_enabled_v1";
 let axonWritingSamples=[],axonNoteRecognition=null,axonNoteListening=false,axonNoteShouldSummarise=false,axonNoteTranscript="",axonNoteStopRequested=false,axonNoteFatalError=false,axonNoteRestartTimer=null;
 const axonModeWorkspace=document.getElementById("axonModeWorkspace"),axonHumaniserPage=document.getElementById("axonHumaniserPage"),axonWritingSamplesPage=document.getElementById("axonWritingSamplesPage"),axonNotesPage=document.getElementById("axonNotesPage"),axonModeWorkspaceTitle=document.getElementById("axonModeWorkspaceTitle");
