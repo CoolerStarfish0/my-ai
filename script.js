@@ -3718,23 +3718,21 @@ async function runAxonGithubLoop(user, systemPrompt, originalMessage, isOwner) {
 
 function looksLikeGoogleRequest(message) {
     const text = String(message || "");
-    const hasService = /\b(google\s*(?:docs?|documents?|forms?|sheets?|drive|classroom|sites?|calendar|gmail)|classroom|gmail|spreadsheet|google\s*sites)\b/i.test(text);
-    // Include continuation verbs: otherwise "open the Google Doc and complete it"
-    // misses the Google agent because "complete" was not considered a task verb.
-    const hasTask = /\b(create|make|build|find|search|look up|check|list|open|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|complete|finish|continue|resume|carry on|pick\s+up|from\s+where|where\s+i\s+stopped|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar)\b/i.test(text);
+    // Accept the general wording users naturally use ("check my Google apps",
+    // "look through my Google", etc.), not just explicit product names.
+    const hasService = /\b(google(?:\s*(?:docs?|documents?|forms?|sheets?|drive|classroom|sites?|calendar|gmail|apps?|account|services?))?|classroom|gmail|spreadsheet)\b/i.test(text);
+    const hasTask = /\b(create|make|build|find|search|look up|check|look through|inspect|list|open|review|look for|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|complete|finish|continue|resume|carry on|pick\s+up|from\s+where|where\s+i\s+stopped|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar|apps?)\b/i.test(text);
     const directGoogleRequest = (hasService && hasTask) || (/\b(design class|class roster|classmates)\b/i.test(text) && /\b(form|pick|choose|students?|names)\b/i.test(text));
 
-    // Follow-up requests often omit "Google" because the user is continuing the
-    // task they just asked Axon to perform (for example, "add questions about IPs").
-    // Only route these to Google when recent conversation actually identifies a form.
+    // Follow-up requests may refer to Google access without naming a specific app.
     const recentMessages = Array.isArray(conversationHistory) ? conversationHistory.slice(-10) : [];
-    const recentFormContext = recentMessages.some(message => {
+    const recentGoogleContext = recentMessages.some(message => {
         const content = String(message?.content || "");
-        return /\bgoogle\s*forms?\b|docs\.google\.com\/forms\/(?:d\/|e\/)|\bform (?:url|link|created|questions?)\b/i.test(content);
+        return /\bgoogle\b|docs\.google\.com|drive\.google\.com|classroom\.google\.com/i.test(content);
     });
-    const followUpEdit = /\b(add|include|insert|put|append|change|edit|update|modify|remove|delete|revise)\b/i.test(text) &&
-        /\b(question|questions|option|options|answer|answers|description|title|setting|settings|form)\b/i.test(text);
-    return directGoogleRequest || (recentFormContext && followUpEdit);
+    const followUpEdit = /\b(add|include|insert|put|append|change|edit|update|modify|remove|delete|revise|find|search|check|look up|look for|identify)\b/i.test(text) &&
+        /\b(question|questions|option|options|answer|answers|description|title|setting|settings|form|name|person|teacher|sir|robotics|document|file|app|apps|account|details)\b/i.test(text);
+    return directGoogleRequest || (recentGoogleContext && followUpEdit);
 }
 
 function extractAxonGoogleAction(text) {
