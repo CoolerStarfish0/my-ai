@@ -4192,20 +4192,24 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
         const raw = typeof result.answer === "string" ? result.answer.trim() : "";
         const parsed = extractAxonGoogleAction(raw);
         if (!parsed) {
-            // Local models sometimes narrate Drive search results and stop instead
-            // of continuing the mandatory read -> draft -> append workflow. Retry
-            // with the actual tool result before showing that premature response.
+            // The local model may answer with a capability disclaimer instead of
+            // emitting the required tool action. For a clear document-continuation
+            // request, retry with an explicit first-step instruction rather than
+            // returning that disclaimer without even searching Drive.
             if (isDocumentContinuation && forcedContinuationRetries < 2 &&
-                lastGoogleToolResult && ["drive_search", "google_read_doc"].includes(lastGoogleToolResult.action)) {
+                (!lastGoogleToolResult || ["drive_search", "google_read_doc"].includes(lastGoogleToolResult.action))) {
                 forcedContinuationRetries++;
+                const recoveryInstruction = !lastGoogleToolResult
+                    ? "You have not used a Google tool yet. Do not give a capability disclaimer. Start by emitting exactly one [[AXON_GOOGLE_ACTION]] block with { \"action\": \"drive_search\", \"query\": \"Design\" } if the requested document is called Design; otherwise use the most distinctive document title/keywords from the user's request. Do not invent search results."
+                    : lastGoogleToolResult.action === "drive_search"
+                        ? "You have ONLY searched Drive; the task is NOT complete. Pick the best matching editable document from the returned files and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_read_doc with that file's exact id. Do not summarize search results to the user."
+                        : "You have read the document; the task is NOT complete. Inspect the actual text. If the unfinished portion is clear, draft only the missing continuation and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_append_doc with the exact documentId from the result. If it is genuinely unclear what remains unfinished, ask one focused question instead of guessing.";
                 currentPrompt = [
                     "Original user request: " + originalMessage,
-                    "Actual previous Google tool result (authoritative): " + JSON.stringify(lastGoogleToolResult).slice(0, 24000),
-                    lastGoogleToolResult.action === "drive_search"
-                        ? "You have ONLY searched Drive; the task is NOT complete. Pick the best matching editable document from the returned files and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_read_doc with that file's exact id. Do not summarize search results to the user."
-                        : "You have read the document; the task is NOT complete. Inspect the actual text. If the unfinished portion is clear, draft only the missing continuation and emit exactly one [[AXON_GOOGLE_ACTION]] block using google_append_doc with the exact documentId from the result. If it is genuinely unclear what remains unfinished, ask one focused question instead of guessing.",
+                    lastGoogleToolResult ? "Actual previous Google tool result (authoritative): " + JSON.stringify(lastGoogleToolResult).slice(0, 24000) : "No Google tool has been called yet.",
+                    recoveryInstruction,
                     "Do not claim to remember this request. Do not answer with a generic capability disclaimer."
-                ].join("\n");
+                ].join("\\n");
                 continue;
             }
             const containsInternalMarker = raw.includes("[[AXON_GOOGLE_ACTION]]");
