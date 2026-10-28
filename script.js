@@ -3720,8 +3720,8 @@ function looksLikeGoogleRequest(message) {
     const text = String(message || "");
     // Accept the general wording users naturally use ("check my Google apps",
     // "look through my Google", etc.), not just explicit product names.
-    const hasService = /\b(google(?:\s*(?:docs?|documents?|forms?|sheets?|drive|classroom|sites?|calendar|gmail|apps?|account|services?))?|classroom|gmail|spreadsheet)\b/i.test(text);
-    const hasTask = /\b(create|make|build|find|search|look up|check|look through|inspect|list|open|review|look for|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|complete|finish|continue|resume|carry on|pick\s+up|from\s+where|where\s+i\s+stopped|classmates?|students?|roster|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar|apps?)\b/i.test(text);
+    const hasService = /\b(google(?:\s*(?:docs?|documents?|forms?|sheets?|drive|classrooms?|sites?|calendar|gmail|apps?|account|services?))?|classrooms?|gmail|spreadsheet)\b/i.test(text);
+    const hasTask = /\b(create|make|build|find|search|look up|check|look through|inspect|list|open|review|look for|edit|update|write|fill|add|put|organize|move|manage|schedule|draft|pick|choose|complete|finish|continue|resume|carry on|pick\s+up|from\s+where|where\s+i\s+stopped|classmates?|students?|roster|assignment|assignments|submission|submissions|homework|coursework|question|form|document|spreadsheet|event|email|site|website|read|append|replace|calendar|apps?)\b/i.test(text);
     const directGoogleRequest = (hasService && hasTask) || (/\b(design class|class roster|classmates)\b/i.test(text) && /\b(form|pick|choose|students?|names)\b/i.test(text));
 
     // Follow-up requests may refer to Google access without naming a specific app.
@@ -4166,7 +4166,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
     let forcedContinuationRetries = 0;
     const isDocumentContinuation = /\b(open|go on|go to|finish|complete|continue|resume|pick up)\b/i.test(originalMessage) &&
         /\b(google\s*(?:docs?|documents?)|document)\b/i.test(originalMessage);
-    const isClassroomPendingRequest = /\b(classroom|class\s*work|assignments?|submissions?|homework|coursework)\b/i.test(originalMessage) &&
+    const isClassroomPendingRequest = /\b(classrooms?|class\s*work|assignments?|submissions?|homework|coursework)\b/i.test(originalMessage) &&
         /\b(check|find|show|list|what|which|left|remaining|pending|missing|overdue|not\s+turned\s+in|haven't|have\s+not|need\s+to\s+do|need\s+to\s+submit|still\s+to\s+do)\b/i.test(originalMessage);
     if (!initialAnswer && isClassroomPendingRequest) {
         // Deterministic routing avoids relying on the local model to invent a valid tool marker.
