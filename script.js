@@ -5771,7 +5771,7 @@ async function renderLinkPreviews(container, messageText) {
         try {
             let data = linkPreviewCache.get(url);
             if (!data) {
-                const endpoint = BACKEND_URL + "/api/link-preview?url=" + encodeURIComponent(url);
+                const endpoint = BACKEND_URL + "/api/chat?mode=link-preview&url=" + encodeURIComponent(url);
                 const response = await fetch(endpoint, { method: "GET", headers: { "Accept": "application/json" } });
                 if (!response.ok) throw new Error("Preview unavailable");
                 data = await response.json();
