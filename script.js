@@ -1290,7 +1290,17 @@ async function loadOwnerVisitorLogs() {
             } else {
                 deviceLine("Device profile", "No device data received yet. It will appear on the visitor's next page activity.");
             }
-            const activities = Array.isArray(record.recentActivities) ? record.recentActivities : [];\n            const activityHeading = document.createElement("strong");\n            activityHeading.className = "owner-device-heading";\n            activityHeading.textContent = "Axon features used";\n            card.append(activityHeading);\n            const activityLine = document.createElement("div");\n            activityLine.className = "owner-visitor-detail";\n            activityLine.textContent = activities.length\n                ? activities.slice(-12).reverse().map(item => `${item.label} · ${item.at ? new Date(item.at).toLocaleString() : "time unknown"}`).join("  |  ")\n                : "No feature-use events recorded yet. Games and Video Studio will appear here when opened.";\n            card.append(activityLine);\n\n            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
+            const activities = Array.isArray(record.recentActivities) ? record.recentActivities : [];
+            const activityHeading = document.createElement("strong");
+            activityHeading.className = "owner-device-heading";
+            activityHeading.textContent = "Axon features used";
+            card.append(activityHeading);
+            const activityLine = document.createElement("div");
+            activityLine.className = "owner-visitor-detail";
+            activityLine.textContent = activities.length
+                ? activities.slice(-12).reverse().map(item => `${item.label} · ${item.at ? new Date(item.at).toLocaleString() : "time unknown"}`).join("  |  ")
+                : "No feature-use events recorded yet. Games and Video Studio will appear here when opened.";
+            card.append(activityLine);\n\n            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
             if (history.length > 1) {
                 const historyLine = document.createElement("div");
                 historyLine.className = "owner-device-history";
@@ -1307,7 +1317,12 @@ async function loadOwnerVisitorLogs() {
     }
 }
 
-window.axonTrackFeatureUse = label => {\n    const clean = String(label || "").trim().slice(0, 80);\n    if (clean) void syncVisitorLog(auth.currentUser, clean);\n};\n\nlet visitorTrackingInitialized = false;
+window.axonTrackFeatureUse = label => {
+    const clean = String(label || "").trim().slice(0, 80);
+    if (clean) void syncVisitorLog(auth.currentUser, clean);
+};
+
+let visitorTrackingInitialized = false;
 let trackedAuthUid = null;
 let lastActivityUpdate = 0;
 let visitorTrackingBusy = false;
