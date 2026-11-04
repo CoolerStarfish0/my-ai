@@ -5696,6 +5696,108 @@ function renderMessageContent(container, messageText) {
     }
 }
 
+const AXON_PREVIEW_ADS = []; // Add approved Axon ad objects here when an ad provider/campaign is connected.
+const linkPreviewCache = new Map();
+
+function extractPreviewUrls(message) {
+    const matches = String(message || "").match(/https?:\/\/[^\s<>"'\])}]+/gi) || [];
+    return [...new Set(matches.map(value => value.replace(/[.,!?;:]+$/, "")))].filter(value => {
+        try {
+            const url = new URL(value);
+            return ["http:", "https:"].includes(url.protocol) && url.hostname.includes(".");
+        } catch { return false; }
+    }).slice(0, 2);
+}
+
+function chooseAxonPreviewAd(url) {
+    if (!Array.isArray(AXON_PREVIEW_ADS) || !AXON_PREVIEW_ADS.length) return null;
+    const eligible = AXON_PREVIEW_ADS.filter(ad => ad && ad.enabled === true &&
+        typeof ad.title === "string" && typeof ad.href === "string");
+    if (!eligible.length) return null;
+    let hash = 0;
+    for (const char of url) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    return eligible[hash % eligible.length];
+}
+
+function appendPreviewAd(container, sourceUrl) {
+    const ad = chooseAxonPreviewAd(sourceUrl);
+    if (!ad) return;
+    let destination;
+    try {
+        destination = new URL(ad.href);
+        if (!["https:", "http:"].includes(destination.protocol)) return;
+    } catch { return; }
+
+    const card = document.createElement("a");
+    card.className = "axon-preview-ad";
+    card.href = destination.href;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer sponsored";
+    const label = document.createElement("span");
+    label.className = "axon-preview-ad-label";
+    label.textContent = "Sponsored";
+    const title = document.createElement("strong");
+    title.textContent = ad.title.slice(0, 120);
+    card.append(label, title);
+    if (typeof ad.description === "string" && ad.description.trim()) {
+        const description = document.createElement("span");
+        description.textContent = ad.description.slice(0, 180);
+        card.append(description);
+    }
+    if (typeof ad.advertiser === "string" && ad.advertiser.trim()) {
+        const advertiser = document.createElement("small");
+        advertiser.textContent = "Ad · " + ad.advertiser.slice(0, 80);
+        card.append(advertiser);
+    }
+    container.append(card);
+}
+
+async function renderLinkPreviews(container, messageText) {
+    const urls = extractPreviewUrls(messageText);
+    for (const url of urls) {
+        const card = document.createElement("section");
+        card.className = "axon-link-preview";
+        card.setAttribute("aria-label", "Link preview");
+        const heading = document.createElement("strong");
+        heading.textContent = "Loading link preview…";
+        const domain = document.createElement("span");
+        domain.className = "axon-link-preview-domain";
+        try { domain.textContent = new URL(url).hostname; } catch { domain.textContent = "Website"; }
+        const summary = document.createElement("p");
+        summary.textContent = url;
+        card.append(heading, domain, summary);
+        container.append(card);
+
+        try {
+            let data = linkPreviewCache.get(url);
+            if (!data) {
+                const endpoint = BACKEND_URL + "/api/link-preview?url=" + encodeURIComponent(url);
+                const response = await fetch(endpoint, { method: "GET", headers: { "Accept": "application/json" } });
+                if (!response.ok) throw new Error("Preview unavailable");
+                data = await response.json();
+                if (!data || typeof data.title !== "string") throw new Error("Invalid preview response");
+                linkPreviewCache.set(url, data);
+            }
+            heading.textContent = data.title.slice(0, 180);
+            domain.textContent = data.siteName || new URL(url).hostname;
+            summary.textContent = data.description || data.finalUrl || url;
+            card.classList.add("is-loaded");
+            const open = document.createElement("a");
+            open.className = "axon-link-preview-open";
+            open.href = data.finalUrl || url;
+            open.target = "_blank";
+            open.rel = "noopener noreferrer";
+            open.textContent = "Open link ↗";
+            card.append(open);
+            appendPreviewAd(card, url);
+        } catch {
+            heading.textContent = "Link preview unavailable";
+            summary.textContent = url;
+            card.classList.add("is-unavailable");
+        }
+    }
+}
+
 function addMessage(
     sender,
     text,
@@ -5722,6 +5824,7 @@ function addMessage(
         "bubble";
 
     renderMessageContent(bubble, String(text ?? ""));
+    void renderLinkPreviews(bubble, String(text ?? ""));
     if (Array.isArray(attachments) && attachments.length) {
         const gallery = document.createElement("div");
         gallery.className = "message-image-gallery";
