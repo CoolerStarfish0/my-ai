@@ -14,8 +14,8 @@
 .vs-workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.8fr);gap:16px}
 .vs-preview-panel,.vs-side-panel,.vs-timeline-panel{background:#120e19;border:1px solid rgba(190,130,255,.14);border-radius:14px;padding:14px;min-width:0}
 .vs-preview-wrap{position:relative;background:#050408;border-radius:10px;overflow:hidden;aspect-ratio:16/9;display:grid;place-items:center}
-.vs-preview-wrap canvas{width:100%;height:100%;object-fit:contain}
-.vs-preview-wrap video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.vs-preview-wrap canvas{display:none}
+.vs-preview-wrap video{display:block;width:100%;height:100%;object-fit:contain;background:#050408}
 .vs-preview-controls{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
 .vs-side-panel h3,.vs-timeline-panel h3{margin:0 0 10px;font-size:14px}
 .vs-media-list{display:grid;gap:7px;max-height:220px;overflow:auto}
