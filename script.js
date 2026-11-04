@@ -1300,7 +1300,9 @@ async function loadOwnerVisitorLogs() {
             activityLine.textContent = activities.length
                 ? activities.slice(-12).reverse().map(item => `${item.label} · ${item.at ? new Date(item.at).toLocaleString() : "time unknown"}`).join("  |  ")
                 : "No feature-use events recorded yet. Games and Video Studio will appear here when opened.";
-            card.append(activityLine);\n\n            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
+            card.append(activityLine);
+
+            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
             if (history.length > 1) {
                 const historyLine = document.createElement("div");
                 historyLine.className = "owner-device-history";
