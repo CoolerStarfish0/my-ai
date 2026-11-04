@@ -107,9 +107,10 @@ export function initVideoStudio({ requestEditPlan } = {}) {
     } else if (Number.isFinite(clip.start)) {
       try { if (Math.abs(preview.currentTime - clip.start) > 0.2 && preview.paused) preview.currentTime = clip.start; } catch {}
     }
-    drawPreview();
   }
 
+  // The visible preview is the native <video> element. The canvas is reserved
+  // for export so ordinary playback does not pay the per-frame canvas cost.
   function drawPreview() {
     if (!preview.videoWidth) return;
     const ratio = Math.min(canvas.width / preview.videoWidth, canvas.height / preview.videoHeight);
@@ -117,10 +118,12 @@ export function initVideoStudio({ requestEditPlan } = {}) {
     ctx.fillStyle = "#08070d"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(preview, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
   }
-  preview.addEventListener("loadeddata", drawPreview);
   preview.addEventListener("timeupdate", () => {
-    const clip = activeClip(); if (clip && preview.currentTime > clip.end) preview.pause();
-    drawPreview();
+    const clip = activeClip();
+    if (clip && preview.currentTime >= clip.end) {
+      preview.pause();
+      try { preview.currentTime = clip.end; } catch {}
+    }
   });
   preview.addEventListener("play", () => { const clip = activeClip(); if (clip && preview.currentTime < clip.start) preview.currentTime = clip.start; });
 
@@ -211,9 +214,11 @@ export function initVideoStudio({ requestEditPlan } = {}) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); link.href = url; link.download = (projectName.value.trim() || "axon-video").replace(/[^a-z0-9-_]+/gi, "-") + ".webm"; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
+      renderPreview();
       setStatus("Export complete. Downloaded a WebM video. Audio tracks and advanced effects are not included in this first browser renderer.", "success");
     } catch (error) {
       try { recorder.stop(); } catch {}
+      renderPreview();
       setStatus("Export failed: " + (error.message || "Unknown error"), "error");
     } finally {
       stream.getTracks().forEach(track => track.stop()); exportButton.disabled = false; aiButton.disabled = false;
