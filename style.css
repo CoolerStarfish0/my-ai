@@ -2899,3 +2899,132 @@ body.chat-sidebar-open .chat-sidebar{transform:translateX(0)}
 .axon-mode-workspace .axon-mode-actions button{min-height:44px}
 body.axon-mode-open{overflow:hidden}
 @media(max-width:560px){.axon-mode-picker{justify-content:stretch}.axon-mode-picker-label{width:100%;text-align:center}.axon-mode-picker button{flex:1 1 100%;min-height:44px}.axon-mode-workspace-header{align-items:flex-start;flex-direction:column}.axon-mode-workspace-header .axon-modes-close{align-self:flex-end}}
+
+/* =========================================================
+   AXON CHATBOX — GENDER-NEUTRAL SLATE & TEAL FINISH
+   Keeps the wider Axon identity intact while giving the
+   conversation and composer a calmer, balanced palette.
+   ========================================================= */
+:root {
+    --chat-accent: #6faaa4;
+    --chat-accent-strong: #4f918d;
+    --chat-accent-soft: rgba(111, 170, 164, 0.16);
+    --chat-line: rgba(164, 185, 181, 0.19);
+    --chat-text: #e8eeec;
+}
+
+.chat {
+    scrollbar-color: rgba(111, 170, 164, 0.32) transparent;
+}
+
+.chat::-webkit-scrollbar-thumb {
+    background: rgba(111, 170, 164, 0.32);
+}
+
+.message.ai .bubble {
+    color: var(--chat-text);
+    background: rgba(29, 38, 42, 0.78);
+    border-color: rgba(164, 185, 181, 0.15);
+}
+
+.message.user .bubble {
+    color: #f0f5f3;
+    background: linear-gradient(135deg, rgba(79, 145, 141, 0.30), rgba(55, 76, 78, 0.34));
+    border-color: rgba(133, 183, 176, 0.27);
+}
+
+.input-area {
+    border-color: var(--chat-line);
+    background: rgba(16, 23, 26, 0.94);
+    box-shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+}
+
+.input-area::before {
+    background: linear-gradient(110deg, transparent, rgba(111, 170, 164, 0.22), transparent);
+    opacity: 0.65;
+}
+
+.input-area #messageInput {
+    color: var(--chat-text);
+    caret-color: var(--chat-accent);
+}
+
+.input-area #messageInput::placeholder {
+    color: #899895;
+}
+
+.input-area #messageInput:focus {
+    background: rgba(111, 170, 164, 0.045);
+    border-color: rgba(111, 170, 164, 0.20);
+}
+
+.input-area #attachImageButton,
+.attach-image-button {
+    color: #dce8e5;
+    border-color: rgba(111, 170, 164, 0.32);
+    background: rgba(79, 145, 141, 0.13);
+}
+
+.input-area #attachImageButton:hover,
+.attach-image-button:hover {
+    background: rgba(79, 145, 141, 0.25);
+    border-color: rgba(133, 183, 176, 0.52);
+}
+
+.input-area #sendButton {
+    color: #f5faf8;
+    border-color: rgba(150, 194, 187, 0.35);
+    background: linear-gradient(135deg, #568f89, #386e6b);
+    box-shadow: 0 8px 28px rgba(55, 112, 107, 0.22);
+}
+
+.input-area #sendButton:hover {
+    background: linear-gradient(135deg, #659f98, #447d78);
+    box-shadow: 0 12px 34px rgba(79, 145, 141, 0.30);
+}
+
+.axon-generating {
+    color: #a9c9c3;
+}
+
+.generation-lightning {
+    filter: drop-shadow(0 0 5px rgba(111, 170, 164, 0.75))
+            drop-shadow(0 0 12px rgba(79, 145, 141, 0.35));
+}
+
+.generation-bolt-glow {
+    stroke: #6faaa4;
+}
+
+.generation-bolt {
+    stroke: #d9eeea;
+}
+
+.axon-generating::after {
+    background: #a9d2ca;
+    box-shadow: 0 0 6px #6faaa4, 0 0 14px #4f918d;
+}
+
+.axon-mode-picker {
+    border-color: rgba(164, 185, 181, 0.18);
+    background: rgba(24, 32, 35, 0.78);
+}
+
+.axon-mode-picker button {
+    color: #e2ece9;
+    border-color: rgba(111, 170, 164, 0.30);
+    background: rgba(79, 145, 141, 0.12);
+}
+
+.axon-mode-picker button:hover,
+.axon-mode-picker button[aria-pressed="true"] {
+    background: rgba(79, 145, 141, 0.26);
+    border-color: #82b7ae;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message {
+        animation: none;
+    }
+}
+
