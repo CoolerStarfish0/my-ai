@@ -1176,7 +1176,7 @@ const deviceProfile = collectDeviceProfile();
 
 // Log page visits whether or not the visitor signs in. IP is derived server-side;
 // account details are attached only when Firebase has an authenticated user.
-async function syncVisitorLog(user = auth.currentUser) {
+async function syncVisitorLog(user = auth.currentUser, activity = null) {
     try {
         const headers = { "Content-Type": "application/json" };
         if (user) {
@@ -1190,7 +1190,8 @@ async function syncVisitorLog(user = auth.currentUser) {
                 visitorId,
                 sessionId,
                 page: window.location.pathname,
-                device: deviceProfile
+                device: deviceProfile,
+                ...(activity ? { activity } : {})
             }),
             keepalive: true
         });
@@ -1289,7 +1290,7 @@ async function loadOwnerVisitorLogs() {
             } else {
                 deviceLine("Device profile", "No device data received yet. It will appear on the visitor's next page activity.");
             }
-            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
+            const activities = Array.isArray(record.recentActivities) ? record.recentActivities : [];\n            const activityHeading = document.createElement("strong");\n            activityHeading.className = "owner-device-heading";\n            activityHeading.textContent = "Axon features used";\n            card.append(activityHeading);\n            const activityLine = document.createElement("div");\n            activityLine.className = "owner-visitor-detail";\n            activityLine.textContent = activities.length\n                ? activities.slice(-12).reverse().map(item => `${item.label} · ${item.at ? new Date(item.at).toLocaleString() : "time unknown"}`).join("  |  ")\n                : "No feature-use events recorded yet. Games and Video Studio will appear here when opened.";\n            card.append(activityLine);\n\n            const history = Array.isArray(record.deviceHistory) ? record.deviceHistory : [];
             if (history.length > 1) {
                 const historyLine = document.createElement("div");
                 historyLine.className = "owner-device-history";
@@ -1306,7 +1307,7 @@ async function loadOwnerVisitorLogs() {
     }
 }
 
-let visitorTrackingInitialized = false;
+window.axonTrackFeatureUse = label => {\n    const clean = String(label || "").trim().slice(0, 80);\n    if (clean) void syncVisitorLog(auth.currentUser, clean);\n};\n\nlet visitorTrackingInitialized = false;
 let trackedAuthUid = null;
 let lastActivityUpdate = 0;
 let visitorTrackingBusy = false;
