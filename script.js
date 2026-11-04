@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import * as chrono from "https://esm.sh/chrono-node@2.8.0";
 import { trackFeature, loadFeatureAnalytics } from "./analytics.js?v=feature-analytics-2";
+import { initVideoStudio } from "./video-studio.js?v=axon-video-studio-1";
 
 import {
     getAuth,
@@ -2773,6 +2774,21 @@ sendButton.addEventListener(
 
 void loadApproximateLocation();
 initCalendarUI();
+initVideoStudio({
+    requestEditPlan: async prompt => {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Sign in or continue as Guest before using AI editing.");
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ prompt, system: "You are Axon\u0027s video edit-decision planner. Return only valid JSON matching the schema in the prompt. Do not use markdown fences, invent source files or timestamps, or claim to have visually inspected media.", context: "", workMode: false, adminAction: null, targetUser: null })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Axon could not create the edit plan.");
+        return data.answer || "";
+    }
+});
 
 messageInput.addEventListener(
     "keydown",
