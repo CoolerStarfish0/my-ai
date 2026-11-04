@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style.css?v=axon-cloud-sync-20261028a">
     <link rel="stylesheet" href="agent.css?v=axon-agent-1">
     <link rel="stylesheet" href="games.css">
+    <link rel="stylesheet" href="video-studio.css?v=axon-video-studio-1">
     <script type="module" src="script.js?v=axon-classroom-pending-20261028d"></script>
     <script type="module" src="games.js?v=market-day-2"></script>
 </head>
@@ -180,6 +181,7 @@
 
             <div class="auth-buttons">
                 <button id="gamesButton" class="games-launch-button" type="button" title="Open Axon Games">🎮 Games</button>
+                <button id="videoStudioButton" class="video-studio-launch" type="button" title="Open Axon Video Studio">🎬 Video Studio</button>
 
                 <button id="calendarButton" class="calendar-launch-button" type="button" title="Open your calendar">📅 Calendar</button>
 
@@ -522,6 +524,18 @@
         </div>
     </section>
 
+<section id="videoStudio" class="video-studio hidden" aria-label="Axon Video Studio" aria-modal="true" role="dialog" aria-hidden="true">
+ <div class="video-studio-inner">
+  <header class="video-studio-header"><div><h2>🎬 Axon Video Studio</h2><p>Browser-based editing · Your source media stays on this device</p></div><button id="videoStudioClose" type="button">✕ Close</button></header>
+  <div class="vs-toolbar"><input id="videoStudioProjectName" type="text" maxlength="100" value="Untitled video" aria-label="Project name"><button id="videoStudioImport" type="button">＋ Import media</button><input id="videoStudioFiles" type="file" accept="video/*,audio/*" multiple hidden><button id="videoStudioSave" type="button">Save edit list</button></div>
+  <div class="vs-workspace">
+   <section class="vs-preview-panel"><div class="vs-preview-wrap"><canvas id="videoStudioCanvas" width="1280" height="720" aria-label="Video preview"></canvas><video id="videoStudioPreview" playsinline preload="metadata"></video></div><div class="vs-preview-controls"><button id="videoStudioPlay" type="button">▶ Play / Pause</button><span>Preview · 1280 × 720</span></div></section>
+   <aside class="vs-side-panel"><h3>Media library</h3><div id="videoStudioMedia" class="vs-media-list"><p class="vs-empty">Import video or audio files to get started.</p></div><div class="vs-ai-box"><h3>Ask Axon to edit</h3><textarea id="videoStudioPrompt" rows="5" maxlength="2000" placeholder="Make a fast-paced gaming montage. Keep the best moments, trim dead time, and build toward the final goal…"></textarea><button id="videoStudioAI" type="button">✨ Generate edit plan</button><p class="vs-empty">Axon creates a timeline plan from filenames and durations. Visual highlight detection will be added in a later stage.</p></div></aside>
+  </div>
+  <section class="vs-timeline-panel"><h3>Timeline · Video track</h3><div id="videoStudioTimeline"><p class="vs-empty">Your video clips will appear here.</p></div><div class="vs-toolbar"><button id="videoStudioExport" type="button">Export video (WebM)</button><span class="vs-empty">First renderer: video-only WebM, 30 FPS. More tracks, audio mixing and MP4 export are later stages.</span></div></section>
+  <p id="videoStudioStatus" class="vs-status" role="status" aria-live="polite">Ready. Import a video to begin.</p>
+ </div>
+</section>
     <dialog id="calendarDialog" class="calendar-dialog" aria-labelledby="calendarDialogTitle">
         <div class="calendar-dialog-header">
             <div>
