@@ -225,7 +225,7 @@ export function initVideoStudio({ requestEditPlan } = {}) {
     }
   }
 
-  openButton.addEventListener("click", () => { studio.classList.remove("hidden"); studio.setAttribute("aria-hidden", "false"); document.body.classList.add("video-studio-open"); render(); });
+  openButton.addEventListener("click", () => { window.axonTrackFeatureUse?.("Video Studio"); studio.classList.remove("hidden"); studio.setAttribute("aria-hidden", "false"); document.body.classList.add("video-studio-open"); render(); });
   function close() { studio.classList.add("hidden"); studio.setAttribute("aria-hidden", "true"); document.body.classList.remove("video-studio-open"); preview.pause(); }
   closeButton?.addEventListener("click", close);
   studio.addEventListener("click", event => { if (event.target === studio) close(); });
