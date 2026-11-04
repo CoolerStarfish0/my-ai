@@ -84,7 +84,9 @@ stage?.addEventListener("submit", e => {
 });
 
 const stageHandlers = {};
-function launchGame(id) {\n   const selectedGame = games.find(game => game.id === id);\n   window.axonTrackFeatureUse?.(`Game: ${selectedGame?.title || id}`);
+function launchGame(id) {
+  const selectedGame = games.find(game => game.id === id);
+  window.axonTrackFeatureUse?.(`Game: ${selectedGame?.title || id}`);
   gameCleanup();
   gameCleanup = () => {};
   const game = games.find(g => g.id === id);
