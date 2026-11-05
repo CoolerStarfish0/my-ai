@@ -2975,3 +2975,12 @@ body.axon-mode-open{overflow:hidden}
     color: var(--text-muted, #888);
     font-size: .7rem;
 }
+
+/* Axon usability pass: a usable composer and compact permission help. */
+.input-area #messageInput{box-sizing:border-box;min-height:64px;max-height:220px;padding:14px 16px;font-size:16px;line-height:1.5}
+.input-area{align-items:stretch;gap:9px;padding:9px}
+.input-area #attachImageButton,.input-area #sendButton{align-self:center}
+.axon-agent-help{margin:8px 0 12px;border:1px solid rgba(192,132,252,.16);border-radius:10px;background:rgba(255,255,255,.025);color:var(--text);font-size:.8rem}
+.axon-agent-help summary{padding:9px 11px;color:var(--purple-soft,#c4b5fd);font-weight:700;cursor:pointer}
+.axon-agent-help p{margin:0;padding:0 11px 11px;color:var(--muted,#aaa);font-size:.78rem;line-height:1.45}
+@media(max-width:520px){.input-area{align-items:stretch}.input-area #messageInput{min-height:56px;max-height:180px;padding:11px 10px;font-size:16px}}
