@@ -6067,3 +6067,165 @@ function restartAxonNoteRecognition(){if(axonNoteStopRequested||axonNoteFatalErr
 axonNotesStart?.addEventListener("click",()=>{const API=window.SpeechRecognition||window.webkitSpeechRecognition;if(!API){axonNotesStatus.textContent="Speech recognition is not supported in this browser. Try desktop Chrome or Edge.";return}try{clearTimeout(axonNoteRestartTimer);axonNoteRestartTimer=null;axonNoteTranscript="";if(axonNotesTranscript)axonNotesTranscript.value="";axonNoteShouldSummarise=false;axonNoteStopRequested=false;axonNoteFatalError=false;axonNoteRecognition=new API();axonNoteRecognition.continuous=true;axonNoteRecognition.interimResults=true;axonNoteRecognition.lang=document.getElementById("axonNotesLanguage")?.value||"en-IN";axonNoteRecognition.onstart=()=>{setAxonNoteListeningUI(true);if(axonNotesStatus)axonNotesStatus.textContent="Listening… Keep this tab open. If speech recognition pauses, Axon will try to reconnect. Your browser's provider may process audio."};axonNoteRecognition.onresult=e=>{let finalText=axonNoteTranscript,interim="";for(let i=e.resultIndex;i<e.results.length;i++){const p=e.results[i][0]?.transcript||"";if(e.results[i].isFinal)finalText+=p+" ";else interim+=p}axonNoteTranscript=finalText;if(axonNotesTranscript){axonNotesTranscript.value=(finalText+(interim?"\n…"+interim:"")).trim();axonNotesTranscript.scrollTop=axonNotesTranscript.scrollHeight}};axonNoteRecognition.onerror=e=>{const err=e.error||"unknown";if(axonNotesStatus)axonNotesStatus.textContent="Speech recognition error: "+err+". "+(["not-allowed","service-not-allowed","audio-capture","language-not-supported"].includes(err)?"Check microphone/site permissions, input device, and selected language.":"Trying to reconnect…");if(["not-allowed","service-not-allowed","audio-capture","language-not-supported"].includes(err)){axonNoteFatalError=true;setAxonNoteListeningUI(false)}};axonNoteRecognition.onend=()=>{if(axonNoteStopRequested||axonNoteFatalError){finishAxonNoteSession();return}restartAxonNoteRecognition()};axonNoteRecognition.start()}catch(e){setAxonNoteListeningUI(false);if(axonNotesStatus)axonNotesStatus.textContent="Could not start speech recognition: "+(e.message||"unknown error")}});
 axonNotesStop?.addEventListener("click",()=>{if(!axonNoteRecognition||!axonNoteListening)return;axonNoteShouldSummarise=true;axonNoteStopRequested=true;clearTimeout(axonNoteRestartTimer);if(axonNotesStatus)axonNotesStatus.textContent="Stopping microphone and finalising transcript…";try{axonNoteRecognition.stop()}catch{finishAxonNoteSession()}});
 loadAxonWritingSamples();
+
+
+
+/* AXON IMAGE STUDIO — prompt-to-canvas pixel-art generation */
+(function initAxonImageStudio() {
+    if (document.getElementById("axonImageStudioButton")) return;
+    const style = document.createElement("style");
+    style.textContent = [
+      "#axonImageStudioButton{border:1px solid rgba(168,85,247,.45);border-radius:11px;background:rgba(124,58,237,.16);color:inherit;padding:9px 12px;font:inherit;font-weight:750;cursor:pointer;white-space:nowrap}",
+      "#axonImageStudioButton:hover{background:rgba(124,58,237,.3)}",
+      "#axonImageStudioModal{position:fixed;inset:0;z-index:12000;display:none;place-items:center;padding:16px;background:rgba(4,3,10,.82);backdrop-filter:blur(7px)}",
+      "#axonImageStudioModal.is-open{display:grid}",
+      ".axon-image-studio{width:min(760px,100%);max-height:min(92dvh,900px);overflow:auto;padding:20px;border:1px solid rgba(192,132,252,.3);border-radius:20px;background:#100b1b;color:#f4efff;box-shadow:0 24px 90px #0009}",
+      ".axon-image-studio-head{display:flex;align-items:center;justify-content:space-between;gap:12px}",
+      ".axon-image-studio-head h2{margin:0;font-size:1.3rem}",
+      ".axon-image-studio button,.axon-image-studio select,.axon-image-studio textarea{font:inherit}",
+      ".axon-image-studio button{border:1px solid rgba(192,132,252,.35);border-radius:10px;background:rgba(124,58,237,.2);color:inherit;padding:9px 12px;cursor:pointer}",
+      ".axon-image-studio button:disabled{opacity:.5;cursor:wait}",
+      ".axon-image-studio textarea{box-sizing:border-box;width:100%;min-height:86px;margin:14px 0 9px;padding:12px;border:1px solid rgba(192,132,252,.28);border-radius:11px;background:#090611;color:inherit;resize:vertical}",
+      ".axon-image-studio-controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px}",
+      ".axon-image-studio select{padding:9px;border:1px solid rgba(192,132,252,.28);border-radius:9px;background:#090611;color:inherit}",
+      ".axon-image-studio-status{min-height:1.4em;color:#c4b5fd;font-size:.84rem}",
+      ".axon-image-studio-preview{display:grid;place-items:center;min-height:260px;margin:12px 0;padding:16px;border:1px solid rgba(192,132,252,.2);border-radius:14px;background-color:#171222;background-image:linear-gradient(45deg,#ffffff0b 25%,transparent 25%),linear-gradient(-45deg,#ffffff0b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ffffff0b 75%),linear-gradient(-45deg,transparent 75%,#ffffff0b 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}",
+      "#axonImageStudioCanvas{display:block;max-width:100%;max-height:48vh;width:auto;height:auto;image-rendering:pixelated;box-shadow:0 8px 30px #0008}",
+      ".axon-image-studio-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:#a99dbd;font-size:.76rem}",
+      "@media(max-width:520px){.axon-image-studio{padding:14px}.axon-image-studio-preview{min-height:190px;padding:8px}}"
+    ].join("");
+    document.head.append(style);
+    const composer = document.querySelector(".input-area");
+    if (!composer) return;
+    const launch = document.createElement("button");
+    launch.id = "axonImageStudioButton"; launch.type = "button";
+    launch.textContent = "🎨 Create image"; launch.title = "Generate pixel art with Axon";
+    composer.insertBefore(launch, composer.querySelector("#messageInput"));
+
+    const modal = document.createElement("div");
+    modal.id = "axonImageStudioModal";
+    modal.innerHTML = [
+      '<section class="axon-image-studio" role="dialog" aria-modal="true" aria-labelledby="axonImageStudioTitle">',
+      '<div class="axon-image-studio-head"><div><h2 id="axonImageStudioTitle">🎨 Axon Image Studio</h2><small>Describe an image; Axon draws it on a pixel canvas.</small></div><button type="button" data-close aria-label="Close image studio">✕</button></div>',
+      '<textarea id="axonImageStudioPrompt" maxlength="700" placeholder="A tiny toucan sitting on a branch at sunset, bright tropical colours…"></textarea>',
+      '<div class="axon-image-studio-controls"><label for="axonImageStudioSize">Canvas</label>',
+      '<select id="axonImageStudioSize"><option value="64x64">64 × 64 · Square</option><option value="96x64">96 × 64 · Landscape</option><option value="64x96">64 × 96 · Portrait</option><option value="96x96">96 × 96 · Large square</option></select>',
+      '<button id="axonImageStudioGenerate" type="button">Generate</button><button id="axonImageStudioDownload" type="button" disabled>Download PNG</button></div>',
+      '<p id="axonImageStudioStatus" class="axon-image-studio-status" role="status">Ready. Generated art is rendered locally in your browser.</p>',
+      '<div class="axon-image-studio-preview"><canvas id="axonImageStudioCanvas" width="64" height="64" aria-label="Generated image preview"></canvas></div>',
+      '<div class="axon-image-studio-foot"><span>Pixel-art renderer · rectangles · ellipses · lines · polygons</span><span id="axonImageStudioMeta">64 × 64</span></div></section>'
+    ].join("");
+    document.body.append(modal);
+    const promptEl = modal.querySelector("#axonImageStudioPrompt");
+    const sizeEl = modal.querySelector("#axonImageStudioSize");
+    const generateButton = modal.querySelector("#axonImageStudioGenerate");
+    const downloadButton = modal.querySelector("#axonImageStudioDownload");
+    const statusEl = modal.querySelector("#axonImageStudioStatus");
+    const canvas = modal.querySelector("#axonImageStudioCanvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    let hasArtwork = false;
+
+    function close() { modal.classList.remove("is-open"); }
+    launch.addEventListener("click", () => { modal.classList.add("is-open"); promptEl.focus(); });
+    modal.querySelector("[data-close]").addEventListener("click", close);
+    modal.addEventListener("click", event => { if (event.target === modal) close(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && modal.classList.contains("is-open")) close(); });
+    sizeEl.addEventListener("change", () => {
+      const dimensions = sizeEl.value.split("x").map(Number);
+      canvas.width = dimensions[0]; canvas.height = dimensions[1];
+      ctx.fillStyle = "#171222"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      modal.querySelector("#axonImageStudioMeta").textContent = dimensions[0] + " × " + dimensions[1];
+      hasArtwork = false; downloadButton.disabled = true;
+    });
+
+    function safeColor(value, fallback) {
+      return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+    }
+    function coord(value, max) {
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : 0;
+    }
+    function drawArtwork(spec) {
+      const width = canvas.width, height = canvas.height;
+      const palette = Array.isArray(spec.palette) ? spec.palette.slice(0, 16).map(color => safeColor(color, "#ffffff")) : [];
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = safeColor(spec.background, palette[0] || "#171222");
+      ctx.fillRect(0, 0, width, height);
+      const shapes = Array.isArray(spec.shapes) ? spec.shapes.slice(0, 180) : [];
+      for (const shape of shapes) {
+        if (!shape || typeof shape !== "object") continue;
+        const color = safeColor(shape.color, palette[1] || "#ffffff");
+        ctx.fillStyle = color; ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, Math.min(8, Number(shape.width) || 1));
+        const x = coord(shape.x, width), y = coord(shape.y, height);
+        const w = coord(shape.w, width), h = coord(shape.h, height);
+        if (shape.type === "rect") ctx.fillRect(x, y, w, h);
+        else if (shape.type === "ellipse") {
+          ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, Math.max(.5, w / 2), Math.max(.5, h / 2), 0, 0, Math.PI * 2); ctx.fill();
+        } else if (shape.type === "line") {
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(coord(shape.x2, width), coord(shape.y2, height)); ctx.stroke();
+        } else if (shape.type === "polygon" && Array.isArray(shape.points) && shape.points.length >= 3 && shape.points.length <= 24) {
+          ctx.beginPath();
+          shape.points.forEach((point, index) => {
+            const px = coord(point && point[0], width), py = coord(point && point[1], height);
+            if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      hasArtwork = true; downloadButton.disabled = false;
+    }
+    function parseDrawingSpec(answer) {
+      let source = String(answer || "").trim();
+      source = source.split("\n").filter(line => !line.trim().startsWith(String.fromCharCode(96,96,96))).join("\n").trim();
+      const first = source.indexOf("{"), last = source.lastIndexOf("}");
+      if (first < 0 || last <= first) throw new Error("Axon returned no drawing instructions. Try a simpler prompt.");
+      const parsed = JSON.parse(source.slice(first, last + 1));
+      if (!parsed || !Array.isArray(parsed.shapes)) throw new Error("Drawing instructions were incomplete. Please try again.");
+      return parsed;
+    }
+
+    generateButton.addEventListener("click", async () => {
+      const description = promptEl.value.trim();
+      if (!description) { statusEl.textContent = "Describe the image first."; promptEl.focus(); return; }
+      const user = auth.currentUser;
+      if (!user) { statusEl.textContent = "Sign in or continue as Guest before generating."; return; }
+      if (workActionBusy) { statusEl.textContent = "Axon is busy with another request. Try again shortly."; return; }
+      const dimensions = sizeEl.value.split("x").map(Number);
+      generateButton.disabled = true; downloadButton.disabled = true;
+      statusEl.textContent = "Axon is planning the pixels…";
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify({
+            prompt: "Create pixel art for this description: " + description + ". Canvas dimensions: " + dimensions[0] + " by " + dimensions[1] + " pixels.",
+            system: "You are Axon's pixel-art drawing planner. Return ONLY one valid JSON object, no markdown or commentary, with this shape: {\"background\":\"#RRGGBB\",\"palette\":[\"#RRGGBB\"],\"shapes\":[{\"type\":\"rect|ellipse|line|polygon\",\"x\":0,\"y\":0,\"w\":0,\"h\":0,\"x2\":0,\"y2\":0,\"width\":1,\"color\":\"#RRGGBB\",\"points\":[[0,0],[8,0],[4,8]]}]}. Coordinates use the supplied canvas pixel dimensions, origin top-left. Use only rect, ellipse, line, polygon. For polygons provide 3-24 points; triangles are polygons with 3 points. Use integer coordinates, 4-12 harmonious hex colours, and up to 150 shapes. Layer background and large forms first, details last. Make a clear, recognizable, attractive pixel-art composition. No URLs, code, SVG, or HTML. Return JSON only.",
+            workMode: false, adminAction: null, targetUser: null
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(data.error || "Image generation request failed.");
+          error.credits = data.credits || null; throw error;
+        }
+        drawArtwork(parseDrawingSpec(data.answer));
+        statusEl.textContent = "Image created. You can download it as a PNG.";
+      } catch (error) {
+        console.error("Axon Image Studio error:", error);
+        statusEl.textContent = error.message || "Couldn't generate that image.";
+      } finally { generateButton.disabled = false; }
+    });
+
+    downloadButton.addEventListener("click", () => {
+      if (!hasArtwork) return;
+      canvas.toBlob(blob => {
+        if (!blob) { statusEl.textContent = "The PNG could not be exported."; return; }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = "axon-image-" + canvas.width + "x" + canvas.height + ".png";
+        document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+      }, "image/png");
+    });
+})();
