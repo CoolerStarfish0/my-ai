@@ -6079,13 +6079,13 @@ loadAxonWritingSamples();
       "#axonImageStudioButton:hover{background:rgba(124,58,237,.3)}",
       "#axonImageStudioModal{position:fixed;inset:0;z-index:12000;display:none;place-items:center;padding:16px;background:rgba(4,3,10,.82);backdrop-filter:blur(7px)}",
       "#axonImageStudioModal.is-open{display:grid}",
-      ".axon-image-studio{width:min(760px,100%);max-height:min(92dvh,900px);overflow:auto;padding:20px;border:1px solid rgba(192,132,252,.3);border-radius:20px;background:#100b1b;color:#f4efff;box-shadow:0 24px 90px #0009}",
+      ".axon-image-studio{width:min(820px,100%);max-height:calc(100dvh - 24px);overflow:auto;padding:clamp(14px,3vw,24px);border:1px solid rgba(192,132,252,.3);border-radius:20px;background:#100b1b;color:#f4efff;box-shadow:0 24px 90px #0009}",
       ".axon-image-studio-head{display:flex;align-items:center;justify-content:space-between;gap:12px}",
       ".axon-image-studio-head h2{margin:0;font-size:1.3rem}",
       ".axon-image-studio button,.axon-image-studio select,.axon-image-studio textarea{font:inherit}",
       ".axon-image-studio button{border:1px solid rgba(192,132,252,.35);border-radius:10px;background:rgba(124,58,237,.2);color:inherit;padding:9px 12px;cursor:pointer}",
       ".axon-image-studio button:disabled{opacity:.5;cursor:wait}",
-      ".axon-image-studio textarea{box-sizing:border-box;width:100%;min-height:86px;margin:14px 0 9px;padding:12px;border:1px solid rgba(192,132,252,.28);border-radius:11px;background:#090611;color:inherit;resize:vertical}",
+      ".axon-image-studio textarea{box-sizing:border-box;display:block;width:100%;min-height:116px;margin:14px 0 9px;padding:12px;border:1px solid rgba(192,132,252,.28);border-radius:11px;background:#090611;color:inherit;resize:vertical}",
       ".axon-image-studio-controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px}",
       ".axon-image-studio select{padding:9px;border:1px solid rgba(192,132,252,.28);border-radius:9px;background:#090611;color:inherit}",
       ".axon-image-studio-status{min-height:1.4em;color:#c4b5fd;font-size:.84rem}",
@@ -6141,12 +6141,22 @@ loadAxonWritingSamples();
     function safeColor(value, fallback) {
       return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
     }
+    let coordinateScale = 1;
     function coord(value, max) {
       const number = Number(value);
       return Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : 0;
     }
     function drawArtwork(spec) {
       const width = canvas.width, height = canvas.height;
+      const values = [];
+      for (const item of (Array.isArray(spec.shapes) ? spec.shapes : [])) {
+        for (const key of ["x", "y", "w", "h", "x2", "y2"]) if (item && item[key] !== undefined) values.push(Math.abs(Number(item[key]) || 0));
+        if (item && Array.isArray(item.points)) for (const point of item.points) if (Array.isArray(point)) values.push(Math.abs(Number(point[0]) || 0), Math.abs(Number(point[1]) || 0));
+      }
+      const maxCoordinate = Math.max(0, ...values);
+      const maxDimension = Math.max(width, height);
+      const sourceRange = maxCoordinate > maxDimension * 1.35 ? (maxCoordinate <= 110 ? 100 : maxCoordinate <= 1100 ? 1000 : maxCoordinate) : maxDimension;
+      coordinateScale = maxDimension / sourceRange;
       const palette = Array.isArray(spec.palette) ? spec.palette.slice(0, 16).map(color => safeColor(color, "#ffffff")) : [];
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = safeColor(spec.background, palette[0] || "#171222");
@@ -6201,7 +6211,7 @@ loadAxonWritingSamples();
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
           body: JSON.stringify({
             prompt: "Create pixel art for this description: " + description + ". Canvas dimensions: " + dimensions[0] + " by " + dimensions[1] + " pixels.",
-            system: "You are Axon's pixel-art drawing planner. Return ONLY one valid JSON object, no markdown or commentary, with this shape: {\"background\":\"#RRGGBB\",\"palette\":[\"#RRGGBB\"],\"shapes\":[{\"type\":\"rect|ellipse|line|polygon\",\"x\":0,\"y\":0,\"w\":0,\"h\":0,\"x2\":0,\"y2\":0,\"width\":1,\"color\":\"#RRGGBB\",\"points\":[[0,0],[8,0],[4,8]]}]}. Coordinates use the supplied canvas pixel dimensions, origin top-left. Use only rect, ellipse, line, polygon. For polygons provide 3-24 points; triangles are polygons with 3 points. Use integer coordinates, 4-12 harmonious hex colours, and up to 150 shapes. Layer background and large forms first, details last. Make a clear, recognizable, attractive pixel-art composition. No URLs, code, SVG, or HTML. Return JSON only.",
+            system: "You are Axon image composition planner, not a chatbot. Return ONLY one valid JSON object with background, palette and shapes. Shapes use rect, ellipse, circle, line or polygon. ALL x/y/w/h/x2/y2/points coordinates use a 0–1000 grid, origin top-left. Build a recognizable composition: background first, distant scenery second, one large connected main subject silhouette next, then foreground and subject details last. Main subject should occupy 45–70% of canvas height and be near centre unless prompt says otherwise. Use 12–35 purposeful shapes for simple subjects, 25–65 for detailed scenes, and 4–8 harmonious hex colours. Avoid random stripes, scattered marks, repeated decorative triangles and unrelated geometry. Keep all points inside the 0–1000 grid. Details must visually belong to the subject. Use integer coordinates and valid #RRGGBB colours. Return JSON only: no markdown, commentary, code, SVG, HTML or URLs.",
             workMode: false, adminAction: null, targetUser: null
           })
         });
