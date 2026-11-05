@@ -6141,10 +6141,10 @@ loadAxonWritingSamples();
     function safeColor(value, fallback) {
       return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
     }
-    let coordinateScale = 1;
+    let coordinateRange = 64;
     function coord(value, max) {
       const number = Number(value);
-      return Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : 0;
+      return Number.isFinite(number) ? Math.max(0, Math.min(max, number * max / coordinateRange)) : 0;
     }
     function drawArtwork(spec) {
       const width = canvas.width, height = canvas.height;
@@ -6156,7 +6156,7 @@ loadAxonWritingSamples();
       const maxCoordinate = Math.max(0, ...values);
       const maxDimension = Math.max(width, height);
       const sourceRange = maxCoordinate > maxDimension * 1.35 ? (maxCoordinate <= 110 ? 100 : maxCoordinate <= 1100 ? 1000 : maxCoordinate) : maxDimension;
-      coordinateScale = maxDimension / sourceRange;
+      coordinateRange = sourceRange;
       const palette = Array.isArray(spec.palette) ? spec.palette.slice(0, 16).map(color => safeColor(color, "#ffffff")) : [];
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = safeColor(spec.background, palette[0] || "#171222");
