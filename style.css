@@ -2985,3 +2985,37 @@ body.axon-mode-open{overflow:hidden}
 .axon-agent-help p{margin:0;padding:0 11px 11px;color:var(--muted,#aaa);font-size:.78rem;line-height:1.45}
 @media(max-width:520px){.input-area{align-items:stretch}.input-area #messageInput{min-height:56px;max-height:180px;padding:11px 10px;font-size:16px}}
 
+
+
+/* AXON SIDEBAR MODES + INTEGRATIONS */
+.chat-sidebar{width:340px;padding:18px 13px}
+.chat-sidebar-heading{margin-bottom:14px}
+.sidebar-modes{margin:14px 0 18px;border:1px solid rgba(192,132,252,.22);border-radius:14px;background:rgba(124,58,237,.07);overflow:hidden}
+.sidebar-modes>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;cursor:pointer;list-style:none;color:var(--white);font-weight:850;letter-spacing:.02em}
+.sidebar-modes>summary::-webkit-details-marker{display:none}
+.sidebar-modes>summary::before{content:"";width:7px;height:7px;border-radius:50%;background:#b78cff;box-shadow:0 0 12px #a855f7}
+.sidebar-modes>summary span:first-child{flex:1}
+.sidebar-modes-chevron{opacity:.65;transition:transform .2s}
+.sidebar-modes[open] .sidebar-modes-chevron{transform:rotate(180deg)}
+.sidebar-modes-content{padding:0 10px 12px;max-height:58vh;overflow-y:auto}
+.sidebar-modes-caption{margin:10px 3px 7px;color:var(--muted);font-size:9px;font-weight:850;letter-spacing:.13em}
+.sidebar-modes .axon-agent-panel{gap:9px;margin:0;padding:12px;border-radius:12px;background:rgba(18,15,31,.92);box-shadow:none;border-color:rgba(192,132,252,.17)}
+.sidebar-modes .axon-agent-heading{display:block}
+.sidebar-modes .axon-agent-heading h2{font-size:14px;line-height:1.35}
+.sidebar-modes .axon-agent-heading p{font-size:11px}
+.sidebar-modes .axon-agent-status{margin-top:8px;font-size:10px}
+.sidebar-modes .axon-agent-note{font-size:11px;overflow-wrap:anywhere}
+.sidebar-modes .axon-agent-actions{display:grid;grid-template-columns:1fr;gap:6px}
+.sidebar-modes .axon-agent-actions button{width:100%;padding:9px 10px;text-align:left;font-size:11px}
+.sidebar-modes .axon-agent-actions label{font-size:11px}
+.sidebar-modes .axon-agent-actions select{width:100%;min-width:0;padding:8px;border-radius:8px}
+.sidebar-modes .axon-agent-help{font-size:11px;line-height:1.45}
+.sidebar-modes .axon-agent-help summary{cursor:pointer}
+.sidebar-modes .axon-agent-panel a{overflow-wrap:anywhere}
+.sidebar-modes .axon-mode-picker{display:grid;grid-template-columns:1fr;width:100%;gap:6px;margin:0;padding:0;border:0;background:transparent}
+.sidebar-modes .axon-mode-picker-label{display:none}
+.sidebar-modes .axon-mode-picker button{width:100%;padding:10px;text-align:left;font-size:12px}
+.chat-sidebar .chat-history-list{margin-top:12px}
+.chat-sidebar-toggle{z-index:1024}
+@media(min-width:1050px){body.chat-sidebar-open .app{padding-left:340px}body.chat-sidebar-open .chat-sidebar-toggle{left:352px}}
+@media(max-width:1049px){.chat-sidebar{width:min(340px,88vw)}}
