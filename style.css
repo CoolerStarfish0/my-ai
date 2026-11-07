@@ -3011,3 +3011,13 @@ body.axon-mode-open{overflow:hidden}
 @media (max-width: 520px) {
     .axon-gps-button { padding: 0 8px; font-size: 11px; }
 }
+
+
+/* LOCATION PRIVACY NOTICE */
+.axon-location-notice {
+    margin: 7px 2px 0;
+    color: var(--muted, #aaa);
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+}
