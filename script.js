@@ -4335,10 +4335,11 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
                 visibleText: parsed.visibleText || ""
             };
         } else if (parsed && isDocumentContinuation &&
-            lastGoogleToolResult?.action === "google_read_doc" &&
-            ["google_append_doc", "google_replace_doc_text"].includes(parsed.action.action)) {
+            lastGoogleToolResult?.action === "google_read_doc") {
             const realDocumentId = lastGoogleToolResult.documentId;
-            if (typeof realDocumentId === "string" && realDocumentId.trim()) {
+            if (typeof realDocumentId === "string" && realDocumentId.trim() &&
+                ["google_read_doc", "google_append_doc", "google_replace_doc_text"].includes(parsed.action.action)) {
+                // Always pin every document operation to the ID returned by Docs API.
                 parsed.action.documentId = realDocumentId;
             }
         }
