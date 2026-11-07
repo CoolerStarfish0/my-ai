@@ -3799,59 +3799,43 @@ function extractAxonGoogleAction(text) {
 
     const payloadStart = start + startMarker.length;
     const explicitEnd = text.indexOf(endMarker, payloadStart);
-    let payload = "";
-    let actionEnd = -1;
+    const sourceEnd = explicitEnd >= 0 ? explicitEnd : text.length;
+    const source = text.slice(payloadStart, sourceEnd).trim();
 
-    // Accept the documented closed marker pair, but also tolerate the common
-    // model output that emits the opening marker followed by one JSON object
-    // and forgets the closing marker.
-    if (explicitEnd >= 0) {
-        payload = text.slice(payloadStart, explicitEnd).trim();
-        actionEnd = explicitEnd + endMarker.length;
-    } else {
-        let cursor = payloadStart;
-        while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
-        if (text.slice(cursor, cursor + 7).toLowerCase() === "```json") {
-            cursor += 7;
-            while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
-        } else if (text.slice(cursor, cursor + 3) === "```") {
-            cursor += 3;
-            while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+    // Models sometimes wrap JSON in prose or Markdown fences even when they
+    // use the required marker. Extract the first complete JSON object with a
+    // string-aware brace scanner instead of parsing the entire payload.
+    let cursor = 0;
+    while (cursor < source.length && source[cursor] !== "{") cursor++;
+    if (cursor >= source.length) return null;
+
+    const objectStart = cursor;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let objectEnd = -1;
+    for (; cursor < source.length; cursor++) {
+        const char = source[cursor];
+        if (inString) {
+            if (escaped) escaped = false;
+            else if (char === "\\") escaped = true;
+            else if (char === '"') inString = false;
+            continue;
         }
-
-        if (text[cursor] !== "{") return null;
-        const objectStart = cursor;
-        let depth = 0;
-        let inString = false;
-        let escaped = false;
-        for (; cursor < text.length; cursor++) {
-            const char = text[cursor];
-            if (inString) {
-                if (escaped) escaped = false;
-                else if (char === "\\") escaped = true;
-                else if (char === '"') inString = false;
-                continue;
-            }
-            if (char === '"') inString = true;
-            else if (char === "{") depth++;
-            else if (char === "}") {
-                depth--;
-                if (depth === 0) {
-                    cursor++;
-                    payload = text.slice(objectStart, cursor);
-                    actionEnd = cursor;
-                    break;
-                }
+        if (char === '"') inString = true;
+        else if (char === "{") depth++;
+        else if (char === "}") {
+            depth--;
+            if (depth === 0) {
+                objectEnd = cursor + 1;
+                break;
             }
         }
-        if (actionEnd < 0) return null;
-        while (actionEnd < text.length && /\s/.test(text[actionEnd])) actionEnd++;
-        if (text.slice(actionEnd, actionEnd + 3) === "```") actionEnd += 3;
     }
+    if (objectEnd < 0) return null;
 
     try {
-        payload = payload.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-        const action = JSON.parse(payload);
+        const action = JSON.parse(source.slice(objectStart, objectEnd));
         const allowed = new Set([
             "drive_search", "classroom_list_courses", "classroom_list_students", "classroom_list_pending_work",
             "google_read_doc", "google_append_doc", "google_replace_doc_text", "google_create_doc",
@@ -3860,6 +3844,8 @@ function extractAxonGoogleAction(text) {
             "calendar_list_events", "calendar_create_event", "gmail_create_draft"
         ]);
         if (!action || typeof action !== "object" || Array.isArray(action) || !allowed.has(action.action)) return null;
+
+        const actionEnd = explicitEnd >= 0 ? explicitEnd + endMarker.length : payloadStart + objectEnd;
         return { action, visibleText: (text.slice(0, start) + text.slice(actionEnd)).trim() };
     } catch (error) {
         console.warn("Axon Google action JSON was invalid:", error);
@@ -4250,6 +4236,10 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
     let forcedContinuationRetries = 0;
     const isDocumentContinuation = /\b(open|go on|go to|finish|complete|continue|resume|pick up)\b/i.test(originalMessage) &&
         /\b(google\s*(?:docs?|documents?)|document)\b/i.test(originalMessage);
+    if (isDocumentContinuation) {
+        // Always begin an explicit existing-document task with a real Drive search.
+        initialAnswer = '[[AXON_GOOGLE_ACTION]]{"action":"drive_search","query":"Design"}[[/AXON_GOOGLE_ACTION]]';
+    }
     const isClassroomPendingRequest = /\b(classrooms?|class\s*work|assignments?|submissions?|homework|coursework)\b/i.test(originalMessage) &&
         /\b(check|find|show|list|what|which|left|remaining|pending|missing|overdue|not\s+turned\s+in|haven't|have\s+not|need\s+to\s+do|need\s+to\s+submit|still\s+to\s+do)\b/i.test(originalMessage);
     if (!initialAnswer && isClassroomPendingRequest) {
@@ -4268,7 +4258,7 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
             "Write tools (confirmation required): google_create_doc { \"action\":\"google_create_doc\", \"title\":\"Title\", \"text\":\"Document text\" }; google_append_doc { \"action\":\"google_append_doc\", \"documentId\":\"ID\", \"text\":\"Append text\" }; google_replace_doc_text { \"action\":\"google_replace_doc_text\", \"documentId\":\"ID\", \"findText\":\"unique exact text\", \"replaceText\":\"replacement\" }; google_create_sheet { \"action\":\"google_create_sheet\", \"title\":\"Title\", \"values\":[[\"Header 1\",\"Header 2\"],[\"value\",\"value\"]] }; google_update_sheet { \"action\":\"google_update_sheet\", \"spreadsheetId\":\"ID\", \"range\":\"A1:B2\", \"values\":[[\"value\",\"value\"]] }; google_create_form { \"action\":\"google_create_form\", \"title\":\"Form title\", \"description\":\"Optional description\", \"quiz\":true, \"questions\":[{\"question\":\"Question\",\"options\":[\"Option 1\",\"Option 2\"],\"correct_answer\":\"2\",\"required\":true}] }; google_add_form_question { \"action\":\"google_add_form_question\", \"formId\":\"ID\", \"question\":\"Question\", \"options\":[\"Option 1\",\"Option 2\"] }; google_add_form_questions { \"action\":\"google_add_form_questions\", \"formId\":\"ID from this conversation's existing form\", \"questions\":[{\"question\":\"Question 1\",\"options\":[\"Option 1\",\"Option 2\"]},{\"question\":\"Question 2\",\"options\":[\"Option 1\",\"Option 2\"]}] }; calendar_create_event { \"action\":\"calendar_create_event\", \"summary\":\"Event\", \"start\":\"ISO datetime with timezone\", \"end\":\"ISO datetime with timezone\" }; gmail_create_draft { \"action\":\"gmail_create_draft\", \"to\":\"person@example.com\", \"subject\":\"Subject\", \"text\":\"Body\" }. For a form with multiple questions, put every question in the questions array in one google_create_form call, with 2–100 non-empty options per question. correct_answer can be the 1-based option number or exact option text. If creating a form with questions, do not omit any options. The backend verifies the saved form; only say it is complete if verified is true. If verified is false, report the warnings and use the returned formId to recover without creating duplicates.",
             "FOLLOW-UP GOOGLE FORM EDITS: If the user asks to add or change questions and recent conversation identifies an existing Google Form, extract and reuse that formId from the conversation's edit/view URL. Use google_add_form_questions to add all requested questions to that existing form in one batch. Do not create a second form and do not merely give manual instructions. If the form ID is not visible in recent context, search Drive for the form title before asking the user to provide it. After the write, report completion only if the tool's verified field is true; include the existing form's edit and responder links from the actual result.",
             "DOCUMENT QUALITY RULES: For google_create_doc, write the actual finished document in action.text before calling the tool. Never use templates, fill-in-the-blank text, bracketed placeholders such as [year], [insert core focus], [Service 1], or generic filler. For a broad request to write about a company, produce a polished, informative overview with real, established facts, usually at least 250 words unless the user requests a short version. Include useful sections such as overview, history/background, products and brands, business/market, and conclusion when relevant. Do not invent exact figures, dates, contacts, or claims you are unsure about; phrase uncertainty honestly. If content is incomplete, regenerate it before creating any file. After creation, only claim success if the backend returns verified: true; if false, explain the warning and repair the existing document rather than creating a duplicate.",
-            "DOCUMENT CONTINUATION WORKFLOW (mandatory): When the user asks to open, finish, complete, continue, or pick up an existing Google Doc, do not stop after drive_search and do not merely return links. First use drive_search to identify the best matching document; then call google_read_doc with the exact documentId from the search result. Inspect the actual document text and determine the last completed section and the unfinished or missing work. Continue in the same style, terminology, headings, and school-appropriate level, without rewriting or deleting existing work. Draft only the missing continuation, based on the document and the user's task. Before changing the document, use google_append_doc with that documentId and the drafted continuation; the normal confirmation dialog must remain enabled. After the write, report completion only if the action succeeded, and include the actual edit URL. If the document text does not make clear what remains unfinished, ask the user a focused question instead of guessing. Never treat a drive_search result as task completion.",
+            "DOCUMENT CONTINUATION WORKFLOW (mandatory): When the user asks to open, finish, complete, continue, or pick up an existing Google Doc, do not stop after drive_search and do not merely return links. First use drive_search to identify the best matching document; then call google_read_doc with the exact documentId from the search result. Read the entire available document text, including every question and every completed answer. Use completed answers as the writing-style reference. Identify every unanswered, blank, or incomplete question throughout the document (not just the final section). Draft a clear answer for each one using the same voice, sentence length, vocabulary, formatting, and school-appropriate level. Preserve every existing answer and question. Add the missing answers to this same document, clearly pairing each answer with its original question/number; do not create a new document or use Canva. Before changing the document, use google_append_doc with that documentId and the drafted continuation; the normal confirmation dialog must remain enabled. After the write, report completion only if the action succeeded, and include the actual edit URL. If the document text does not make clear what remains unfinished, ask the user a focused question instead of guessing. Never treat a drive_search result as task completion.",
             "For class roster tasks, list courses first, use actual course name and section to identify the intended class, then retrieve that roster. If more than one course plausibly matches, ask the user which one. Select names only from actual roster results. Do not expose roster details unrelated to the task.",
             "Ask for confirmation before every write. Gmail tool only creates a draft and never sends it. For user requests to add multiple questions to an existing Google Form, use the batch google_add_form_questions action so all requested questions are added in one confirmed operation. Google Sites editing is not supported by this API; when local computer access is enabled, let the computer-control agent handle a Sites task instead. Otherwise, explain that the user can enable local computer access to let Axon attempt the browser workflow.",
             "Use one tool call per round, incorporate the actual result, and do not repeat a successful action. If a tool fails, explain the actual error.",
