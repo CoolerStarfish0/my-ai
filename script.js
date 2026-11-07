@@ -4270,7 +4270,18 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
             : await callAxonBackend(user, systemPrompt + "\\n\\n" + instructions, currentPrompt, isOwner);
         latestCredits = result.credits || latestCredits;
         const raw = typeof result.answer === "string" ? result.answer.trim() : "";
-        const parsed = extractAxonGoogleAction(raw);
+        let parsed = extractAxonGoogleAction(raw);
+
+        // Deterministic safety net: an explicit existing-Doc continuation must
+        // always begin with Drive search. Do not let model formatting/parser
+        // failures block the first read-only step.
+        if (!parsed && isDocumentContinuation && round === 0 && !lastGoogleToolResult) {
+            parsed = {
+                action: { action: "drive_search", query: "Design" },
+                visibleText: ""
+            };
+        }
+
         if (!parsed) {
             // The local model may answer with a capability disclaimer instead of
             // emitting the required tool action. For a clear document-continuation
