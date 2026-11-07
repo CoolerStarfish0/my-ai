@@ -4344,8 +4344,15 @@ async function runAxonAgentLoop(
     isOwner
 ) {
 
-    // Route Google requests for signed-in users; the Google backend enforces the owner/tester allowlist.
-    if (user && !user.isAnonymous && looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\bgoogle\s*sites?\b/i.test(originalMessage))) {
+    // Route explicit Google requests BEFORE the general model/Canva path.
+    // Never let an unauthenticated Google Docs request fall through to Canva or another platform.
+    if (looksLikeGoogleRequest(originalMessage) && !(workModeEnabled && /\bgoogle\s*sites?\b/i.test(originalMessage))) {
+        if (!user || user.isAnonymous) {
+            return {
+                answer: "Please sign in with your Google-connected Axon account first. I won't switch your Google Docs request to Canva or create a different file.",
+                actionPerformed: false
+            };
+        }
         return runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner);
     }
 
