@@ -4312,6 +4312,37 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
                 actionPerformed: false
             };
         }
+        // Carry the real Drive file ID forward ourselves. Local models can
+        // identify the right file but omit/misname documentId in the next JSON action.
+        if (parsed && isDocumentContinuation && lastGoogleToolResult?.action === "drive_search") {
+            const files = Array.isArray(lastGoogleToolResult.files) ? lastGoogleToolResult.files : [];
+            const docs = files.filter(file => file && typeof file.id === "string" &&
+                (file.type === "application/vnd.google-apps.document" || !file.type));
+            const exact = docs.find(file => String(file.name || "").trim().toLowerCase() === "design");
+            const candidate = exact || docs.find(file => /design/i.test(String(file.name || "")));
+            if (!candidate) {
+                return {
+                    answer: files.length
+                        ? "I found files in Drive, but none was clearly the Google Doc named “Design”. I haven't changed anything. Please check the document title in Drive."
+                        : "I searched Google Drive but couldn't find a Google Doc named “Design”. I haven't changed anything.",
+                    credits: latestCredits,
+                    actionPerformed: true
+                };
+            }
+            // The search result, not model-generated text, is authoritative.
+            parsed = {
+                action: { action: "google_read_doc", documentId: candidate.id },
+                visibleText: parsed.visibleText || ""
+            };
+        } else if (parsed && isDocumentContinuation &&
+            lastGoogleToolResult?.action === "google_read_doc" &&
+            ["google_append_doc", "google_replace_doc_text"].includes(parsed.action.action)) {
+            const realDocumentId = lastGoogleToolResult.documentId;
+            if (typeof realDocumentId === "string" && realDocumentId.trim()) {
+                parsed.action.documentId = realDocumentId;
+            }
+        }
+
         const explicitShortRequest = /\b(short|brief|concise|one paragraph|one sentence|under\s+\d+\s+words)\b/i.test(originalMessage);
         if (parsed.action.action === "google_create_doc" && explicitShortRequest) parsed.action.allowShort = true;
         if (parsed.visibleText) {
