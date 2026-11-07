@@ -4110,6 +4110,34 @@ window.addEventListener("message", event => {
 })();
 document.getElementById("axonGoogleConnectButton")?.addEventListener("click", startGoogleConnection);
 document.getElementById("axonGoogleRefreshButton")?.addEventListener("click", () => { void refreshGoogleConnectionStatus(); });
+
+document.getElementById("axonGoogleDisconnectButton")?.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    const status = document.getElementById("axonGoogleStatus");
+    const button = document.getElementById("axonGoogleDisconnectButton");
+    if (!user || user.isAnonymous) {
+        if (status) status.textContent = "Sign in before disconnecting Google.";
+        return;
+    }
+    if (!window.confirm("Disconnect Google from Axon? This removes Axon's saved Google connection, but does not delete your Google files or account.")) return;
+    if (button) button.disabled = true;
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/agent?mode=google&action=disconnect", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+            cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not disconnect Google.");
+        if (status) status.textContent = "Google disconnected from Axon. You can connect it again when ready.";
+        await refreshGoogleConnectionStatus();
+    } catch (error) {
+        if (status) status.textContent = error.message || "Google could not be disconnected.";
+    } finally {
+        if (button) button.disabled = false;
+    }
+});
 document.getElementById("axonGoogleSavePermissionsButton")?.addEventListener("click", async () => {
     const user = auth.currentUser;
     const status = document.getElementById("axonGoogleStatus");
