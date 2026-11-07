@@ -152,6 +152,52 @@
         <aside id="chatSidebar" class="chat-sidebar" aria-label="Your past chats">
             <div class="chat-sidebar-heading"><strong>Past chats</strong><button id="chatSidebarClose" type="button" aria-label="Close chats">✕</button></div>
             <button id="chatNewButton" class="chat-new-button" type="button">＋ New chat</button>
+            <details class="sidebar-modes" open>
+                <summary><span>⚡ Modes</span><span class="sidebar-modes-chevron">⌄</span></summary>
+                <div class="sidebar-modes-content">
+                    <p class="sidebar-modes-caption">TOOLS & CONNECTED APPS</p>
+                                <section id="axonAgentPanel" class="axon-agent-panel" aria-labelledby="axonAgentHeading">
+                <div class="axon-agent-heading">
+                    <div>
+                        <h2 id="axonAgentHeading">🧠 Axon Autonomous Agent</h2>
+                        <p>Plan, investigate, use connected apps, and verify results directly from normal chat. No separate Work Mode switch.</p>
+                    </div>
+                    <span class="axon-agent-status">Agent ready</span>
+                </div>
+                <p id="axonGoogleStatus" class="axon-agent-note" role="status">Google connection status will appear here. Google tools require the one-time setup documented in the backend repository.</p>
+                <p id="axonCanvaStatus" class="axon-agent-note" role="status">Canva is not connected yet.</p>
+                <div class="axon-agent-actions" aria-label="Canva integration"><button id="axonCanvaConnectButton" type="button">🎨 Connect Canva</button><button id="axonCanvaRefreshButton" type="button">Check Canva connection</button><button id="axonCanvaDisconnectButton" type="button">Disconnect Canva</button></div>
+
+                <div class="axon-agent-actions">
+                    <button id="axonGoogleConnectButton" type="button">🔗 Connect Google / Reconnect</button>
+                    <button id="axonGoogleRefreshButton" type="button">Check connection</button>
+                    <button id="axonGoogleDisconnectButton" type="button">Disconnect Google</button>
+                    <button id="workModeStartButton" type="button">Allow computer access</button>
+                    <button id="workModeStopButton" type="button" disabled>Disable computer access</button>
+                </div>
+                <div class="axon-agent-actions" aria-label="Google agent permissions">
+                    <label for="axonGooglePermissionMode">Google action permissions</label>
+                    <select id="axonGooglePermissionMode">
+                        <option value="ask">Ask every time</option>
+                        <option value="trusted">Trusted actions (new drafts/files/events)</option>
+                        <option value="full">Full access (skip per-action confirmations)</option>
+                    </select>
+                    <button id="axonGoogleSavePermissionsButton" type="button">Save permissions</button>
+                </div>
+                <details class="axon-agent-help"><summary>What do these permission levels allow?</summary><p>Trusted Actions can create new drafts, documents, sheets, forms and calendar events without asking each time. Full Access also permits supported edits without per-action confirmation. Google, Canva and GitHub authorization remain separate.</p></details>
+                <p id="axonComputerAccessStatus" class="axon-agent-note" role="status">Local computer access is off. Enable it only when you want Axon to interact with your computer.</p>
+                <p class="axon-agent-note">GitHub tools run in normal chat for the owner account. Once connected, Google tools can search Drive and Classroom, read and edit Docs, read and update Sheets, inspect and create Forms, read and schedule Calendar events, and save Gmail drafts. Axon confirms writes and verifies tool results. Google Sites editing uses the optional local browser-control capability.</p>
+                <p class="axon-agent-note"><a href="https://github.com/CoolerStarfish0/5158-ai-backend/blob/main/GOOGLE_AGENT_SETUP.md" target="_blank" rel="noopener noreferrer">Open the one-time Google setup guide ↗</a></p>
+            </section>
+                    <p class="sidebar-modes-caption">AXON MODES</p>
+                                <nav id="axonModePicker" class="axon-mode-picker" aria-label="Axon modes">
+                <span class="axon-mode-picker-label">MODES</span>
+                <button type="button" data-axon-mode="humaniser">✍️ AI Humaniser</button>
+                <button type="button" data-axon-mode="writing-samples">🧬 Writing Samples</button>
+                <button type="button" data-axon-mode="notes">🎙️ Note-Taking</button>
+            </nav>
+                </div>
+            </details>
             <div id="chatHistoryList" class="chat-history-list"></div>
             <p class="chat-storage-note">Signed-in chats sync to your account. Guest chats stay on this browser.</p>
         </aside>
@@ -316,39 +362,7 @@
             <!-- ======================================
                  AXON AUTONOMOUS AGENT
                  ====================================== -->
-            <section id="axonAgentPanel" class="axon-agent-panel" aria-labelledby="axonAgentHeading">
-                <div class="axon-agent-heading">
-                    <div>
-                        <h2 id="axonAgentHeading">🧠 Axon Autonomous Agent</h2>
-                        <p>Plan, investigate, use connected apps, and verify results directly from normal chat. No separate Work Mode switch.</p>
-                    </div>
-                    <span class="axon-agent-status">Agent ready</span>
-                </div>
-                <p id="axonGoogleStatus" class="axon-agent-note" role="status">Google connection status will appear here. Google tools require the one-time setup documented in the backend repository.</p>
-                <p id="axonCanvaStatus" class="axon-agent-note" role="status">Canva is not connected yet.</p>
-                <div class="axon-agent-actions" aria-label="Canva integration"><button id="axonCanvaConnectButton" type="button">🎨 Connect Canva</button><button id="axonCanvaRefreshButton" type="button">Check Canva connection</button><button id="axonCanvaDisconnectButton" type="button">Disconnect Canva</button></div>
 
-                <div class="axon-agent-actions">
-                    <button id="axonGoogleConnectButton" type="button">🔗 Connect Google / Reconnect</button>
-                    <button id="axonGoogleRefreshButton" type="button">Check connection</button>
-                    <button id="axonGoogleDisconnectButton" type="button">Disconnect Google</button>
-                    <button id="workModeStartButton" type="button">Allow computer access</button>
-                    <button id="workModeStopButton" type="button" disabled>Disable computer access</button>
-                </div>
-                <div class="axon-agent-actions" aria-label="Google agent permissions">
-                    <label for="axonGooglePermissionMode">Google action permissions</label>
-                    <select id="axonGooglePermissionMode">
-                        <option value="ask">Ask every time</option>
-                        <option value="trusted">Trusted actions (new drafts/files/events)</option>
-                        <option value="full">Full access (skip per-action confirmations)</option>
-                    </select>
-                    <button id="axonGoogleSavePermissionsButton" type="button">Save permissions</button>
-                </div>
-                <details class="axon-agent-help"><summary>What do these permission levels allow?</summary><p>Trusted Actions can create new drafts, documents, sheets, forms and calendar events without asking each time. Full Access also permits supported edits without per-action confirmation. Google, Canva and GitHub authorization remain separate.</p></details>
-                <p id="axonComputerAccessStatus" class="axon-agent-note" role="status">Local computer access is off. Enable it only when you want Axon to interact with your computer.</p>
-                <p class="axon-agent-note">GitHub tools run in normal chat for the owner account. Once connected, Google tools can search Drive and Classroom, read and edit Docs, read and update Sheets, inspect and create Forms, read and schedule Calendar events, and save Gmail drafts. Axon confirms writes and verifies tool results. Google Sites editing uses the optional local browser-control capability.</p>
-                <p class="axon-agent-note"><a href="https://github.com/CoolerStarfish0/5158-ai-backend/blob/main/GOOGLE_AGENT_SETUP.md" target="_blank" rel="noopener noreferrer">Open the one-time Google setup guide ↗</a></p>
-            </section>
 
             <!-- Legacy local-computer controls remain hidden while the unified agent replaces the old Work Mode UI. -->
             <div class="hidden" aria-hidden="true">
@@ -460,12 +474,7 @@
                 <textarea id="messageInput" placeholder="Talk to Axon..." rows="1"></textarea>
                 <button id="sendButton" type="button"><span>Send</span><span class="send-arrow">↗</span></button>
             </div>
-            <nav id="axonModePicker" class="axon-mode-picker" aria-label="Axon modes">
-                <span class="axon-mode-picker-label">MODES</span>
-                <button type="button" data-axon-mode="humaniser">✍️ AI Humaniser</button>
-                <button type="button" data-axon-mode="writing-samples">🧬 Writing Samples</button>
-                <button type="button" data-axon-mode="notes">🎙️ Note-Taking</button>
-            </nav>
+
             <section id="axonModeWorkspace" class="axon-mode-workspace hidden" aria-label="Axon mode workspace" aria-modal="true" role="dialog">
                 <div class="axon-mode-workspace-inner">
                     <header class="axon-mode-workspace-header">
