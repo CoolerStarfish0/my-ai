@@ -3197,8 +3197,8 @@ tool reports success.
 
 The user's explicit platform and destination instructions are mandatory.
 
-- If the user says Google Docs, Google Drive, a Google Doc, or names an existing Google document, use Google Docs/Drive capabilities only.
-- NEVER create, open, edit, or suggest a Canva design for a request explicitly directed to Google Docs or Google Drive.
+- If the user says Google Docs, Google Drive, a Google Doc, or names an existing Google document, use Google Docs/Drive capabilities only. This rule takes priority over all design, document, presentation, and Canva intent detection.
+- NEVER create, open, edit, or suggest a Canva design for a request explicitly directed to Google Docs or Google Drive. The chat-level Canva interceptor must yield to Google Docs/Drive requests before checking for Canva intent or pending Canva confirmations.
 - The word "design" by itself does NOT mean Canva. Determine the platform from the full request and recent conversation.
 - Only use Canva when the user explicitly asks to use Canva or clearly requests a new Canva design without specifying another platform.
 - If the user says a document already exists, search for and open that existing document. Do not create a replacement, duplicate, template, or unrelated design.
@@ -4827,6 +4827,15 @@ function detectCanvaIntent(prompt) {
 
 async function handleCanvaChatIntent(prompt) {
     const text = String(prompt || "").trim();
+
+    // Explicit Google Docs/Drive requests must bypass Canva's early chat interceptor.
+    // This guard runs before any pending Canva confirmation or design-intent detection,
+    // so words like "design", "document", "complete", or "edit" cannot hijack a Docs task.
+    if (looksLikeGoogleRequest(text)) {
+        pendingCanvaPrompt = null;
+        return { handled: false };
+    }
+
     if (pendingCanvaPrompt) {
         if (/^(yes|yeah|yep|sure|ok|okay|do it|canva)$/i.test(text)) {
             const original = pendingCanvaPrompt;
