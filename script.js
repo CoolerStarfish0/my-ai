@@ -4234,8 +4234,9 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
     let latestCredits = null;
     let lastGoogleToolResult = null;
     let forcedContinuationRetries = 0;
-    const isDocumentContinuation = /\b(open|go on|go to|finish|complete|continue|resume|pick up)\b/i.test(originalMessage) &&
-        /\b(google\s*(?:docs?|documents?)|document)\b/i.test(originalMessage);
+    const isDocumentContinuation = /\b(open|go on|go to|finish|complete|continue|resume|pick up|edit|update|fill|answer|revise|work on)\b/i.test(originalMessage) &&
+        /\b(google\s*(?:docs?|documents?)|document)\b/i.test(originalMessage) &&
+        /\b(question|questions|answer|answers|unanswered|blank|incomplete|same document|existing document|design)\b/i.test(originalMessage);
     if (isDocumentContinuation) {
         // Always begin an explicit existing-document task with a real Drive search.
         initialAnswer = '[[AXON_GOOGLE_ACTION]]{"action":"drive_search","query":"Design"}[[/AXON_GOOGLE_ACTION]]';
