@@ -6,11 +6,11 @@
 
     <title>Axon</title>
 
-    <link rel="stylesheet" href="style.css?v=axon-location-notice-20261107b">
+    <link rel="stylesheet" href="style.css?v=axon-no-gps-20261107c">
     <link rel="stylesheet" href="agent.css?v=axon-agent-1">
     <link rel="stylesheet" href="games.css">
     <link rel="stylesheet" href="video-studio.css?v=axon-video-studio-2">
-    <script type="module" src="script.js?v=axon-location-notice-20261107b"></script>
+    <script type="module" src="script.js?v=axon-no-gps-20261107c"></script>
     <script type="module" src="games.js?v=market-day-2"></script>
 </head>
 
@@ -456,13 +456,9 @@
             <input id="imageUploadInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
             <div class="input-area">
                 <button id="attachImageButton" class="attach-image-button" type="button" aria-label="Attach images" title="Attach images">＋</button>
-                <button id="axonGpsButton" class="axon-gps-button" type="button" aria-label="Enable precise location" title="Share precise location with Axon">📍 GPS</button>
                 <textarea id="messageInput" placeholder="Talk to Axon..." rows="1"></textarea>
                 <button id="sendButton" type="button"><span>Send</span><span class="send-arrow">↗</span></button>
             </div>
-            <p class="axon-location-notice" role="note">
-                📍 Location is optional. When GPS is ON, Axon can use your precise location to answer this chat. It is not sent to the Owner Panel.
-            </p>
             <nav id="axonModePicker" class="axon-mode-picker" aria-label="Axon modes">
                 <span class="axon-mode-picker-label">MODES</span>
                 <button type="button" data-axon-mode="humaniser">✍️ AI Humaniser</button>
