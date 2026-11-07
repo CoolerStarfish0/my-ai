@@ -2984,3 +2984,30 @@ body.axon-mode-open{overflow:hidden}
 .axon-agent-help summary{padding:9px 11px;color:var(--purple-soft,#c4b5fd);font-weight:700;cursor:pointer}
 .axon-agent-help p{margin:0;padding:0 11px 11px;color:var(--muted,#aaa);font-size:.78rem;line-height:1.45}
 @media(max-width:520px){.input-area{align-items:stretch}.input-area #messageInput{min-height:56px;max-height:180px;padding:11px 10px;font-size:16px}}
+
+
+/* AXON OPT-IN GPS BUTTON */
+.axon-gps-button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 11px;
+    border: 1px solid rgba(192,132,252,.22);
+    border-radius: 13px;
+    background: rgba(168,85,247,.09);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.axon-gps-button:hover { background: rgba(168,85,247,.18); }
+.axon-gps-button.is-active {
+    border-color: rgba(74,222,128,.5);
+    background: rgba(34,197,94,.13);
+    color: #86efac;
+}
+.axon-gps-button:disabled { opacity: .65; cursor: wait; }
+@media (max-width: 520px) {
+    .axon-gps-button { padding: 0 8px; font-size: 11px; }
+}
