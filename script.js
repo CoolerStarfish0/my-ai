@@ -84,9 +84,8 @@ const RANKS = {
 };
 let currentRankName = "VISITOR";
 
-// Location is opt-in: precise browser GPS is requested only after the user taps the GPS button.
+// Location context uses approximate IP-based location only; browser GPS is disabled.
 let approximateLocation = null;
-let preciseGpsLocation = null;
 let calendarViewDate = new Date();
 let calendarSelectedDate = new Date();
 const CALENDAR_STORE_PREFIX = "axon_calendar_events_v1_";
@@ -397,7 +396,6 @@ const messageInput =
 
 const sendButton =
     document.getElementById("sendButton");
-const axonGpsButton = document.getElementById("axonGpsButton");
 const imageUploadInput = document.getElementById("imageUploadInput");
 const attachImageButton = document.getElementById("attachImageButton");
 const imageAttachmentTray = document.getElementById("imageAttachmentTray");
@@ -405,53 +403,6 @@ let pendingImageAttachments = [];
 const MAX_IMAGE_ATTACHMENTS = 3;
 const MAX_IMAGE_BYTES = 400 * 1024;
 
-// GPS is user-triggered. Coordinates stay in memory and are included in
-// Axon's system context only while GPS is enabled.
-function updateAxonGpsButton(status) {
-    if (!axonGpsButton) return;
-    const enabled = Boolean(preciseGpsLocation);
-    axonGpsButton.classList.toggle("is-active", enabled);
-    axonGpsButton.textContent = enabled ? "📍 GPS ON" : "📍 GPS";
-    axonGpsButton.setAttribute("aria-pressed", String(enabled));
-    axonGpsButton.title = status || (enabled
-        ? "Precise location is enabled. Tap to turn it off."
-        : "Tap to share your precise device location with Axon.");
-}
-axonGpsButton?.addEventListener("click", () => {
-    if (preciseGpsLocation) {
-        preciseGpsLocation = null;
-        updateAxonGpsButton("GPS disabled. Axon will no longer receive your precise coordinates.");
-        return;
-    }
-    if (!navigator.geolocation) {
-        updateAxonGpsButton("This browser or device does not support location access.");
-        return;
-    }
-    axonGpsButton.disabled = true;
-    axonGpsButton.textContent = "📍 Locating…";
-    navigator.geolocation.getCurrentPosition(
-        position => {
-            preciseGpsLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : 0
-            };
-            axonGpsButton.disabled = false;
-            updateAxonGpsButton("GPS enabled. Axon can use your coordinates when a request needs your location.");
-        },
-        error => {
-            axonGpsButton.disabled = false;
-            const message = error.code === 1
-                ? "Location permission was denied. Allow location access in your browser settings, then try again."
-                : error.code === 2
-                    ? "Your device could not determine its location. Try again somewhere with a clearer GPS signal."
-                    : "Location request timed out. Please try again.";
-            updateAxonGpsButton(message);
-            axonGpsButton.title = message;
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-    );
-});
 
 // ==========================================
 // LOCAL COMPUTER ACCESS UI
@@ -2970,14 +2921,9 @@ function buildSystemPrompt(
     });
     const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local device timezone";
 
-    const locationPromptContext = preciseGpsLocation
-        ? "Precise device location (user explicitly enabled GPS): latitude " +
-            preciseGpsLocation.latitude.toFixed(6) + ", longitude " +
-            preciseGpsLocation.longitude.toFixed(6) + ", reported accuracy about " +
-            Math.round(preciseGpsLocation.accuracy) + " metres. Use this only when relevant to the request. Do not repeat exact coordinates unless the user asks."
-        : approximateLocation
-            ? "Approximate IP-based location only: " + [approximateLocation.city, approximateLocation.region, approximateLocation.country].filter(Boolean).join(", ") + ". This is not precise GPS."
-            : "Unavailable; do not guess the user's location.";
+    const locationPromptContext = approximateLocation
+        ? "Approximate IP-based location only: " + [approximateLocation.city, approximateLocation.region, approximateLocation.country].filter(Boolean).join(", ") + ". This is not precise GPS."
+        : "Unavailable; do not guess the user's location.";
     const calendarPromptContext = getCalendarEvents()
         .sort((a, b) => new Date(a.start) - new Date(b.start))
         .slice(0, 40)
