@@ -3880,7 +3880,7 @@ async function refreshGoogleConnectionStatus() {
         const data = await getGoogleConnectionStatus(user);
         status.textContent = data.connected
             ? "Google connected" + (data.email ? " · " + data.email : "") + "."
-            : "Google not connected yet. Connect once to enable Google tools.";
+            : (data.error || "Google not connected yet. Connect once to enable Google tools.");
         const permissionSelect = document.getElementById("axonGooglePermissionMode");
         if (permissionSelect) permissionSelect.value = data.googlePolicy || "ask";
     } catch (error) {
@@ -4223,7 +4223,9 @@ async function runAxonGoogleLoop(user, systemPrompt, originalMessage, isOwner, i
     try {
         const status = await getGoogleConnectionStatus(user);
         if (!status.connected) return {
-            answer: "Google isn't connected yet, so I can't inspect your Classroom or create Google files. Click **Connect Google** in the Axon Agent panel, approve the requested access, then ask me again. I won't invent names or pretend I checked Classroom.",
+            answer: status.error
+                ? "Google connection check failed: " + status.error + " I won't ask you to reconnect repeatedly; this needs to be diagnosed in the backend."
+                : "Google isn't connected yet, so I can't inspect your Classroom or create Google files. Connect Google in the Axon Agent panel, then ask me again. I won't invent names or pretend I checked Classroom.",
             actionPerformed: false
         };
     } catch (error) {
