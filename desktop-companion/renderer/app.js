@@ -110,6 +110,7 @@ function speak(text) {
 
 async function analyseLatestFrame() {
   if (!state.stream || state.processing) return;
+  const runId = state.screenRunId;
   const frame = makeFrame();
   if (!frame) return;
   state.latestFrame = { ...frame, capturedAt: Date.now() };
@@ -157,6 +158,7 @@ async function startScreen() {
       audio: false
     });
 
+    state.screenRunId += 1;
     state.video = document.createElement("video");
     state.video.muted = true;
     state.video.srcObject = state.stream;
