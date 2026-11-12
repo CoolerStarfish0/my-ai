@@ -122,6 +122,7 @@ async function analyseLatestFrame() {
       [frame],
       SCREEN_SYSTEM
     );
+    if (runId !== state.screenRunId || !state.stream) return;
     const answer = result.answer.trim();
     if (!answer || /^SILENT[.!\s]*$/i.test(answer)) return;
 
