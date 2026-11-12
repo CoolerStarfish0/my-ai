@@ -11,7 +11,7 @@ const state = {
   latestFrame: null,
   lastComment: "",
   lastCommentAt: 0,
-  speechEnabled: true
+  screenRunId: 0
 };
 
 const SCREEN_SYSTEM = [
@@ -126,6 +126,7 @@ async function analyseLatestFrame() {
 
     const now = Date.now();
     if (answer.toLowerCase() === state.lastComment.toLowerCase() && now - state.lastCommentAt < 30000) return;
+    if (now - state.lastCommentAt < 8000) return;
     state.lastComment = answer;
     state.lastCommentAt = now;
     logMessage("axon", answer);
@@ -186,10 +187,10 @@ function stopScreen() {
   if (state.stream) {
     for (const track of state.stream.getTracks()) track.stop();
   }
+  state.screenRunId += 1;
   state.stream = null;
   state.video = null;
   state.latestFrame = null;
-  state.processing = false;
   $("startScreen").disabled = false;
   $("stopScreen").disabled = true;
   $("screenSource").disabled = false;
@@ -233,6 +234,12 @@ function createSpeechRecognition() {
 
   recognition.onerror = event => {
     $("micHint").textContent = `Speech recognition issue: ${event.error || "unknown error"}`;
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      state.micEnabled = false;
+      state.recognition = null;
+      $("toggleMic").textContent = "Turn microphone on";
+      setStatus($("micStatus"), "MIC OFF");
+    }
   };
 
   recognition.onend = () => {
@@ -257,6 +264,10 @@ function toggleMic() {
 
   if (!getSecret()) {
     $("micHint").textContent = "Enter the local AI bridge secret before turning on the microphone.";
+    return;
+  }
+  if (!$("speechConsent").checked) {
+    $("micHint").textContent = "Tick the speech-recognition notice first. Recognition may use an online provider.";
     return;
   }
 
@@ -288,7 +299,7 @@ $("clearLog").addEventListener("click", () => {
     textContent: "Conversation cleared."
   }));
 });
-$("voiceReplies").addEventListener("change", event => { state.speechEnabled = event.target.checked; });
+$("voiceReplies").addEventListener("change", () => {});
 $("captureRate").addEventListener("change", () => {
   if (!state.stream) return;
   if (state.screenTimer) clearInterval(state.screenTimer);
