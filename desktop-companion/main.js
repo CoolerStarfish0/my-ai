@@ -48,7 +48,16 @@ function createWindow() {
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const trustedAppPage = String(details?.requestingUrl || webContents?.getURL?.() || "").startsWith("file://");
-    callback(trustedAppPage && permission === "media");
+    if (!trustedAppPage) {
+      callback(false);
+      return;
+    }
+    if (permission === "media") {
+      const mediaTypes = Array.isArray(details?.mediaTypes) ? details.mediaTypes : [];
+      callback(mediaTypes.includes("audio"));
+      return;
+    }
+    callback(permission === "display-capture");
   });
 
   // The renderer must explicitly select a source first. No source is captured on startup.
