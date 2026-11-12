@@ -1,0 +1,13 @@
+{
+  "name": "axon-desktop-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Opt-in local desktop vision and voice companion for Axon",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^36.0.0"
+  }
+}
