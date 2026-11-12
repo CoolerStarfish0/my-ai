@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; connect-src 'self'; media-src 'self' blob:;">
+  <title>Axon Desktop Companion</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div>
+        <p class="eyebrow">AXON • LOCAL DESKTOP COMPANION</p>
+        <h1>Desktop Vision</h1>
+        <p class="sub">Live screen understanding. No screen recording or cloud relay.</p>
+      </div>
+      <span id="overallStatus" class="status">Not connected</span>
+    </header>
+
+    <section class="panel">
+      <h2>Local AI connection</h2>
+      <div class="inline">
+        <label class="grow">Bridge secret
+          <input id="bridgeSecret" type="password" autocomplete="off" placeholder="Paste LOCAL_AI_SECRET">
+        </label>
+        <button id="checkBridge" class="secondary">Check bridge</button>
+      </div>
+      <p id="bridgeStatus" class="hint">Axon connects directly to http://127.0.0.1:3000. Your screen frames are sent only to this local bridge.</p>
+    </section>
+
+    <section class="panel">
+      <div class="sectionHeading">
+        <div>
+          <h2>Live screen</h2>
+          <p class="hint">Choose a screen or window, then explicitly start sharing.</p>
+        </div>
+        <span id="screenStatus" class="pill">OFF</span>
+      </div>
+      <div class="inline">
+        <label class="grow">Capture source
+          <select id="screenSource"><option value="">Load screens…</option></select>
+        </label>
+        <button id="refreshScreens" class="secondary">Refresh</button>
+      </div>
+      <div class="inline controls">
+        <label>Analysis rate
+          <select id="captureRate">
+            <option value="1" selected>1 frame/sec</option>
+            <option value="2">2 frames/sec</option>
+          </select>
+        </label>
+        <button id="startScreen" class="primary">Start live screen</button>
+        <button id="stopScreen" class="danger" disabled>Stop screen</button>
+      </div>
+      <p id="screenHint" class="hint">Screen capture is off. Axon cannot see your desktop until you start it.</p>
+    </section>
+
+    <section class="panel">
+      <div class="sectionHeading">
+        <div>
+          <h2>Voice</h2>
+          <p class="hint">Microphone listening is controlled separately.</p>
+        </div>
+        <span id="micStatus" class="pill">MIC OFF</span>
+      </div>
+      <div class="inline controls">
+        <button id="toggleMic" class="primary">Turn microphone on</button>
+        <label class="check"><input id="voiceReplies" type="checkbox" checked> Speak Axon's replies</label>
+      </div>
+      <p class="notice">Speech-to-text uses Chromium's built-in speech recognition when available. Depending on the Electron build, recognition may be processed by an online provider. The microphone is never activated automatically; use the toggle and turn it off when finished.</p>
+      <p id="micHint" class="hint">Microphone is off.</p>
+    </section>
+
+    <section class="panel">
+      <div class="sectionHeading">
+        <h2>Axon conversation</h2>
+        <button id="clearLog" class="secondary small">Clear</button>
+      </div>
+      <div id="conversation" class="conversation" aria-live="polite">
+        <p class="systemMessage">Axon is waiting. Start screen sharing or turn on the microphone.</p>
+      </div>
+      <form id="messageForm" class="messageForm">
+        <input id="messageInput" type="text" maxlength="1000" placeholder="Ask Axon about your screen…" autocomplete="off">
+        <button class="primary" type="submit">Send</button>
+      </form>
+    </section>
+
+    <footer>
+      <span>Screen frames are sampled live and discarded after each request.</span>
+      <button id="muteSpeech" class="secondary small">Stop spoken audio</button>
+    </footer>
+  </main>
+</body>
+</html>
