@@ -237,7 +237,7 @@ function createSpeechRecognition() {
 
   recognition.onerror = event => {
     $("micHint").textContent = `Speech recognition issue: ${event.error || "unknown error"}`;
-    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+    if (["not-allowed", "service-not-allowed", "network", "audio-capture"].includes(event.error)) {
       state.micEnabled = false;
       state.recognition = null;
       $("toggleMic").textContent = "Turn microphone on";
