@@ -1402,6 +1402,67 @@ const ownerRankSearch = document.getElementById("ownerRankSearch");
 const ownerRankStatus = document.getElementById("ownerRankStatus");
 const ownerRankList = document.getElementById("ownerRankList");
 let ownerRankUsers = [];
+const ownerTunnelUrlInput = document.getElementById("ownerTunnelUrl");
+const ownerTunnelStatus = document.getElementById("ownerTunnelStatus");
+const ownerTunnelSyncButton = document.getElementById("ownerTunnelSync");
+const ownerTunnelRefreshButton = document.getElementById("ownerTunnelRefresh");
+
+async function loadOwnerTunnelConfig() {
+    const user = auth.currentUser;
+    if (!ownerTunnelStatus || !user || user.isAnonymous || user.uid !== OWNER_UID) return;
+    ownerTunnelStatus.textContent = "Loading saved tunnel URL…";
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/tunnel-sync", {
+            method: "GET",
+            headers: { Authorization: "Bearer " + token },
+            cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not load tunnel configuration.");
+        ownerTunnelUrlInput.value = data.url || "";
+        ownerTunnelStatus.textContent = data.url
+            ? "Saved tunnel URL loaded (" + (data.source === "firestore" ? "private Firestore setting" : "environment fallback") + ")."
+            : "No tunnel URL is saved yet.";
+    } catch (error) {
+        ownerTunnelStatus.textContent = error.message || "Could not load tunnel configuration.";
+    }
+}
+
+async function saveOwnerTunnelConfig() {
+    const user = auth.currentUser;
+    if (!ownerTunnelStatus || !user || user.isAnonymous || user.uid !== OWNER_UID) return;
+    const url = String(ownerTunnelUrlInput?.value || "").trim();
+    if (!url) {
+        ownerTunnelStatus.textContent = "Paste the current Cloudflare Quick Tunnel URL first.";
+        return;
+    }
+    ownerTunnelSyncButton.disabled = true;
+    ownerTunnelStatus.textContent = "Saving tunnel URL securely…";
+    try {
+        const token = await user.getIdToken();
+        const response = await fetch(BACKEND_URL + "/api/tunnel-sync", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
+            body: JSON.stringify({ url })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Could not save tunnel URL.");
+        ownerTunnelUrlInput.value = data.url || url;
+        ownerTunnelStatus.textContent = "Tunnel URL saved. New chat and Work Mode requests will use it.";
+    } catch (error) {
+        ownerTunnelStatus.textContent = error.message || "Could not save tunnel URL.";
+    } finally {
+        ownerTunnelSyncButton.disabled = false;
+    }
+}
+
+ownerTunnelSyncButton?.addEventListener("click", () => { void saveOwnerTunnelConfig(); });
+ownerTunnelRefreshButton?.addEventListener("click", () => { void loadOwnerTunnelConfig(); });
+
 
 function closeOwnerAnalyticsPanel() {
     ownerAnalyticsPanel?.classList.add("hidden");
@@ -1415,7 +1476,7 @@ ownerAnalyticsButton?.addEventListener("click", async () => {
     ownerAnalyticsPanel?.classList.remove("hidden");
     ownerAnalyticsBackdrop?.classList.remove("hidden");
     ownerAnalyticsPanel?.setAttribute("aria-hidden", "false");
-    await Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers(), loadFeatureAnalytics()]);
+    await Promise.all([loadOwnerVisitorLogs(), loadOwnerRankUsers(), loadFeatureAnalytics(), loadOwnerTunnelConfig()]);
 });
 ownerAnalyticsClose?.addEventListener("click", closeOwnerAnalyticsPanel);
 ownerAnalyticsBackdrop?.addEventListener("click", closeOwnerAnalyticsPanel);
