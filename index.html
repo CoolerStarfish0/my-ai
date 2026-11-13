@@ -269,6 +269,23 @@
                 <div id="ownerRankList" class="owner-rank-list"></div>
             </section>
 
+            <section class="owner-rank-manager" aria-labelledby="ownerTunnelHeading">
+                <div class="owner-rank-heading">
+                    <div>
+                        <span class="owner-analytics-kicker">LOCAL AI CONNECTION</span>
+                        <h3 id="ownerTunnelHeading">Cloudflare Tunnel</h3>
+                    </div>
+                </div>
+                <p class="owner-analytics-note">Paste the current HTTPS Cloudflare Quick Tunnel address from your tunnel window, then save it. Axon stores it privately on the backend; the bridge secret is never sent to this page.</p>
+                <label class="owner-rank-search-label" for="ownerTunnelUrl">Current tunnel URL</label>
+                <input id="ownerTunnelUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://your-name.trycloudflare.com">
+                <div class="owner-tunnel-actions">
+                    <button id="ownerTunnelSync" type="button">Save tunnel URL</button>
+                    <button id="ownerTunnelRefresh" type="button">Load saved URL</button>
+                </div>
+                <p id="ownerTunnelStatus" class="owner-rank-status" role="status">Only the signed-in owner can change this setting.</p>
+            </section>
+
             <section class="feature-analytics-section" aria-labelledby="featureAnalyticsHeading">
                 <div class="owner-rank-heading">
                     <div>
